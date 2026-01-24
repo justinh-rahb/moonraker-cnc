@@ -89,4 +89,4 @@ jobs:
             --notes-file release_notes.md \
             --draft \
             retro-cnc-panel-${{ steps.changelog.outputs.version }}.zip \
-            scripts/install.sh
+            docs/install.sh

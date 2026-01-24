@@ -37,7 +37,7 @@ A retro-styled, reactive web interface for controlling 3D printers and CNC machi
 The classic Klipper ecosystem approach - pipe curl to bash:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/justinh-rahb/moonraker-cnc/main/scripts/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/justinh-rahb/moonraker-cnc/main/docs/install.sh | bash
 ```
 
 This will:
@@ -62,13 +62,13 @@ python3 -m http.server 8080
 Simply run the installer again - it will backup your existing installation and download the latest version:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/justinh-rahb/moonraker-cnc/main/scripts/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/justinh-rahb/moonraker-cnc/main/docs/install.sh | bash
 ```
 
 ### Uninstalling
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/justinh-rahb/moonraker-cnc/main/scripts/install.sh | bash -s -- --uninstall
+curl -sSL https://raw.githubusercontent.com/justinh-rahb/moonraker-cnc/main/docs/install.sh | bash -s -- --uninstall
 ```
 
 ## Development
