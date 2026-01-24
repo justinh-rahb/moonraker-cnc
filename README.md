@@ -2,6 +2,9 @@
 
 A retro-styled, reactive web interface for controlling 3D printers and CNC machines running Klipper/Moonraker. Built with Svelte for a snappy, responsive experience with a distinct 1980s terminal aesthetic.
 
+[!Retro CNC Panel Home](docs/screenshot-1.png)
+[!Retro CNC Panel Config](docs/screenshot-2.png)
+
 ## Features
 
 ### 🎮 Real-Time Control
