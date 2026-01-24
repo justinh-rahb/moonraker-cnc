@@ -18,11 +18,23 @@
     } from "../../../stores/configStore.js";
     import CncButton from "./CncButton.svelte";
     import ColorPicker from "./ColorPicker.svelte";
+    import ConfirmDialog from "./ConfirmDialog.svelte";
 
     export let isOpen = false;
     export let onClose;
 
     $: panels = $configStore.panels;
+
+    // Confirm dialog state
+    let confirmOpen = false;
+    let confirmMessage = "";
+    let confirmCallback = () => {};
+
+    const showConfirm = (message, callback) => {
+        confirmMessage = message;
+        confirmCallback = callback;
+        confirmOpen = true;
+    };
 
     const save = () => {
         // configStore auto-saves on change, so just close
@@ -34,9 +46,9 @@
     };
 
     const handleDeletePanel = (panelId) => {
-        if (confirm("Delete this panel and all its macros?")) {
+        showConfirm("Delete this panel and all its macros?", () => {
             deletePanel(panelId);
-        }
+        });
     };
 
     const handleAddMacro = (panelId) => {
@@ -56,9 +68,9 @@
     };
 
     const handleDeletePreset = (id) => {
-        if (confirm("Delete this preset?")) {
+        showConfirm("Delete this preset?", () => {
             deletePreset(id);
-        }
+        });
     };
 </script>
 
@@ -338,6 +350,14 @@
             </div>
         </div>
     </div>
+
+    <ConfirmDialog
+        bind:isOpen={confirmOpen}
+        title="CONFIRM DELETE"
+        message={confirmMessage}
+        onConfirm={confirmCallback}
+        onCancel={() => (confirmOpen = false)}
+    />
 {/if}
 
 <style>
