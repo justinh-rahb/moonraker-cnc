@@ -38,6 +38,12 @@ export const machineState = writable({
     // Extruder Tuning
     pressureAdvance: 0.0,
     smoothTime: 0.040,
+
+    // Print status
+    printFilename: '',
+    printProgress: 0,
+    printDuration: 0,      // seconds elapsed
+    filamentUsed: 0,       // mm of filament used
 });
 
 const HISTORY_points = 300; // Keep last ~5-10 mins depending on update rate
@@ -151,7 +157,8 @@ const initializeConnection = async () => {
         const subscriptions = {
             toolhead: ['position', 'status', 'print_time', 'homed_axes'],
             'gcode_move': ['speed_factor', 'extrude_factor'],
-            'print_stats': ['state'],
+            'print_stats': ['state', 'filename', 'total_duration', 'print_duration', 'filament_used'],
+            'virtual_sdcard': ['progress', 'file_path'],
         };
 
         // Add all temperature objects to subscription
@@ -316,7 +323,28 @@ const updateStateFromStatus = (status) => {
 
 
         if (status.print_stats) {
-            newState.status = status.print_stats.state.toUpperCase();
+            if (status.print_stats.state !== undefined) {
+                newState.status = status.print_stats.state.toUpperCase();
+            }
+            if (status.print_stats.filename !== undefined) {
+                newState.printFilename = status.print_stats.filename;
+            }
+            if (status.print_stats.print_duration !== undefined) {
+                newState.printDuration = status.print_stats.print_duration;
+            }
+            if (status.print_stats.filament_used !== undefined) {
+                newState.filamentUsed = status.print_stats.filament_used;
+            }
+        }
+
+        if (status.virtual_sdcard) {
+            if (status.virtual_sdcard.progress !== undefined) {
+                newState.printProgress = status.virtual_sdcard.progress;
+            }
+            // file_path can also contain filename
+            if (status.virtual_sdcard.file_path !== undefined && !newState.printFilename) {
+                newState.printFilename = status.virtual_sdcard.file_path;
+            }
         }
 
         if (status.gcode_move) {
@@ -396,4 +424,17 @@ export const extrude = (direction = 1) => {
 
     const gcode = `M83\nG1 E${direction * amount} F${speed}\nM82`;
     send('printer.gcode.script', { script: gcode });
+};
+
+// Print Control
+export const pausePrint = (macroName = 'PAUSE') => {
+    send('printer.gcode.script', { script: macroName });
+};
+
+export const resumePrint = (macroName = 'RESUME') => {
+    send('printer.gcode.script', { script: macroName });
+};
+
+export const cancelPrint = (macroName = 'CANCEL_PRINT') => {
+    send('printer.gcode.script', { script: macroName });
 };

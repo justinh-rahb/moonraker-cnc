@@ -15,6 +15,8 @@
         updatePreset,
         // Filament
         updateFilamentConfig,
+        // Print Control
+        updatePrintControlConfig,
     } from "../../../stores/configStore.js";
     import CncButton from "./CncButton.svelte";
     import ColorPicker from "./ColorPicker.svelte";
@@ -171,6 +173,48 @@
                                 on:input={(e) =>
                                     updateFilamentConfig({
                                         tempParam: e.target.value,
+                                    })}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-title">PRINT CONTROL MACROS</div>
+                <div class="presets-container" style="margin-bottom: 25px;">
+                    <div class="macro-row">
+                        <div class="input-col main">
+                            <label>PAUSE MACRO</label>
+                            <input
+                                type="text"
+                                value={$configStore.printControl?.pauseMacro ||
+                                    "PAUSE"}
+                                on:input={(e) =>
+                                    updatePrintControlConfig({
+                                        pauseMacro: e.target.value,
+                                    })}
+                            />
+                        </div>
+                        <div class="input-col main">
+                            <label>RESUME MACRO</label>
+                            <input
+                                type="text"
+                                value={$configStore.printControl?.resumeMacro ||
+                                    "RESUME"}
+                                on:input={(e) =>
+                                    updatePrintControlConfig({
+                                        resumeMacro: e.target.value,
+                                    })}
+                            />
+                        </div>
+                        <div class="input-col main">
+                            <label>CANCEL MACRO</label>
+                            <input
+                                type="text"
+                                value={$configStore.printControl?.cancelMacro ||
+                                    "CANCEL_PRINT"}
+                                on:input={(e) =>
+                                    updatePrintControlConfig({
+                                        cancelMacro: e.target.value,
                                     })}
                             />
                         </div>

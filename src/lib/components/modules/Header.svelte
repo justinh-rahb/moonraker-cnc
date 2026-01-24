@@ -1,24 +1,14 @@
 <script>
-    import Led from "../ui/Led.svelte";
     import SettingsModal from "../ui/SettingsModal.svelte";
-    import {
-        machineState,
-        emergencyStop,
-    } from "../../../stores/machineStore.js";
+    import { emergencyStop } from "../../../stores/machineStore.js";
     import { configStore } from "../../../stores/configStore.js";
 
     let isSettingsOpen = false;
-
-    // Reactive derived values if needed, or just direct access
-    $: status = $machineState.status;
-    $: isEStop = $machineState.isEmergencyStop;
 </script>
 
 <div class="panel-header">
     <div class="machine-title">{$configStore.title}</div>
-    <div class="status-indicator">
-        <Led color="green" on={status === "STANDBY" && !isEStop} />
-        <span class="status-text">{status}</span>
+    <div class="header-controls">
         <button
             class="settings-btn"
             on:click={() => (isSettingsOpen = true)}
@@ -58,16 +48,10 @@
         text-shadow: 0 0 2px var(--retro-green);
     }
 
-    .status-indicator {
+    .header-controls {
         display: flex;
         gap: 15px;
         align-items: center;
-    }
-
-    .status-text {
-        font-family: "Orbitron", monospace;
-        font-size: 14px;
-        color: var(--retro-green);
     }
 
     .settings-btn {
