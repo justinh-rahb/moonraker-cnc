@@ -127,32 +127,6 @@
             line-height: 1.6;
         }
 
-        .copy-btn {
-            position: absolute;
-            top: 0.75rem;
-            right: 0.75rem;
-            background: var(--bg-panel);
-            border: 1px solid var(--text-green-dim);
-            color: var(--text-green);
-            padding: 0.5rem 1rem;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-        }
-
-        .copy-btn:hover {
-            background: var(--text-green);
-            color: var(--bg-dark);
-            box-shadow: var(--text-green-glow);
-        }
-
-        .copy-btn.copied {
-            background: var(--text-green);
-            color: var(--bg-dark);
-        }
-
         .install-note {
             margin-top: 1rem;
             font-size: 0.85rem;
@@ -321,18 +295,6 @@
 
             .install-box {
                 padding: 1rem;
-                padding-right: 1rem;
-                padding-top: 3rem;
-            }
-
-            .copy-btn {
-                position: relative;
-                top: auto;
-                right: auto;
-                display: block;
-                width: 100%;
-                margin-top: 1rem;
-                text-align: center;
             }
         }
     </style>
@@ -350,8 +312,7 @@
         <section class="install-section">
             <h2 class="section-title">QUICK INSTALL</h2>
             <div class="install-box">
-                <code class="install-command" id="install-cmd">curl -sSL https://justinh-rahb.github.io/moonraker-cnc/install.sh | bash</code>
-                <button class="copy-btn" onclick="copyCommand()">Copy</button>
+                <code class="install-command">curl -sSL https://justinh-rahb.github.io/moonraker-cnc/install.sh | bash</code>
             </div>
             <p class="install-note">
                 Installs to <code>~/retro-cnc-panel</code> with optional nginx configuration.
@@ -415,19 +376,5 @@
         </footer>
     </div>
 
-    <script>
-        function copyCommand() {
-            const cmd = document.getElementById('install-cmd').textContent;
-            navigator.clipboard.writeText(cmd).then(() => {
-                const btn = document.querySelector('.copy-btn');
-                btn.textContent = 'Copied!';
-                btn.classList.add('copied');
-                setTimeout(() => {
-                    btn.textContent = 'Copy';
-                    btn.classList.remove('copied');
-                }, 2000);
-            });
-        }
-    </script>
 </body>
 </html>
