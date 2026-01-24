@@ -15,25 +15,23 @@ const DEFAULT_CONFIG = {
     },
     panels: [
         {
-            id: 'panel-motion',
-            title: 'MOTION',
+            id: 'panel-calibration',
+            title: 'CALIBRATION',
             order: 0,
             macros: [
-                { id: 'macro-1', label: 'Z OFFSET TEST', gcode: 'TEST_Z_OFFSET', color: 'action', order: 0 },
-                { id: 'macro-2', label: 'ZZ OFFSET TEST', gcode: 'TEST_ZZ_OFFSET', color: 'action', order: 1 },
-                { id: 'macro-3', label: 'Z COMPENSATE', gcode: 'Z_COMPENSATE', color: 'action', order: 2 },
-                { id: 'macro-4', label: 'PID EXTRUDER', gcode: 'PID_CALIBRATE HEATER=extruder TARGET=210', color: 'action', order: 3 }
+                { id: 'macro-1', label: 'BED MESH CALIBRATE', gcode: 'BED_MESH_CALIBRATE', color: 'action', order: 0 },
+                { id: 'macro-2', label: 'PROBE CALIBRATE', gcode: 'PROBE_CALIBRATE', color: 'action', order: 1 },
+                { id: 'macro-3', label: 'PID EXTRUDER', gcode: 'PID_EXTRUDER', color: 'home', order: 2 },
+                { id: 'macro-4', label: 'PID BED', gcode: 'PID_BED', color: 'home', order: 3 }
             ]
         },
         {
-            id: 'panel-power',
-            title: 'POWER',
+            id: 'panel-system',
+            title: 'SYSTEM',
             order: 1,
             macros: [
-                { id: 'macro-5', label: 'POWEROFF NOW', gcode: 'M112', color: 'danger', order: 0 },
-                { id: 'macro-6', label: 'POWEROFF CANCEL', gcode: 'M112', color: 'danger', order: 1 },
-                { id: 'macro-7', label: 'FIRMWARE RESTART', gcode: 'FIRMWARE_RESTART', color: 'action', order: 2 },
-                { id: 'macro-8', label: 'SYSTEM INFO', gcode: 'M115', color: 'action', order: 3 }
+                { id: 'macro-5', label: 'FIRMWARE RESTART', gcode: 'FIRMWARE_RESTART', color: 'action', order: 0 },
+                { id: 'macro-6', label: 'SYSTEM INFO', gcode: 'M115', color: 'action', order: 1 }
             ]
         }
     ],
@@ -60,7 +58,7 @@ const migrateConfig = (config) => {
 
     // Migrate old macros array to panels
     if (config.macros && Array.isArray(config.macros)) {
-        const motionMacros = config.macros.slice(0, 4).map((macro, idx) => ({
+        const calibrationMacros = config.macros.slice(0, 4).map((macro, idx) => ({
             id: generateId(),
             label: macro.label || '',
             gcode: macro.gcode || '',
@@ -68,7 +66,7 @@ const migrateConfig = (config) => {
             order: idx
         }));
 
-        const powerMacros = config.macros.slice(4, 8).map((macro, idx) => ({
+        const systemMacros = config.macros.slice(4, 8).map((macro, idx) => ({
             id: generateId(),
             label: macro.label || '',
             gcode: macro.gcode || '',
@@ -80,16 +78,16 @@ const migrateConfig = (config) => {
             ...config,
             panels: [
                 {
-                    id: 'panel-motion',
-                    title: 'MOTION',
+                    id: 'panel-calibration',
+                    title: 'CALIBRATION',
                     order: 0,
-                    macros: motionMacros
+                    macros: calibrationMacros
                 },
                 {
-                    id: 'panel-power',
-                    title: 'POWER',
+                    id: 'panel-system',
+                    title: 'SYSTEM',
                     order: 1,
-                    macros: powerMacros
+                    macros: systemMacros
                 }
             ]
         };
