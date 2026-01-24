@@ -4,11 +4,26 @@
         lastError,
         connect,
     } from "../../../stores/websocket.js";
+    import {
+        configStore,
+        updateServerConfig,
+    } from "../../../stores/configStore.js";
     import CncButton from "./CncButton.svelte";
+    import { onMount } from "svelte";
 
-    // Default to the user's known IP for convenience
+    // Local state for inputs
     let ipAddress = "192.168.2.241";
     let port = "7125";
+    let autoConnect = false;
+
+    // Load from configStore when valid
+    configStore.subscribe((val) => {
+        if (val.server) {
+            ipAddress = val.server.ip;
+            port = val.server.port;
+            autoConnect = val.server.autoConnect;
+        }
+    });
 
     $: fullUrl = `${ipAddress}:${port}`;
     $: state = $connectionState;
@@ -16,12 +31,22 @@
 
     const handleConnect = () => {
         if (state === "connecting") return;
+
+        // Save config
+        updateServerConfig(ipAddress, port, autoConnect);
+
         connect(fullUrl);
     };
 
     const handleKeydown = (e) => {
         if (e.key === "Enter") handleConnect();
     };
+
+    onMount(() => {
+        if (autoConnect) {
+            connect(fullUrl);
+        }
+    });
 </script>
 
 {#if state !== "connected"}
@@ -60,6 +85,13 @@
                         on:keydown={handleKeydown}
                         placeholder="7125"
                     />
+                </div>
+
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" bind:checked={autoConnect} />
+                        AUTOCONNECT ON LOAD
+                    </label>
                 </div>
 
                 <div class="actions">
@@ -152,13 +184,26 @@
         gap: 8px;
     }
 
+    .checkbox-group label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+    }
+
+    .checkbox-group input {
+        width: 20px;
+        height: 20px;
+        padding: 0;
+    }
+
     label {
         color: var(--retro-green);
         font-size: 14px;
         letter-spacing: 1px;
     }
 
-    input {
+    input[type="text"] {
         background: #000;
         border: 2px solid #333;
         color: var(--retro-green);
@@ -169,7 +214,7 @@
         transition: border-color 0.2s;
     }
 
-    input:focus {
+    input[type="text"]:focus {
         border-color: var(--retro-green);
         box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
     }

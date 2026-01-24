@@ -4,6 +4,7 @@
         machineState,
         emergencyStop,
     } from "../../../stores/machineStore.js";
+    import { configStore } from "../../../stores/configStore.js";
 
     // Reactive derived values if needed, or just direct access
     $: status = $machineState.status;
@@ -11,7 +12,7 @@
 </script>
 
 <div class="panel-header">
-    <div class="machine-title">ENDER-3 V3 SE</div>
+    <div class="machine-title">{$configStore.title}</div>
     <div class="status-indicator">
         <Led color="green" on={status === "STANDBY" && !isEStop} />
         <span class="status-text">{status}</span>

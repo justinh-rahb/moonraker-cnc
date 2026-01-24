@@ -3,28 +3,34 @@
     import { machineState } from "../../../stores/machineStore.js";
 
     $: temps = $machineState.temperatures;
+
+    // Sort keys to ensure heater_bed is last or first as preferred, and extruders are ordered
+    $: keys = Object.keys(temps).sort();
+    // You might want a more sophisticated sort (Bed, Extruder, Extruder1...)
 </script>
 
 <PanelModule title="TEMPERATURES">
     <div class="temp-display">
+        {#each keys as key}
+            {#if key === "heater_bed" || key.startsWith("extruder")}
+                <div class="temp-item">
+                    <div class="temp-label">{key.replace("_", " ")}</div>
+                    <div class="temp-current">{temps[key].current}°C</div>
+                    <div class="temp-target">TARGET: {temps[key].target}°C</div>
+                </div>
+            {/if}
+        {/each}
+
+        <!-- Optional: Show MCU/Host temps if desired, separate loop or condition -->
         <div class="temp-item">
-            <div class="temp-label">EXTRUDER</div>
-            <div class="temp-current">{temps.extruder.current}°C</div>
-            <div class="temp-target">TARGET: {temps.extruder.target}°C</div>
-        </div>
-        <div class="temp-item">
-            <div class="temp-label">HEATER BED</div>
-            <div class="temp-current">{temps.heater_bed.current}°C</div>
-            <div class="temp-target">TARGET: {temps.heater_bed.target}°C</div>
-        </div>
-        <div class="temp-item">
-            <div class="temp-label">CPU</div>
-            <div class="temp-current">{temps.cpu.current}°C</div>
+            <div class="temp-label">MCU</div>
+            <div class="temp-current">{temps.mcu?.current || 0}°C</div>
             <div class="temp-target">MONITOR</div>
         </div>
+
         <div class="temp-item">
-            <div class="temp-label">MCU TEMP</div>
-            <div class="temp-current">{temps.mcu.current}°C</div>
+            <div class="temp-label">HOST</div>
+            <div class="temp-current">{temps.cpu?.current || 0}°C</div>
             <div class="temp-target">MONITOR</div>
         </div>
     </div>
