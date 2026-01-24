@@ -33,13 +33,14 @@
     $: isComplete = status === 'COMPLETE';
     $: isError = status === 'ERROR' || status === 'SHUTDOWN';
     $: isCancelled = status === 'CANCELLED';
+    $: isBusy = status === 'BUSY';
 
     // Show controls only when printing or paused
     $: showControls = isPrinting || isPaused;
 
     // Determine LED states
     $: greenOn = isStandby || isComplete;
-    $: orangeOn = isPaused || isPrinting;
+    $: orangeOn = isPaused || isPrinting || isBusy;
     $: redOn = isError || isCancelled;
 
     // Format duration as HH:MM:SS

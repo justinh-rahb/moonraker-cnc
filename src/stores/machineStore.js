@@ -48,6 +48,9 @@ export const machineState = writable({
     // Live motion data (only available during printing)
     liveSpeed: 0,              // mm/s - current toolhead velocity
     liveExtruderVelocity: 0,   // mm/s - current extruder velocity
+
+    // Idle timeout state (for detecting busy during commands)
+    idleState: 'Idle',         // Idle, Printing, Ready
 });
 
 const HISTORY_points = 300; // Keep last ~5-10 mins depending on update rate
@@ -164,6 +167,7 @@ const initializeConnection = async () => {
             'print_stats': ['state', 'filename', 'total_duration', 'print_duration', 'filament_used'],
             'virtual_sdcard': ['progress', 'file_path'],
             'motion_report': ['live_velocity', 'live_extruder_velocity'],
+            'idle_timeout': ['state'],
         };
 
         // Add all temperature objects to subscription
@@ -340,6 +344,18 @@ const updateStateFromStatus = (status) => {
             if (status.print_stats.filament_used !== undefined) {
                 newState.filamentUsed = status.print_stats.filament_used;
             }
+        }
+
+        if (status.idle_timeout) {
+            if (status.idle_timeout.state !== undefined) {
+                newState.idleState = status.idle_timeout.state;
+            }
+        }
+
+        // Determine BUSY state: when idle_timeout is "Printing" but not actually printing a file
+        // This happens during homing, probing, manual moves, macros, etc.
+        if (newState.status === 'STANDBY' && newState.idleState === 'Printing') {
+            newState.status = 'BUSY';
         }
 
         if (status.virtual_sdcard) {
