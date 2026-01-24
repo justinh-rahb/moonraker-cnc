@@ -79,17 +79,13 @@
                         min="0"
                         max="1"
                         step="0.01"
-                        value={dev.type === "pin"
-                            ? dev.value / dev.max
-                            : dev.value}
+                        value={dev.value}
                         on:change={(e) => handleSlide(key, dev, e)}
-                        style="--val: {(dev.type === 'pin'
-                            ? dev.value / dev.max
-                            : dev.value) * 100}%"
+                        style="--val: {dev.value * 100}%"
                     />
                     <span class="value-display">
-                        {#if dev.type === "pin" && dev.max > 1}
-                            {dev.value.toFixed(0)}
+                        {#if dev.max > 1}
+                            {(dev.value * dev.max).toFixed(0)}
                         {:else}
                             {(dev.value * 100).toFixed(0)}%
                         {/if}
