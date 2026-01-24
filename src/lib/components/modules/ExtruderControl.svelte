@@ -10,6 +10,8 @@
         extrude as extrudeCmd,
         updatePressureAdvance,
         updateSmoothTime,
+        loadFilament,
+        unloadFilament,
     } from "../../../stores/machineStore.js";
     import { send } from "../../../stores/websocket.js";
 
@@ -128,6 +130,11 @@
         <CncButton variant="action" on:click={retract}>RETRACT</CncButton>
         <CncButton variant="action" on:click={extrude}>EXTRUDE</CncButton>
     </div>
+
+    <div class="action-buttons filament-actions">
+        <CncButton variant="action" on:click={unloadFilament}>UNLOAD</CncButton>
+        <CncButton variant="action" on:click={loadFilament}>LOAD</CncButton>
+    </div>
 </PanelModule>
 
 <style>
@@ -135,6 +142,17 @@
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .filament-actions {
+        margin-bottom: 0;
+    }
+
+    .filament-actions :global(.cnc-button.action) {
+        background: linear-gradient(180deg, #333 0%, #222 100%);
+        border-color: #444;
+        box-shadow: 0 4px 0 #111;
     }
 
     .control-section {

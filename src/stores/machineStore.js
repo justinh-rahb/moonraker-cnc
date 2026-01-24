@@ -337,7 +337,23 @@ onNotification((method, params) => {
     }
 });
 
+// Filament Management
+export const loadFilament = () => {
+    const s = get(machineState);
+    const amount = s.extrudeAmount;
+    const speed = s.extrudeSpeed * 60; // mm/s to mm/min
+    // Many macros expect DISTANCE or EXTRUDE. We'll use common names.
+    const gcode = `LOAD_FILAMENT DISTANCE=${amount} SPEED=${speed}`;
+    send('printer.gcode.script', { script: gcode });
+};
 
+export const unloadFilament = () => {
+    const s = get(machineState);
+    const amount = s.extrudeAmount;
+    const speed = s.extrudeSpeed * 60; // mm/s to mm/min
+    const gcode = `UNLOAD_FILAMENT DISTANCE=${amount} SPEED=${speed}`;
+    send('printer.gcode.script', { script: gcode });
+};
 // Commands
 export const jog = (axis, direction) => {
     const s = get(machineState);
