@@ -9,13 +9,13 @@ export const machineState = writable({
     // Coordinates (toolhead)
     position: { x: 0.00, y: 0.00, z: 0.00, e: 0.00 },
 
-    // Temperatures
-    temperatures: {
-        extruder: { current: 0, target: 0 },
-        heater_bed: { current: 0, target: 0 },
-        cpu: { current: 0, target: null },
-        mcu: { current: 0, target: null }
-    },
+    // Temperatures - Dynamic map now
+    // format: { [sensorName]: { current: 0, target: 0, label: 'Friendly Name' } }
+    temperatures: {},
+
+    // History for graphing
+    // format: [ { timestamp: 12345, sensors: { [name]: temp } } ]
+    tempHistory: [],
 
     // Multi-Extruder Support
     availableExtruders: [], // Populated on connect
@@ -29,6 +29,8 @@ export const machineState = writable({
     jogDistance: 10,
 });
 
+const HISTORY_points = 300; // Keep last ~5-10 mins depending on update rate
+
 // Helper actions
 export const setJogDistance = (dist) => {
     machineState.update(s => ({ ...s, jogDistance: dist }));
@@ -36,8 +38,6 @@ export const setJogDistance = (dist) => {
 
 export const setActiveExtruder = (extruderName) => {
     machineState.update(s => ({ ...s, activeExtruder: extruderName }));
-    // Ideally send a T-code to printer here too? usually macros handle tool change.
-    // For now we just select which one we are controlling in UI.
 };
 
 // WebSocket Integration
@@ -49,21 +49,39 @@ connectionState.subscribe((state) => {
 
 const initializeConnection = async () => {
     try {
-        // 1. List all objects to find extruders
+        // 1. List all objects to find EVERYTHING temperature related
         const listResponse = await send('printer.objects.list');
         const allObjects = listResponse.objects;
+
+        // Find all interesting temperature objects
+        const tempObjects = allObjects.filter(obj =>
+            obj.startsWith('extruder') ||
+            obj.startsWith('heater_bed') ||
+            obj.startsWith('temperature_sensor') ||
+            obj.startsWith('temperature_fan') ||
+            obj.startsWith('heater_generic')
+        );
+
+        // Found extruders for multi-extruder support
         const foundExtruders = allObjects.filter(obj => obj.startsWith('extruder'));
 
-        // Update state with found extruders (initialize if needed)
+        // Update state with found sensors
         machineState.update(s => {
             const temps = { ...s.temperatures };
-            foundExtruders.forEach(ext => {
-                if (!temps[ext]) temps[ext] = { current: 0, target: 0 };
+            tempObjects.forEach(obj => {
+                if (!temps[obj]) {
+                    temps[obj] = {
+                        current: 0,
+                        target: 0,
+                        // Create a nicer label
+                        label: formatSensorName(obj)
+                    };
+                }
             });
             return {
                 ...s,
+                temperatures: temps,
                 availableExtruders: foundExtruders,
-                // Set active if none set, or if current active is invalid
                 activeExtruder: (s.activeExtruder && foundExtruders.includes(s.activeExtruder))
                     ? s.activeExtruder
                     : foundExtruders[0] || 'extruder'
@@ -73,16 +91,13 @@ const initializeConnection = async () => {
         // 2. Build subscription map
         const subscriptions = {
             toolhead: ['position', 'status', 'print_time', 'homed_axes'],
-            heater_bed: ['temperature', 'target'],
             'gcode_move': ['speed_factor', 'extrude_factor'],
             'print_stats': ['state'],
-            'temperature_sensor mcu_temp': ['temperature'],
-            'temperature_host': ['temperature']
         };
 
-        // Add all found extruders to subscription
-        foundExtruders.forEach(ext => {
-            subscriptions[ext] = ['temperature', 'target'];
+        // Add all temperature objects to subscription
+        tempObjects.forEach(obj => {
+            subscriptions[obj] = ['temperature', 'target'];
         });
 
         // 3. Subscribe
@@ -98,6 +113,28 @@ const initializeConnection = async () => {
     } catch (e) {
         console.error('Failed to initialize printer connection:', e);
     }
+};
+
+const formatSensorName = (rawName) => {
+    // extruder -> EXTRUDER
+    // heater_bed -> BED
+    // temperature_sensor mcu_temp -> MCU TEMP
+    // temperature_fan pi_fan -> PI FAN
+
+    if (rawName === 'heater_bed') return 'BED';
+
+    const parts = rawName.split(' ');
+    // If it has a space, use the second part (the name)
+    if (parts.length > 1) {
+        return parts.slice(1).join(' ').toUpperCase().replace(/_/g, ' ');
+    }
+
+    // Otherwise use the first part, stripping prefixes if needed
+    let name = parts[0];
+    if (name.startsWith('temperature_sensor')) name = name.replace('temperature_sensor_', '');
+    if (name.startsWith('heater_generic')) name = name.replace('heater_generic_', '');
+
+    return name.toUpperCase().replace(/_/g, ' ');
 };
 
 const updateStateFromStatus = (status) => {
@@ -116,23 +153,64 @@ const updateStateFromStatus = (status) => {
             }
         }
 
-        // Handle all extruders dynamically
-        Object.keys(status).forEach(key => {
-            if (key.startsWith('extruder')) {
-                // Ensure the object exists in state
-                if (!newState.temperatures[key]) newState.temperatures[key] = { current: 0, target: 0 };
+        // --- DYNAMIC SENSOR UPDATES ---
+        let hasTempUpdate = false;
+        const currentReadings = {};
 
-                if (status[key].temperature !== undefined) newState.temperatures[key].current = status[key].temperature;
-                if (status[key].target !== undefined) newState.temperatures[key].target = status[key].target;
+        Object.keys(status).forEach(key => {
+            // Check if this key corresponds to one of our tracked sensors
+            if (newState.temperatures[key]) {
+                const sensor = newState.temperatures[key];
+
+                if (status[key].temperature !== undefined) {
+                    sensor.current = status[key].temperature;
+                    currentReadings[key] = status[key].temperature;
+                    hasTempUpdate = true;
+                }
+                if (status[key].target !== undefined) {
+                    sensor.target = status[key].target;
+                }
             }
         });
 
-        if (status.heater_bed) {
-            newState.temperatures.heater_bed = {
-                current: status.heater_bed.temperature,
-                target: status.heater_bed.target
-            };
+        // Update History Buffer
+        if (hasTempUpdate) {
+            const now = Date.now();
+
+            // If we have history, get the last set of readings to fill in gaps
+            const lastEntry = newState.tempHistory.length > 0
+                ? newState.tempHistory[newState.tempHistory.length - 1].sensors
+                : {};
+
+            // Combine last readings with new updates so graph lines don't drop to 0
+            const mergedSensors = { ...lastEntry };
+
+            // Update with any new readings from this batch
+            Object.keys(currentReadings).forEach(k => {
+                mergedSensors[k] = currentReadings[k];
+            });
+
+            // Also for any sensor that didn't report, assume it holds steady for this tick 
+            // OR simpler: just only graph what we have. 
+            // Better: update known current values from state
+            Object.keys(newState.temperatures).forEach(k => {
+                if (newState.temperatures[k].current !== undefined) {
+                    mergedSensors[k] = newState.temperatures[k].current;
+                }
+            });
+
+            newState.tempHistory = [
+                ...newState.tempHistory,
+                { timestamp: now, sensors: mergedSensors }
+            ];
+
+            // Limit buffer size
+            if (newState.tempHistory.length > HISTORY_points) {
+                newState.tempHistory = newState.tempHistory.slice(-HISTORY_points);
+            }
         }
+        // -----------------------------
+
 
         if (status.print_stats) {
             newState.status = status.print_stats.state.toUpperCase();
@@ -164,12 +242,8 @@ export const jog = (axis, direction) => {
     const dist = s.jogDistance;
     const feedrate = 3000; // mm/min
 
-    // Construct simplified G-code for relative move
-    // G91 = relative positioning
-    // G1 = linear move
-    // G90 = absolute positioning (return to default)
+    // Simpler Relative Move
     const gcode = `G91\nG1 ${axis.toUpperCase()}${direction * dist} F${feedrate}\nG90`;
-
     send('printer.gcode.script', { script: gcode });
 };
 
@@ -177,22 +251,8 @@ export const emergencyStop = () => {
     send('printer.emergency_stop');
 };
 
-export const home = async () => {
-    send('printer.gcode.script', { script: "G28" });
-};
-
-export const homeX = async () => {
-    send('printer.gcode.script', { script: "G28 X" });
-};
-
-export const homeY = async () => {
-    send('printer.gcode.script', { script: "G28 Y" });
-};
-
-export const homeZ = async () => {
-    send('printer.gcode.script', { script: "G28 Z" });
-};
-
-export const motorsOff = async () => {
-    send('printer.gcode.script', { script: "M84" });
-};
+export const home = async () => send('printer.gcode.script', { script: "G28" });
+export const homeX = async () => send('printer.gcode.script', { script: "G28 X" });
+export const homeY = async () => send('printer.gcode.script', { script: "G28 Y" });
+export const homeZ = async () => send('printer.gcode.script', { script: "G28 Z" });
+export const motorsOff = async () => send('printer.gcode.script', { script: "M84" });
