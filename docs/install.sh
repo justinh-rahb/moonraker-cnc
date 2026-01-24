@@ -1,6 +1,6 @@
 #!/bin/bash
 # Retro CNC Panel Installer
-# Usage: curl -sSL https://raw.githubusercontent.com/justinh-rahb/moonraker-cnc/main/docs/install.sh | bash
+# Usage: curl -sSL https://justinh-rahb.github.io/moonraker-cnc/install.sh | bash
 
 set -e
 
