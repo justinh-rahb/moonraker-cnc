@@ -36,6 +36,11 @@ const DEFAULT_CONFIG = {
                 { id: 'macro-8', label: 'SYSTEM INFO', gcode: 'M115', color: 'action', order: 3 }
             ]
         }
+    ],
+    tempPresets: [
+        { id: 'pla', name: 'PLA', bed: 60, extruder: 200 },
+        { id: 'petg', name: 'PETG', bed: 80, extruder: 240 },
+        { id: 'abs', name: 'ABS', bed: 100, extruder: 250 }
     ]
 };
 
@@ -83,7 +88,13 @@ const migrateConfig = (config) => {
         };
     }
 
-    return config;
+    return {
+        ...config,
+        tempPresets: config.tempPresets || DEFAULT_CONFIG.tempPresets,
+        panels: [
+            // ... (rest of logic handles panels)
+        ]
+    };
 };
 
 // Load initial config
@@ -265,6 +276,34 @@ export const moveMacro = (sourcePanelId, targetPanelId, macroId, targetIndex = -
 
         return { ...s, panels: finalPanels };
     });
+};
+
+// ============ PRESET MANAGEMENT ============
+
+export const addPreset = () => {
+    configStore.update(s => ({
+        ...s,
+        tempPresets: [
+            ...(s.tempPresets || []),
+            { id: generateId(), name: 'NEW PRESET', bed: 60, extruder: 200 }
+        ]
+    }));
+};
+
+export const deletePreset = (presetId) => {
+    configStore.update(s => ({
+        ...s,
+        tempPresets: s.tempPresets.filter(p => p.id !== presetId)
+    }));
+};
+
+export const updatePreset = (presetId, updates) => {
+    configStore.update(s => ({
+        ...s,
+        tempPresets: s.tempPresets.map(p =>
+            p.id === presetId ? { ...p, ...updates } : p
+        )
+    }));
 };
 
 // Legacy support - kept for backward compatibility with existing components

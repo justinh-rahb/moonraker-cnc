@@ -9,6 +9,10 @@
         addMacroToPanel,
         deleteMacro,
         updateMacro,
+        // Presets
+        addPreset,
+        deletePreset,
+        updatePreset,
     } from "../../../stores/configStore.js";
     import CncButton from "./CncButton.svelte";
     import ColorPicker from "./ColorPicker.svelte";
@@ -43,6 +47,16 @@
 
     const handleDeleteMacro = (panelId, macroId) => {
         deleteMacro(panelId, macroId);
+    };
+
+    const handleCreatePreset = () => {
+        addPreset();
+    };
+
+    const handleDeletePreset = (id) => {
+        if (confirm("Delete this preset?")) {
+            deletePreset(id);
+        }
     };
 </script>
 
@@ -181,6 +195,63 @@
                 <button class="create-panel-btn" on:click={handleCreatePanel}>
                     + CREATE NEW PANEL
                 </button>
+
+                <div class="section-title">TEMPERATURE PRESETS</div>
+
+                <div class="presets-container">
+                    {#each $configStore.tempPresets || [] as preset (preset.id)}
+                        <div class="preset-row">
+                            <div class="input-col main">
+                                <label>PRESET NAME</label>
+                                <input
+                                    type="text"
+                                    value={preset.name}
+                                    on:input={(e) =>
+                                        updatePreset(preset.id, {
+                                            name: e.target.value,
+                                        })}
+                                />
+                            </div>
+                            <div class="input-col small">
+                                <label>BED °C</label>
+                                <input
+                                    type="number"
+                                    value={preset.bed}
+                                    on:input={(e) =>
+                                        updatePreset(preset.id, {
+                                            bed: parseInt(e.target.value) || 0,
+                                        })}
+                                />
+                            </div>
+                            <div class="input-col small">
+                                <label>EXT. °C</label>
+                                <input
+                                    type="number"
+                                    value={preset.extruder}
+                                    on:input={(e) =>
+                                        updatePreset(preset.id, {
+                                            extruder:
+                                                parseInt(e.target.value) || 0,
+                                        })}
+                                />
+                            </div>
+                            <button
+                                class="delete-macro-btn"
+                                on:click={() => handleDeletePreset(preset.id)}
+                                title="Delete Preset"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    {/each}
+
+                    <button
+                        class="add-preset-btn"
+                        on:click={handleCreatePreset}
+                    >
+                        + ADD PRESET
+                    </button>
+                </div>
 
                 <div class="actions">
                     <CncButton variant="action" on:click={save}>
@@ -428,5 +499,36 @@
     .input-group label {
         font-size: 12px;
         color: #666;
+    }
+    .input-col.small {
+        width: 80px;
+        flex: none;
+    }
+
+    .preset-row {
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+        background: #151515;
+        padding: 10px;
+        border: 1px solid #222;
+        margin-bottom: 10px;
+    }
+
+    .add-preset-btn {
+        background: #004400;
+        border: 2px solid #006600;
+        color: var(--retro-green);
+        padding: 10px;
+        font-family: "Orbitron", monospace;
+        font-size: 12px;
+        cursor: pointer;
+        width: 100%;
+        letter-spacing: 1px;
+        margin-bottom: 30px;
+    }
+
+    .add-preset-btn:hover {
+        background: #006600;
     }
 </style>

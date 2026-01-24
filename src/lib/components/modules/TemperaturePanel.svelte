@@ -1,15 +1,17 @@
 <script>
     import PanelModule from "../ui/PanelModule.svelte";
     import { machineState } from "../../../stores/machineStore.js";
+    import { configStore } from "../../../stores/configStore.js";
     import { send } from "../../../stores/websocket.js";
 
     // Dynamic temperature access
     $: temps = $machineState.temperatures;
     $: history = $machineState.tempHistory;
+    $: presets = $configStore.tempPresets || [];
 
     // Step selection
     let tempStep = 10;
-    const steps = [1, 5, 10, 25];
+    const steps = [1, 5, 10, 25, 50];
 
     // List sensors, prioritizing main heaters
     $: keys = Object.keys(temps).sort((a, b) => {
@@ -56,6 +58,20 @@
 
     const cooldownAll = () => {
         send("printer.gcode.script", { script: "TURN_OFF_HEATERS" });
+    };
+
+    const applyPreset = (preset) => {
+        // Set Bed
+        if (preset.bed >= 0) {
+            send("printer.gcode.script", { script: `M140 S${preset.bed}` });
+        }
+
+        // Set Extruder (simplified: just sets the main/first extruder found or defaults to M104 active)
+        if (preset.extruder >= 0) {
+            send("printer.gcode.script", {
+                script: `M104 S${preset.extruder}`,
+            });
+        }
     };
 
     // Color mapping based on type
@@ -173,7 +189,20 @@
             {/each}
         </div>
 
-        <button class="cool-all-btn" on:click={cooldownAll}>M-OFF (ALL)</button>
+        {#if presets.length > 0}
+            <div class="presets-inline">
+                {#each presets as preset}
+                    <button
+                        class="preset-btn"
+                        on:click={() => applyPreset(preset)}
+                    >
+                        <span class="preset-name">{preset.name}</span>
+                    </button>
+                {/each}
+            </div>
+        {/if}
+
+        <button class="cool-all-btn" on:click={cooldownAll}>OFF</button>
     </div>
 
     <div class="graph">
@@ -361,31 +390,35 @@
         align-items: center;
         margin-bottom: 20px;
         background: #0a0a0a;
-        padding: 10px;
+        padding: 5px;
         border: 1px solid #333;
+        overflow-x: auto; /* Handle overflow if too narrow */
     }
 
     .step-selector {
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 3px;
+        flex-shrink: 0;
     }
 
     .step-label {
         font-size: 10px;
         color: #666;
-        margin-right: 5px;
+        margin-right: 2px;
+        white-space: nowrap;
     }
 
     .step-btn {
         background: #1a1a1a;
         border: 1px solid #333;
         color: #666;
-        padding: 4px 8px;
+        padding: 4px 6px;
         font-size: 10px;
         font-family: "Share Tech Mono", monospace;
         cursor: pointer;
-        min-width: 24px;
+        min-width: 20px;
+        text-align: center;
     }
 
     .step-btn.active {
@@ -393,6 +426,37 @@
         color: #000;
         border-color: var(--retro-green);
         font-weight: bold;
+    }
+
+    .presets-inline {
+        display: flex;
+        gap: 5px;
+        margin: 0 10px;
+        flex-shrink: 0;
+    }
+
+    .preset-btn {
+        background: #003300;
+        border: 1px solid #005500;
+        color: #00ff00;
+        padding: 4px 8px;
+        font-family: "Orbitron", sans-serif;
+        font-size: 10px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        letter-spacing: 1px;
+    }
+
+    .preset-btn:hover {
+        background: #005500;
+        border-color: #008800;
+        box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
+    }
+
+    .preset-btn:active {
+        background: #002200;
+        transform: translateY(1px);
     }
 
     .cool-all-btn {
