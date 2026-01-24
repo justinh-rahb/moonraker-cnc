@@ -177,11 +177,15 @@
                                     value={panel.title}
                                     on:input={(e) =>
                                         renamePanel(panel.id, e.target.value)}
+                                    on:keydown={(e) =>
+                                        e.key === "Enter" && e.preventDefault()}
                                     placeholder="Panel Title"
                                 />
                                 <button
-                                    class="delete-panel-btn"
-                                    on:click={() => handleDeletePanel(panel.id)}
+                                    type="button"
+                                    class:delete-panel-btn={true}
+                                    on:click|preventDefault|stopPropagation={() =>
+                                        handleDeletePanel(panel.id)}
                                     title="Delete Panel"
                                 >
                                     🗑️
@@ -238,8 +242,9 @@
                                             />
                                         </div>
                                         <button
+                                            type="button"
                                             class="delete-macro-btn"
-                                            on:click={() =>
+                                            on:click|preventDefault|stopPropagation={() =>
                                                 handleDeleteMacro(
                                                     panel.id,
                                                     macro.id,
@@ -306,8 +311,10 @@
                                 />
                             </div>
                             <button
+                                type="button"
                                 class="delete-macro-btn"
-                                on:click={() => handleDeletePreset(preset.id)}
+                                on:click|preventDefault|stopPropagation={() =>
+                                    handleDeletePreset(preset.id)}
                                 title="Delete Preset"
                             >
                                 ✕
