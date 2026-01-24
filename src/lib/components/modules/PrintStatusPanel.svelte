@@ -12,11 +12,16 @@
 
     // Reactive state values
     $: status = $machineState.status;
-    $: speedFactor = $machineState.speedFactor;
-    $: extrusionFactor = $machineState.extrusionFactor;
     $: printFilename = $machineState.printFilename;
     $: printProgress = $machineState.printProgress;
     $: printDuration = $machineState.printDuration;
+    $: liveSpeed = $machineState.liveSpeed;
+    $: liveExtruderVelocity = $machineState.liveExtruderVelocity;
+
+    // Calculate volumetric flow (mm³/s) assuming 1.75mm filament
+    // Cross-sectional area = π * (1.75/2)² ≈ 2.405 mm²
+    const FILAMENT_CROSS_SECTION = Math.PI * Math.pow(1.75 / 2, 2);
+    $: volumetricFlow = liveExtruderVelocity * FILAMENT_CROSS_SECTION;
 
     // Config values
     $: printControl = $configStore.printControl || { pauseMacro: 'PAUSE', resumeMacro: 'RESUME', cancelMacro: 'CANCEL_PRINT' };
@@ -123,11 +128,13 @@
         <div class="factors-section">
             <div class="factor-item">
                 <span class="factor-label">SPEED</span>
-                <span class="factor-value">{speedFactor}%</span>
+                <span class="factor-value">{liveSpeed.toFixed(1)}</span>
+                <span class="factor-unit">mm/s</span>
             </div>
             <div class="factor-item">
                 <span class="factor-label">FLOW</span>
-                <span class="factor-value">{extrusionFactor}%</span>
+                <span class="factor-value">{volumetricFlow.toFixed(2)}</span>
+                <span class="factor-unit">mm³/s</span>
             </div>
         </div>
 
@@ -288,6 +295,13 @@
         font-size: 20px;
         font-weight: 700;
         color: var(--retro-orange);
+    }
+
+    .factor-unit {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        color: #666;
+        margin-top: 2px;
     }
 
     /* Control Buttons */

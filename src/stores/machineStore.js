@@ -44,6 +44,10 @@ export const machineState = writable({
     printProgress: 0,
     printDuration: 0,      // seconds elapsed
     filamentUsed: 0,       // mm of filament used
+
+    // Live motion data (only available during printing)
+    liveSpeed: 0,              // mm/s - current toolhead velocity
+    liveExtruderVelocity: 0,   // mm/s - current extruder velocity
 });
 
 const HISTORY_points = 300; // Keep last ~5-10 mins depending on update rate
@@ -159,6 +163,7 @@ const initializeConnection = async () => {
             'gcode_move': ['speed_factor', 'extrude_factor'],
             'print_stats': ['state', 'filename', 'total_duration', 'print_duration', 'filament_used'],
             'virtual_sdcard': ['progress', 'file_path'],
+            'motion_report': ['live_velocity', 'live_extruder_velocity'],
         };
 
         // Add all temperature objects to subscription
@@ -350,6 +355,21 @@ const updateStateFromStatus = (status) => {
         if (status.gcode_move) {
             newState.speedFactor = Math.round(status.gcode_move.speed_factor * 100);
             newState.extrusionFactor = Math.round(status.gcode_move.extrude_factor * 100);
+        }
+
+        if (status.motion_report) {
+            if (status.motion_report.live_velocity !== undefined) {
+                newState.liveSpeed = status.motion_report.live_velocity;
+            }
+            if (status.motion_report.live_extruder_velocity !== undefined) {
+                newState.liveExtruderVelocity = status.motion_report.live_extruder_velocity;
+            }
+        }
+
+        // Reset live values to 0 when not printing
+        if (newState.status !== 'PRINTING') {
+            newState.liveSpeed = 0;
+            newState.liveExtruderVelocity = 0;
         }
 
         return newState;
