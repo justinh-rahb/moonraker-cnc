@@ -13,6 +13,10 @@ export const machineState = writable({
     // format: { [sensorName]: { current: 0, target: 0, label: 'Friendly Name' } }
     temperatures: {},
 
+    // Fans and Output Pins
+    // format: { [name]: { type: 'fan'|'pin', value: 0.0, max: 1.0, label: 'Friendly Name' } }
+    miscDevices: {},
+
     // History for graphing
     // format: [ { timestamp: 12345, sensors: { [name]: temp } } ]
     tempHistory: [],
@@ -49,7 +53,7 @@ connectionState.subscribe((state) => {
 
 const initializeConnection = async () => {
     try {
-        // 1. List all objects to find EVERYTHING temperature related
+        // 1. List all objects to find EVERYTHING temperature/fan/pin related
         const listResponse = await send('printer.objects.list');
         const allObjects = listResponse.objects;
 
@@ -62,10 +66,17 @@ const initializeConnection = async () => {
             obj.startsWith('heater_generic')
         );
 
+        // Find Fans and Pins
+        const miscObjects = allObjects.filter(obj =>
+            obj === 'fan' || // Primary part fan
+            obj.startsWith('fan_generic') ||
+            obj.startsWith('output_pin')
+        );
+
         // Found extruders for multi-extruder support
         const foundExtruders = allObjects.filter(obj => obj.startsWith('extruder'));
 
-        // Update state with found sensors
+        // Update state with found objects
         machineState.update(s => {
             const temps = { ...s.temperatures };
             tempObjects.forEach(obj => {
@@ -78,9 +89,30 @@ const initializeConnection = async () => {
                     };
                 }
             });
+
+            const misc = { ...s.miscDevices };
+            miscObjects.forEach(obj => {
+                const type = obj.startsWith('output_pin') ? 'pin' : 'fan';
+                // Heuristic: If it's an output_pin configured as a fan (has 'fan' in name), 
+                // it likely uses 0-255 scale (often used for mainboard fans on some configs)
+                // Otherwise assume 0-1 for standard pins/LEDs
+                const isFanPin = type === 'pin' && obj.toLowerCase().includes('fan');
+                const max = isFanPin ? 255.0 : 1.0;
+
+                if (!misc[obj]) {
+                    misc[obj] = {
+                        type,
+                        value: 0.0,
+                        max,
+                        label: formatSensorName(obj)
+                    };
+                }
+            });
+
             return {
                 ...s,
                 temperatures: temps,
+                miscDevices: misc,
                 availableExtruders: foundExtruders,
                 activeExtruder: (s.activeExtruder && foundExtruders.includes(s.activeExtruder))
                     ? s.activeExtruder
@@ -98,6 +130,15 @@ const initializeConnection = async () => {
         // Add all temperature objects to subscription
         tempObjects.forEach(obj => {
             subscriptions[obj] = ['temperature', 'target'];
+        });
+
+        // Add fans and pins
+        miscObjects.forEach(obj => {
+            if (obj === 'fan' || obj.startsWith('fan_generic')) {
+                subscriptions[obj] = ['speed'];
+            } else if (obj.startsWith('output_pin')) {
+                subscriptions[obj] = ['value'];
+            }
         });
 
         // 3. Subscribe
@@ -120,8 +161,12 @@ const formatSensorName = (rawName) => {
     // heater_bed -> BED
     // temperature_sensor mcu_temp -> MCU TEMP
     // temperature_fan pi_fan -> PI FAN
+    // fan -> PART FAN
+    // fan_generic case -> CASE
+    // output_pin light -> LIGHT
 
     if (rawName === 'heater_bed') return 'BED';
+    if (rawName === 'fan') return 'PART FAN';
 
     const parts = rawName.split(' ');
     // If it has a space, use the second part (the name)
@@ -133,6 +178,8 @@ const formatSensorName = (rawName) => {
     let name = parts[0];
     if (name.startsWith('temperature_sensor')) name = name.replace('temperature_sensor_', '');
     if (name.startsWith('heater_generic')) name = name.replace('heater_generic_', '');
+    if (name.startsWith('fan_generic')) name = name.replace('fan_generic_', '');
+    if (name.startsWith('output_pin')) name = name.replace('output_pin_', '');
 
     return name.toUpperCase().replace(/_/g, ' ');
 };
@@ -169,6 +216,21 @@ const updateStateFromStatus = (status) => {
                 }
                 if (status[key].target !== undefined) {
                     sensor.target = status[key].target;
+                }
+            }
+
+            // Check if it's a misc device (fan/pin)
+            if (newState.miscDevices[key]) {
+                const dev = newState.miscDevices[key];
+
+                // Fan speed
+                if (status[key].speed !== undefined) {
+                    dev.value = status[key].speed;
+                }
+
+                // Pin value
+                if (status[key].value !== undefined) {
+                    dev.value = status[key].value;
                 }
             }
         });

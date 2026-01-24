@@ -4,6 +4,7 @@
   import ToolheadControl from "./lib/components/modules/ToolheadControl.svelte";
   import ExtruderControl from "./lib/components/modules/ExtruderControl.svelte";
   import TemperaturePanel from "./lib/components/modules/TemperaturePanel.svelte";
+  import MiscPanel from "./lib/components/modules/MiscPanel.svelte";
   import MacroPanel from "./lib/components/modules/MacroPanel.svelte";
   import ConnectionModal from "./lib/components/ui/ConnectionModal.svelte";
   import { configStore } from "./stores/configStore.js";
@@ -28,6 +29,7 @@
     <!-- Right Column -->
     <div class="column">
       <TemperaturePanel />
+      <MiscPanel />
       {#each sortedPanels as panel (panel.id)}
         <MacroPanel {panel} />
       {/each}
