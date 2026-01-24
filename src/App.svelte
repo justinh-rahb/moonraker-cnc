@@ -23,13 +23,13 @@
   <div class="panel-grid">
     <!-- Left Column -->
     <div class="column">
+      <PrintStatusPanel />
       <ToolheadControl />
       <ExtruderControl />
     </div>
 
     <!-- Right Column -->
     <div class="column">
-      <PrintStatusPanel />
       <TemperaturePanel />
       <MiscPanel />
       {#each sortedPanels as panel (panel.id)}
