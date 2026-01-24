@@ -51,6 +51,9 @@ export const machineState = writable({
 
     // Idle timeout state (for detecting busy during commands)
     idleState: 'Idle',         // Idle, Printing, Ready
+
+    // Raw print stats state (for deriving display status)
+    printStatsState: 'standby',
 });
 
 const HISTORY_points = 300; // Keep last ~5-10 mins depending on update rate
@@ -333,7 +336,7 @@ const updateStateFromStatus = (status) => {
 
         if (status.print_stats) {
             if (status.print_stats.state !== undefined) {
-                newState.status = status.print_stats.state.toUpperCase();
+                newState.printStatsState = status.print_stats.state;
             }
             if (status.print_stats.filename !== undefined) {
                 newState.printFilename = status.print_stats.filename;
@@ -352,10 +355,16 @@ const updateStateFromStatus = (status) => {
             }
         }
 
+        // Always derive the display status from the raw states
+        // This ensures status updates correctly when either state changes
+        const rawStatus = newState.printStatsState.toUpperCase();
+
         // Determine BUSY state: when idle_timeout is "Printing" but not actually printing a file
         // This happens during homing, probing, manual moves, macros, etc.
-        if (newState.status === 'STANDBY' && newState.idleState === 'Printing') {
+        if (rawStatus === 'STANDBY' && newState.idleState === 'Printing') {
             newState.status = 'BUSY';
+        } else {
+            newState.status = rawStatus;
         }
 
         if (status.virtual_sdcard) {
