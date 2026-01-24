@@ -88,4 +88,5 @@ jobs:
             --title "Retro CNC Panel v${{ steps.changelog.outputs.version }}" \
             --notes-file release_notes.md \
             --draft \
-            retro-cnc-panel-${{ steps.changelog.outputs.version }}.zip
+            retro-cnc-panel-${{ steps.changelog.outputs.version }}.zip \
+            scripts/install.sh

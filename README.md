@@ -30,7 +30,50 @@ A retro-styled, reactive web interface for controlling 3D printers and CNC machi
 - **Tactile Button Feedback**: Shadow-based 3D press effects
 - **Orbitron Font**: Retro-futuristic typography
 
-## Quick Start
+## Installation
+
+### One-Line Install (Recommended)
+
+The classic Klipper ecosystem approach - pipe curl to bash:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/justinh-rahb/moonraker-cnc/main/scripts/install.sh | bash
+```
+
+This will:
+- Download the latest release
+- Install to `~/retro-cnc-panel`
+- Optionally configure nginx to serve the panel
+
+### Manual Installation
+
+1. Download the latest release from the [Releases](https://github.com/justinh-rahb/moonraker-cnc/releases) page
+2. Extract the zip to your desired location
+3. Serve the files with any web server
+
+Example with Python:
+```bash
+cd ~/retro-cnc-panel
+python3 -m http.server 8080
+```
+
+### Updating
+
+Simply run the installer again - it will backup your existing installation and download the latest version:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/justinh-rahb/moonraker-cnc/main/scripts/install.sh | bash
+```
+
+### Uninstalling
+
+```bash
+curl -sSL https://raw.githubusercontent.com/justinh-rahb/moonraker-cnc/main/scripts/install.sh | bash -s -- --uninstall
+```
+
+## Development
+
+### Quick Start
 
 ```bash
 # Install dependencies
