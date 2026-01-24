@@ -60,35 +60,10 @@
         </div>
     {/if}
 
-    <div class="control-section">
-        <span class="section-label">AMOUNT (mm)</span>
-        <div class="selector-grid">
-            {#each amounts as amt}
-                <button
-                    class="select-btn"
-                    class:active={currentAmount === amt}
-                    on:click={() => setExtrudeAmount(amt)}
-                >
-                    {amt}
-                </button>
-            {/each}
-        </div>
-    </div>
-
-    <div class="control-section">
-        <span class="section-label">SPEED (mm/s)</span>
-        <div class="selector-grid">
-            {#each speeds as spd}
-                <button
-                    class="select-btn"
-                    class:active={currentSpeed === spd}
-                    on:click={() => setExtrudeSpeed(spd)}
-                >
-                    {spd}
-                </button>
-            {/each}
-        </div>
-    </div>
+    <RetroSlider
+        label="EXTRUSION FACTOR ({$machineState.extrusionFactor}%)"
+        bind:value={$machineState.extrusionFactor}
+    />
 
     <div class="divider"></div>
 
@@ -119,10 +94,35 @@
         </div>
     </div>
 
-    <RetroSlider
-        label="EXTRUSION FACTOR ({$machineState.extrusionFactor}%)"
-        bind:value={$machineState.extrusionFactor}
-    />
+    <div class="control-section">
+        <span class="section-label">AMOUNT (mm)</span>
+        <div class="selector-grid">
+            {#each amounts as amt}
+                <button
+                    class="select-btn"
+                    class:active={currentAmount === amt}
+                    on:click={() => setExtrudeAmount(amt)}
+                >
+                    {amt}
+                </button>
+            {/each}
+        </div>
+    </div>
+
+    <div class="control-section">
+        <span class="section-label">SPEED (mm/s)</span>
+        <div class="selector-grid">
+            {#each speeds as spd}
+                <button
+                    class="select-btn"
+                    class:active={currentSpeed === spd}
+                    on:click={() => setExtrudeSpeed(spd)}
+                >
+                    {spd}
+                </button>
+            {/each}
+        </div>
+    </div>
 
     <div class="action-buttons">
         <CncButton variant="action" on:click={retract}>RETRACT</CncButton>
