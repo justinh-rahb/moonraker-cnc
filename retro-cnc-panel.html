@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ender-3 V3 SE - CNC Control Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .machine-panel {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+            border: 8px solid #3a3a3a;
+            border-radius: 2px;
+            box-shadow: 
+                inset 0 2px 10px rgba(0,0,0,0.8),
+                0 8px 30px rgba(0,0,0,0.9),
+                0 0 0 2px #1a1a1a;
+            padding: 30px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(180deg, #0a0a0a 0%, #151515 100%);
+            border: 3px solid #333;
+            box-shadow: inset 0 -2px 5px rgba(255,255,255,0.1);
+        }
+
+        .machine-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: 4px;
+            color: #00ff00;
+            text-shadow: 0 0 2px #00ff00;
+        }
+
+        .status-indicator {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .led {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 3px solid #000;
+            position: relative;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.8);
+        }
+
+        .led.green {
+            background: radial-gradient(circle at 30% 30%, #00ff00, #008800);
+            box-shadow: 
+                inset 0 0 8px rgba(0,0,0,0.8),
+                0 0 5px #00ff00;
+        }
+
+        .emergency-stop {
+            background: #ff0000;
+            color: #fff;
+            border: 4px solid #8b0000;
+            padding: 12px 24px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            font-size: 14px;
+            letter-spacing: 2px;
+            cursor: pointer;
+            box-shadow: 
+                0 4px 0 #8b0000,
+                0 8px 20px rgba(255,0,0,0.5);
+            transition: all 0.1s;
+        }
+
+        .emergency-stop:active {
+            transform: translateY(4px);
+            box-shadow: 
+                0 0 0 #8b0000,
+                0 4px 10px rgba(255,0,0,0.3);
+        }
+
+        .panel-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .module {
+            background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+            border: 4px solid #333;
+            padding: 20px;
+            box-shadow: 
+                inset 0 0 20px rgba(0,0,0,0.5),
+                0 4px 15px rgba(0,0,0,0.7);
+        }
+
+        .module-header {
+            font-family: 'Orbitron', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            color: #00ff00;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #0a0a0a;
+            border-left: 4px solid #00ff00;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .led-display {
+            background: #000;
+            border: 6px solid #2a2a2a;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 
+                inset 0 0 40px rgba(0,255,0,0.1),
+                inset 0 0 10px rgba(0,0,0,0.8);
+            font-family: 'Orbitron', monospace;
+            position: relative;
+        }
+
+        .led-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0,255,0,0.03) 0px,
+                rgba(0,255,0,0.03) 2px,
+                transparent 2px,
+                transparent 4px
+            );
+            pointer-events: none;
+        }
+
+        .axis-readout {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .axis {
+            text-align: center;
+        }
+
+        .axis-label {
+            font-size: 24px;
+            font-weight: 900;
+            color: #ff6600;
+            margin-bottom: 8px;
+        }
+
+        .axis-value {
+            font-size: 32px;
+            color: #00ff00;
+            font-weight: 700;
+            letter-spacing: 3px;
+        }
+
+        .control-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .z-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .cnc-button {
+            background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+            border: 3px solid #4a4a4a;
+            color: #00ff00;
+            padding: 20px;
+            font-family: 'Orbitron', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 
+                0 4px 0 #1a1a1a,
+                0 6px 15px rgba(0,0,0,0.8),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+            transition: all 0.1s;
+        }
+
+        .cnc-button:hover {
+            background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
+            color: #00ff88;
+        }
+
+        .cnc-button:active {
+            transform: translateY(4px);
+            box-shadow: 
+                0 0 0 #1a1a1a,
+                0 2px 8px rgba(0,0,0,0.8),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .cnc-button.arrow {
+            font-size: 24px;
+        }
+
+        .cnc-button.z-up, .cnc-button.z-down {
+            font-size: 20px;
+        }
+
+        .cnc-button.home-button {
+            background: linear-gradient(180deg, #ff6600 0%, #cc5500 100%);
+            color: #000;
+            border-color: #ff8833;
+        }
+
+        .cnc-button.home-button:hover {
+            background: linear-gradient(180deg, #ff7722 0%, #dd6611 100%);
+        }
+
+        .cnc-button.center { 
+            background: #0a0a0a; 
+            cursor: default;
+        }
+
+        .distance-select {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .distance-button {
+            flex: 1;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            color: #00ff00;
+            padding: 12px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .distance-button.active {
+            background: #00ff00;
+            color: #000;
+            border-color: #00ff00;
+            box-shadow: 0 0 20px #00ff00;
+        }
+
+        .temp-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .temp-item {
+            background: #000;
+            border: 3px solid #2a2a2a;
+            padding: 15px;
+            box-shadow: inset 0 0 20px rgba(255,100,0,0.05);
+        }
+
+        .temp-label {
+            font-size: 12px;
+            color: #ff6600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .temp-current {
+            font-size: 28px;
+            color: #ff6600;
+            font-weight: 700;
+        }
+
+        .temp-target {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .graph {
+            background: #000;
+            border: 4px solid #2a2a2a;
+            height: 200px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
+        }
+
+        .graph-grid {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, #0a3a0a 0px, #0a3a0a 1px, transparent 1px, transparent 40px),
+                repeating-linear-gradient(90deg, #0a3a0a 0px, #0a3a0a 1px, transparent 1px, transparent 40px);
+        }
+
+        .graph-line {
+            position: absolute;
+            bottom: 30%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #ff6600;
+            animation: scan 2s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .slider-control {
+            margin-bottom: 20px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            color: #00ff00;
+            font-size: 14px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            background: #0a0a0a;
+            border: 2px solid #333;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: #00ff00;
+            border: 3px solid #008800;
+            cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            background: #00ff00;
+            border: 3px solid #008800;
+            cursor: pointer;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .action-button {
+            background: linear-gradient(180deg, #004400 0%, #003300 100%);
+            border: 3px solid #006600;
+            color: #00ff00;
+            padding: 16px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            font-size: 14px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 
+                0 4px 0 #002200,
+                0 6px 15px rgba(0,100,0,0.5);
+            transition: all 0.1s;
+        }
+
+        .action-button:active {
+            transform: translateY(4px);
+            box-shadow: 
+                0 0 0 #002200,
+                0 2px 8px rgba(0,100,0,0.3);
+        }
+
+        .action-button.danger {
+            background: linear-gradient(180deg, #440000 0%, #330000 100%);
+            border-color: #660000;
+            color: #ff4444;
+            box-shadow: 
+                0 4px 0 #220000,
+                0 6px 15px rgba(100,0,0,0.5);
+        }
+
+        .segment-display {
+            background: #000;
+            border: 4px solid #2a2a2a;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 30px rgba(0,255,0,0.05);
+        }
+
+        .segment-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 48px;
+            font-weight: 900;
+            color: #ff6600;
+            letter-spacing: 8px;
+        }
+
+        @media (max-width: 1200px) {
+            .panel-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0,0,0,0.15) 0px,
+                rgba(0,0,0,0.15) 1px,
+                transparent 1px,
+                transparent 3px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="scanline"></div>
+    
+    <div class="machine-panel">
+        <div class="panel-header">
+            <div class="machine-title">ENDER-3 V3 SE</div>
+            <div class="status-indicator">
+                <div class="led green"></div>
+                <span style="font-family: 'Orbitron', monospace; font-size: 14px;">STANDBY</span>
+                <button class="emergency-stop">⚠ E-STOP</button>
+            </div>
+        </div>
+
+        <div class="panel-grid">
+            <!-- Left Column -->
+            <div style="display: flex; flex-direction: column; gap: 25px;">
+                <!-- Toolhead Control -->
+                <div class="module">
+                    <div class="module-header">▸ TOOLHEAD CONTROL</div>
+                    
+                    <div class="led-display">
+                        <div class="axis-readout">
+                            <div class="axis">
+                                <div class="axis-label">X</div>
+                                <div class="axis-value">0.00</div>
+                            </div>
+                            <div class="axis">
+                                <div class="axis-label">Y</div>
+                                <div class="axis-value">0.00</div>
+                            </div>
+                            <div class="axis">
+                                <div class="axis-label">Z</div>
+                                <div class="axis-value">-0.116</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-pad">
+                        <div></div>
+                        <button class="cnc-button arrow">Y+</button>
+                        <div></div>
+                        
+                        <button class="cnc-button arrow">X-</button>
+                        <button class="cnc-button home-button">HOME</button>
+                        <button class="cnc-button arrow">X+</button>
+                        
+                        <div></div>
+                        <button class="cnc-button arrow">Y-</button>
+                        <div></div>
+                    </div>
+
+                    <div class="z-controls">
+                        <button class="cnc-button z-up">Z+</button>
+                        <button class="cnc-button z-down">Z-</button>
+                    </div>
+
+                    <div class="distance-select">
+                        <button class="distance-button">0.1</button>
+                        <button class="distance-button">1</button>
+                        <button class="distance-button active">10</button>
+                        <button class="distance-button">25</button>
+                        <button class="distance-button">50</button>
+                        <button class="distance-button">100</button>
+                    </div>
+
+                    <div class="slider-control">
+                        <div class="slider-label">
+                            <span>SPEED FACTOR</span>
+                            <span>100%</span>
+                        </div>
+                        <input type="range" class="slider" min="0" max="200" value="100">
+                    </div>
+                </div>
+
+                <!-- Extruder Control -->
+                <div class="module">
+                    <div class="module-header">▸ EXTRUDER</div>
+                    
+                    <div class="segment-display">
+                        <div class="segment-value">100%</div>
+                    </div>
+
+                    <div class="slider-control">
+                        <div class="slider-label">
+                            <span>EXTRUSION FACTOR</span>
+                            <span>100%</span>
+                        </div>
+                        <input type="range" class="slider" min="0" max="200" value="100">
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="action-button">RETRACT</button>
+                        <button class="action-button">EXTRUDE</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div style="display: flex; flex-direction: column; gap: 25px;">
+                <!-- Temperatures -->
+                <div class="module">
+                    <div class="module-header">▸ TEMPERATURES</div>
+                    
+                    <div class="temp-display">
+                        <div class="temp-item">
+                            <div class="temp-label">EXTRUDER</div>
+                            <div class="temp-current">24.8°C</div>
+                            <div class="temp-target">TARGET: 0°C</div>
+                        </div>
+                        <div class="temp-item">
+                            <div class="temp-label">HEATER BED</div>
+                            <div class="temp-current">24.4°C</div>
+                            <div class="temp-target">TARGET: 0°C</div>
+                        </div>
+                        <div class="temp-item">
+                            <div class="temp-label">CPU</div>
+                            <div class="temp-current">58.4°C</div>
+                            <div class="temp-target">MONITOR</div>
+                        </div>
+                        <div class="temp-item">
+                            <div class="temp-label">MCU TEMP</div>
+                            <div class="temp-current">28.9°C</div>
+                            <div class="temp-target">MONITOR</div>
+                        </div>
+                    </div>
+
+                    <div class="graph">
+                        <div class="graph-grid"></div>
+                        <div class="graph-line"></div>
+                    </div>
+                </div>
+
+                <!-- Motion Control -->
+                <div class="module">
+                    <div class="module-header">▸ MOTION</div>
+                    
+                    <div class="action-buttons">
+                        <button class="action-button">Z OFFSET TEST</button>
+                        <button class="action-button">ZZ OFFSET TEST</button>
+                        <button class="action-button">Z COMPENSATE</button>
+                        <button class="action-button">PID EXTRUDER</button>
+                    </div>
+                </div>
+
+                <!-- Power Control -->
+                <div class="module">
+                    <div class="module-header">▸ POWER</div>
+                    
+                    <div class="action-buttons">
+                        <button class="action-button danger">POWEROFF NOW</button>
+                        <button class="action-button danger">POWEROFF CANCEL</button>
+                        <button class="action-button">POWEROFF STATUS</button>
+                        <button class="action-button">SYSTEM INFO</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add interactivity
+        document.querySelectorAll('.cnc-button, .action-button, .distance-button').forEach(button => {
+            button.addEventListener('click', function() {
+                // Visual feedback
+                this.style.transform = 'translateY(4px)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 100);
+            });
+        });
+
+        // Distance button selection
+        document.querySelectorAll('.distance-button').forEach(button => {
+            button.addEventListener('click', function() {
+                document.querySelectorAll('.distance-button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Slider value display
+        document.querySelectorAll('.slider').forEach(slider => {
+            slider.addEventListener('input', function() {
+                const label = this.parentElement.querySelector('.slider-label span:last-child');
+                label.textContent = this.value + '%';
+            });
+        });
+
+        // Emergency stop button
+        document.querySelector('.emergency-stop').addEventListener('click', function() {
+            alert('EMERGENCY STOP ACTIVATED');
+        });
+    </script>
+</body>
+</html>
