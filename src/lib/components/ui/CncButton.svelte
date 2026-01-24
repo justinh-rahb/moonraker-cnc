@@ -68,6 +68,10 @@
         );
         color: #000;
         border-color: #ff8833;
+        padding: 16px;
+        font-size: 16px; /* Equalized font size */
+        letter-spacing: 1px;
+        text-transform: uppercase;
     }
     .cnc-button.home:hover:not(:disabled) {
         background: linear-gradient(180deg, #ff7722 0%, #dd6611 100%);
@@ -88,8 +92,8 @@
     .cnc-button.action {
         background: linear-gradient(180deg, #004400 0%, #003300 100%);
         border: 3px solid #006600;
-        padding: 16px; /* Slightly smaller padding */
-        font-size: 14px;
+        padding: 16px;
+        font-size: 16px; /* Equalized font size */
         letter-spacing: 1px;
         text-transform: uppercase;
         box-shadow:
@@ -108,9 +112,28 @@
         background: linear-gradient(180deg, #440000 0%, #330000 100%);
         border-color: #660000;
         color: #ff4444;
+        padding: 16px;
+        font-size: 16px; /* Equalized font size */
+        letter-spacing: 1px;
+        text-transform: uppercase;
         box-shadow:
             0 4px 0 #220000,
             0 6px 15px rgba(100, 0, 0, 0.5);
+    }
+
+    /* Darkened variant - like move buttons */
+    .cnc-button.dark {
+        background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+        border: 3px solid #4a4a4a;
+        color: var(--retro-green);
+        padding: 16px;
+        font-size: 16px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        box-shadow:
+            0 4px 0 #1a1a1a,
+            0 6px 15px rgba(0, 0, 0, 0.8),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
 
     .cnc-button:disabled {

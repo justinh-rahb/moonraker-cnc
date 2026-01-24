@@ -6,6 +6,7 @@
         { value: "action", label: "Green (Action)", class: "action" },
         { value: "danger", label: "Red (Danger)", class: "danger" },
         { value: "home", label: "Orange (Home)", class: "home" },
+        { value: "dark", label: "Dark", class: "dark" },
     ];
 
     const handleChange = (color) => {
@@ -63,6 +64,12 @@
             var(--retro-orange-dim) 100%
         );
         color: #000;
+    }
+
+    .color-option.dark {
+        background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+        color: var(--retro-green);
+        border-color: #4a4a4a;
     }
 
     .color-option.selected {
