@@ -84,11 +84,7 @@
                         style="--val: {dev.value * 100}%"
                     />
                     <span class="value-display">
-                        {#if dev.max > 1}
-                            {(dev.value * dev.max).toFixed(0)}
-                        {:else}
-                            {(dev.value * 100).toFixed(0)}%
-                        {/if}
+                        {(dev.value * 100).toFixed(0)}%
                     </span>
                 </div>
             </div>
@@ -168,6 +164,10 @@
         outline: none;
         border: 1px solid #333;
         position: relative;
+        /* Dynamic fill track using gradient */
+        background-image: linear-gradient(#552200, #552200);
+        background-repeat: no-repeat;
+        /* background-size is set inline via style="" */
     }
 
     /* Slider Thumb */
@@ -179,19 +179,10 @@
         background: var(--retro-orange);
         cursor: pointer;
         box-shadow: 0 0 5px var(--retro-orange);
-    }
-
-    /* Track Fill Trick (simple version) */
-    input[type="range"]::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        height: 100%;
-        width: var(--val);
-        background: #552200;
-        z-index: 0;
-        pointer-events: none;
+        border: 1px solid #000; /* Add contrast so it sits 'above' */
+        position: relative;
+        z-index: 2; /* Just in case */
+        margin-top: -1px; /* Align if needed, though usually centered */
     }
 
     .empty-state {
