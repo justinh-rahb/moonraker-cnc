@@ -7,6 +7,10 @@
         jog,
         setJogDistance,
         home,
+        homeX,
+        homeY,
+        homeZ,
+        motorsOff,
     } from "../../../stores/machineStore.js";
 
     $: pos = $machineState.position;
@@ -43,17 +47,17 @@
 
     <!-- Jog Controls -->
     <div class="control-pad">
-        <div></div>
+        <CncButton variant="action" on:click={homeX}>X</CncButton>
         <CncButton variant="arrow" on:click={() => jog("y", 1)}>Y+</CncButton>
-        <div></div>
+        <CncButton variant="action" on:click={homeY}>Y</CncButton>
 
         <CncButton variant="arrow" on:click={() => jog("x", -1)}>X-</CncButton>
-        <CncButton variant="home" on:click={home}>HOME</CncButton>
+        <CncButton variant="home" on:click={home}>ALL</CncButton>
         <CncButton variant="arrow" on:click={() => jog("x", 1)}>X+</CncButton>
 
-        <div></div>
+        <CncButton variant="action" on:click={homeZ}>Z</CncButton>
         <CncButton variant="arrow" on:click={() => jog("y", -1)}>Y-</CncButton>
-        <div></div>
+        <CncButton variant="danger" on:click={motorsOff}>M-OFF</CncButton>
     </div>
 
     <!-- Z Controls -->

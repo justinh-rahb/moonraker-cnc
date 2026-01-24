@@ -180,3 +180,19 @@ export const emergencyStop = () => {
 export const home = async () => {
     send('printer.gcode.script', { script: "G28" });
 };
+
+export const homeX = async () => {
+    send('printer.gcode.script', { script: "G28 X" });
+};
+
+export const homeY = async () => {
+    send('printer.gcode.script', { script: "G28 Y" });
+};
+
+export const homeZ = async () => {
+    send('printer.gcode.script', { script: "G28 Z" });
+};
+
+export const motorsOff = async () => {
+    send('printer.gcode.script', { script: "M84" });
+};
