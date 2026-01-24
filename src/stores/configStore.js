@@ -19,21 +19,19 @@ const DEFAULT_CONFIG = {
             title: 'CALIBRATION',
             order: 0,
             macros: [
-                { id: 'macro-1', label: 'PID EXTRUDER', gcode: 'PID_EXTRUDER', color: 'home', order: 0 },
-                { id: 'macro-2', label: 'PID BED', gcode: 'PID_BED', color: 'home', order: 1 },
-                { id: 'macro-3', label: 'BED MESH CALIBRATE', gcode: 'BED_MESH_CALIBRATE', color: 'action', order: 2 },
-                { id: 'macro-4', label: 'PROBE CALIBRATE', gcode: 'PROBE_CALIBRATE', color: 'action', order: 3 }
+                { id: 'macro-1', label: 'BED MESH CALIBRATE', gcode: 'BED_MESH_CALIBRATE', color: 'action', order: 0 },
+                { id: 'macro-2', label: 'PROBE CALIBRATE', gcode: 'PROBE_CALIBRATE', color: 'action', order: 1 },
+                { id: 'macro-3', label: 'PID EXTRUDER', gcode: 'PID_EXTRUDER', color: 'home', order: 2 },
+                { id: 'macro-4', label: 'PID BED', gcode: 'PID_BED', color: 'home', order: 3 }
             ]
         },
         {
-            id: 'panel-power',
-            title: 'POWER',
+            id: 'panel-system',
+            title: 'SYSTEM',
             order: 1,
             macros: [
-                { id: 'macro-5', label: 'POWEROFF NOW', gcode: 'M112', color: 'danger', order: 0 },
-                { id: 'macro-6', label: 'POWEROFF CANCEL', gcode: 'M112', color: 'danger', order: 1 },
-                { id: 'macro-7', label: 'FIRMWARE RESTART', gcode: 'FIRMWARE_RESTART', color: 'action', order: 2 },
-                { id: 'macro-8', label: 'SYSTEM INFO', gcode: 'M115', color: 'action', order: 3 }
+                { id: 'macro-5', label: 'FIRMWARE RESTART', gcode: 'FIRMWARE_RESTART', color: 'action', order: 0 },
+                { id: 'macro-6', label: 'SYSTEM INFO', gcode: 'M115', color: 'action', order: 1 }
             ]
         }
     ],
@@ -68,7 +66,7 @@ const migrateConfig = (config) => {
             order: idx
         }));
 
-        const powerMacros = config.macros.slice(4, 8).map((macro, idx) => ({
+        const systemMacros = config.macros.slice(4, 8).map((macro, idx) => ({
             id: generateId(),
             label: macro.label || '',
             gcode: macro.gcode || '',
@@ -86,10 +84,10 @@ const migrateConfig = (config) => {
                     macros: calibrationMacros
                 },
                 {
-                    id: 'panel-power',
-                    title: 'POWER',
+                    id: 'panel-system',
+                    title: 'SYSTEM',
                     order: 1,
-                    macros: powerMacros
+                    macros: systemMacros
                 }
             ]
         };
