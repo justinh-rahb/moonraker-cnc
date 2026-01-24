@@ -31,6 +31,12 @@ export const machineState = writable({
 
     // Selected options
     jogDistance: 10,
+    extrudeAmount: 10,
+    extrudeSpeed: 5, // mm/s
+
+    // Extruder Tuning
+    pressureAdvance: 0.0,
+    smoothTime: 0.040,
 });
 
 const HISTORY_points = 300; // Keep last ~5-10 mins depending on update rate
@@ -40,8 +46,28 @@ export const setJogDistance = (dist) => {
     machineState.update(s => ({ ...s, jogDistance: dist }));
 };
 
+export const setExtrudeAmount = (amount) => {
+    machineState.update(s => ({ ...s, extrudeAmount: amount }));
+};
+
+export const setExtrudeSpeed = (speed) => {
+    machineState.update(s => ({ ...s, extrudeSpeed: speed }));
+};
+
 export const setActiveExtruder = (extruderName) => {
     machineState.update(s => ({ ...s, activeExtruder: extruderName }));
+};
+
+export const updatePressureAdvance = (val) => {
+    const s = get(machineState);
+    const extruder = s.activeExtruder;
+    send('printer.gcode.script', { script: `SET_PRESSURE_ADVANCE EXTRUDER=${extruder} ADVANCE=${val.toFixed(4)}` });
+};
+
+export const updateSmoothTime = (val) => {
+    const s = get(machineState);
+    const extruder = s.activeExtruder;
+    send('printer.gcode.script', { script: `SET_PRESSURE_ADVANCE EXTRUDER=${extruder} SMOOTH_TIME=${val.toFixed(4)}` });
 };
 
 // WebSocket Integration
@@ -130,6 +156,10 @@ const initializeConnection = async () => {
         // Add all temperature objects to subscription
         tempObjects.forEach(obj => {
             subscriptions[obj] = ['temperature', 'target'];
+            // If it's an extruder, also track tuning
+            if (obj.startsWith('extruder')) {
+                subscriptions[obj].push('pressure_advance', 'smooth_time');
+            }
         });
 
         // Add fans and pins
@@ -216,6 +246,16 @@ const updateStateFromStatus = (status) => {
                 }
                 if (status[key].target !== undefined) {
                     sensor.target = status[key].target;
+                }
+
+                // Track tuning for active extruder
+                if (key === newState.activeExtruder) {
+                    if (status[key].pressure_advance !== undefined) {
+                        newState.pressureAdvance = status[key].pressure_advance;
+                    }
+                    if (status[key].smooth_time !== undefined) {
+                        newState.smoothTime = status[key].smooth_time;
+                    }
                 }
             }
 
@@ -318,3 +358,12 @@ export const homeX = async () => send('printer.gcode.script', { script: "G28 X" 
 export const homeY = async () => send('printer.gcode.script', { script: "G28 Y" });
 export const homeZ = async () => send('printer.gcode.script', { script: "G28 Z" });
 export const motorsOff = async () => send('printer.gcode.script', { script: "M84" });
+
+export const extrude = (direction = 1) => {
+    const s = get(machineState);
+    const amount = s.extrudeAmount;
+    const speed = s.extrudeSpeed * 60; // mm/s to mm/min
+
+    const gcode = `M83\nG1 E${direction * amount} F${speed}\nM82`;
+    send('printer.gcode.script', { script: gcode });
+};
