@@ -38,6 +38,22 @@ export const machineState = writable({
     // Extruder Tuning
     pressureAdvance: 0.0,
     smoothTime: 0.040,
+
+    // Print status
+    printFilename: '',
+    printProgress: 0,
+    printDuration: 0,      // seconds elapsed
+    filamentUsed: 0,       // mm of filament used
+
+    // Live motion data (only available during printing)
+    liveSpeed: 0,              // mm/s - current toolhead velocity
+    liveExtruderVelocity: 0,   // mm/s - current extruder velocity
+
+    // Idle timeout state (for detecting busy during commands)
+    idleState: 'Idle',         // Idle, Printing, Ready
+
+    // Raw print stats state (for deriving display status)
+    printStatsState: 'standby',
 });
 
 const HISTORY_points = 300; // Keep last ~5-10 mins depending on update rate
@@ -151,7 +167,10 @@ const initializeConnection = async () => {
         const subscriptions = {
             toolhead: ['position', 'status', 'print_time', 'homed_axes'],
             'gcode_move': ['speed_factor', 'extrude_factor'],
-            'print_stats': ['state'],
+            'print_stats': ['state', 'filename', 'total_duration', 'print_duration', 'filament_used'],
+            'virtual_sdcard': ['progress', 'file_path'],
+            'motion_report': ['live_velocity', 'live_extruder_velocity'],
+            'idle_timeout': ['state'],
         };
 
         // Add all temperature objects to subscription
@@ -316,12 +335,66 @@ const updateStateFromStatus = (status) => {
 
 
         if (status.print_stats) {
-            newState.status = status.print_stats.state.toUpperCase();
+            if (status.print_stats.state !== undefined) {
+                newState.printStatsState = status.print_stats.state;
+            }
+            if (status.print_stats.filename !== undefined) {
+                newState.printFilename = status.print_stats.filename;
+            }
+            if (status.print_stats.print_duration !== undefined) {
+                newState.printDuration = status.print_stats.print_duration;
+            }
+            if (status.print_stats.filament_used !== undefined) {
+                newState.filamentUsed = status.print_stats.filament_used;
+            }
+        }
+
+        if (status.idle_timeout) {
+            if (status.idle_timeout.state !== undefined) {
+                newState.idleState = status.idle_timeout.state;
+            }
+        }
+
+        // Always derive the display status from the raw states
+        // This ensures status updates correctly when either state changes
+        const rawStatus = newState.printStatsState.toUpperCase();
+
+        // Determine BUSY state: when idle_timeout is "Printing" but not actually printing a file
+        // This happens during homing, probing, manual moves, macros, etc.
+        if (rawStatus === 'STANDBY' && newState.idleState === 'Printing') {
+            newState.status = 'BUSY';
+        } else {
+            newState.status = rawStatus;
+        }
+
+        if (status.virtual_sdcard) {
+            if (status.virtual_sdcard.progress !== undefined) {
+                newState.printProgress = status.virtual_sdcard.progress;
+            }
+            // file_path can also contain filename
+            if (status.virtual_sdcard.file_path !== undefined && !newState.printFilename) {
+                newState.printFilename = status.virtual_sdcard.file_path;
+            }
         }
 
         if (status.gcode_move) {
             newState.speedFactor = Math.round(status.gcode_move.speed_factor * 100);
             newState.extrusionFactor = Math.round(status.gcode_move.extrude_factor * 100);
+        }
+
+        if (status.motion_report) {
+            if (status.motion_report.live_velocity !== undefined) {
+                newState.liveSpeed = status.motion_report.live_velocity;
+            }
+            if (status.motion_report.live_extruder_velocity !== undefined) {
+                newState.liveExtruderVelocity = status.motion_report.live_extruder_velocity;
+            }
+        }
+
+        // Reset live values to 0 when not printing
+        if (newState.status !== 'PRINTING') {
+            newState.liveSpeed = 0;
+            newState.liveExtruderVelocity = 0;
         }
 
         return newState;
@@ -396,4 +469,17 @@ export const extrude = (direction = 1) => {
 
     const gcode = `M83\nG1 E${direction * amount} F${speed}\nM82`;
     send('printer.gcode.script', { script: gcode });
+};
+
+// Print Control
+export const pausePrint = (macroName = 'PAUSE') => {
+    send('printer.gcode.script', { script: macroName });
+};
+
+export const resumePrint = (macroName = 'RESUME') => {
+    send('printer.gcode.script', { script: macroName });
+};
+
+export const cancelPrint = (macroName = 'CANCEL_PRINT') => {
+    send('printer.gcode.script', { script: macroName });
 };

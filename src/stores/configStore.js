@@ -46,6 +46,11 @@ const DEFAULT_CONFIG = {
         distanceParam: 'DISTANCE',
         speedParam: 'SPEED',
         tempParam: 'TEMP'
+    },
+    printControl: {
+        pauseMacro: 'PAUSE',
+        resumeMacro: 'RESUME',
+        cancelMacro: 'CANCEL_PRINT'
     }
 };
 
@@ -145,6 +150,13 @@ export const updateFilamentConfig = (updates) => {
     configStore.update(s => ({
         ...s,
         filament: { ...(s.filament || DEFAULT_CONFIG.filament), ...updates }
+    }));
+};
+
+export const updatePrintControlConfig = (updates) => {
+    configStore.update(s => ({
+        ...s,
+        printControl: { ...(s.printControl || DEFAULT_CONFIG.printControl), ...updates }
     }));
 };
 
