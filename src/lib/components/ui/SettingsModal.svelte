@@ -13,6 +13,8 @@
         addPreset,
         deletePreset,
         updatePreset,
+        // Filament
+        updateFilamentConfig,
     } from "../../../stores/configStore.js";
     import CncButton from "./CncButton.svelte";
     import ColorPicker from "./ColorPicker.svelte";
@@ -93,6 +95,74 @@
                         />
                         AUTOCONNECT ON STARTUP
                     </label>
+                </div>
+
+                <div class="section-title">FILAMENT MACROS</div>
+                <div class="presets-container" style="margin-bottom: 25px;">
+                    <div class="macro-row">
+                        <div class="input-col main">
+                            <label>LOAD MACRO</label>
+                            <input
+                                type="text"
+                                value={$configStore.filament?.loadMacro ||
+                                    "LOAD_FILAMENT"}
+                                on:input={(e) =>
+                                    updateFilamentConfig({
+                                        loadMacro: e.target.value,
+                                    })}
+                            />
+                        </div>
+                        <div class="input-col main">
+                            <label>UNLOAD MACRO</label>
+                            <input
+                                type="text"
+                                value={$configStore.filament?.unloadMacro ||
+                                    "UNLOAD_FILAMENT"}
+                                on:input={(e) =>
+                                    updateFilamentConfig({
+                                        unloadMacro: e.target.value,
+                                    })}
+                            />
+                        </div>
+                    </div>
+                    <div class="macro-row">
+                        <div class="input-col">
+                            <label>DISTANCE PARAM</label>
+                            <input
+                                type="text"
+                                value={$configStore.filament?.distanceParam ||
+                                    "DISTANCE"}
+                                on:input={(e) =>
+                                    updateFilamentConfig({
+                                        distanceParam: e.target.value,
+                                    })}
+                            />
+                        </div>
+                        <div class="input-col">
+                            <label>SPEED PARAM</label>
+                            <input
+                                type="text"
+                                value={$configStore.filament?.speedParam ||
+                                    "SPEED"}
+                                on:input={(e) =>
+                                    updateFilamentConfig({
+                                        speedParam: e.target.value,
+                                    })}
+                            />
+                        </div>
+                        <div class="input-col">
+                            <label>TEMP PARAM</label>
+                            <input
+                                type="text"
+                                value={$configStore.filament?.tempParam ||
+                                    "TEMP"}
+                                on:input={(e) =>
+                                    updateFilamentConfig({
+                                        tempParam: e.target.value,
+                                    })}
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 <div class="section-title">MACRO PANELS</div>

@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
 import { send, onNotification, connectionState } from './websocket.js';
+import { configStore } from './configStore.js';
 
 // Initial state
 export const machineState = writable({
@@ -340,18 +341,31 @@ onNotification((method, params) => {
 // Filament Management
 export const loadFilament = () => {
     const s = get(machineState);
+    const config = get(configStore).filament;
+
     const amount = s.extrudeAmount;
     const speed = s.extrudeSpeed * 60; // mm/s to mm/min
-    // Many macros expect DISTANCE or EXTRUDE. We'll use common names.
-    const gcode = `LOAD_FILAMENT DISTANCE=${amount} SPEED=${speed}`;
+
+    const macro = config.loadMacro || 'LOAD_FILAMENT';
+    const distParam = config.distanceParam || 'DISTANCE';
+    const speedParam = config.speedParam || 'SPEED';
+
+    const gcode = `${macro} ${distParam}=${amount} ${speedParam}=${speed}`;
     send('printer.gcode.script', { script: gcode });
 };
 
 export const unloadFilament = () => {
     const s = get(machineState);
+    const config = get(configStore).filament;
+
     const amount = s.extrudeAmount;
     const speed = s.extrudeSpeed * 60; // mm/s to mm/min
-    const gcode = `UNLOAD_FILAMENT DISTANCE=${amount} SPEED=${speed}`;
+
+    const macro = config.unloadMacro || 'UNLOAD_FILAMENT';
+    const distParam = config.distanceParam || 'DISTANCE';
+    const speedParam = config.speedParam || 'SPEED';
+
+    const gcode = `${macro} ${distParam}=${amount} ${speedParam}=${speed}`;
     send('printer.gcode.script', { script: gcode });
 };
 // Commands

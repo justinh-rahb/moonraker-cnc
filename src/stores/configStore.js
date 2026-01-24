@@ -41,7 +41,14 @@ const DEFAULT_CONFIG = {
         { id: 'pla', name: 'PLA', bed: 60, extruder: 200 },
         { id: 'petg', name: 'PETG', bed: 80, extruder: 240 },
         { id: 'abs', name: 'ABS', bed: 100, extruder: 250 }
-    ]
+    ],
+    filament: {
+        loadMacro: 'LOAD_FILAMENT',
+        unloadMacro: 'UNLOAD_FILAMENT',
+        distanceParam: 'DISTANCE',
+        speedParam: 'SPEED',
+        tempParam: 'TEMP'
+    }
 };
 
 // Migration function to convert old macros array to new panels structure
@@ -134,6 +141,13 @@ export const updateServerConfig = (ip, port, autoConnect) => {
 
 export const updateTitle = (title) => {
     configStore.update(s => ({ ...s, title }));
+};
+
+export const updateFilamentConfig = (updates) => {
+    configStore.update(s => ({
+        ...s,
+        filament: { ...(s.filament || DEFAULT_CONFIG.filament), ...updates }
+    }));
 };
 
 // ============ PANEL MANAGEMENT ============
