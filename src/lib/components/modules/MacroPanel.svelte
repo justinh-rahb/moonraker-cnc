@@ -2,22 +2,27 @@
     import PanelModule from "../ui/PanelModule.svelte";
     import CncButton from "../ui/CncButton.svelte";
     import { send } from "../../../stores/websocket.js";
-    import { configStore } from "../../../stores/configStore.js";
 
-    // Get first 4 macros (mapped to motion panel)
-    $: macros = $configStore.macros.slice(0, 4);
+    export let panel;
+    export let editMode = false;
+
+    // Sort macros by order
+    $: sortedMacros = [...panel.macros].sort((a, b) => a.order - b.order);
 
     const runMacro = (gcode) => {
-        send("printer.gcode.script", { script: gcode });
+        if (!editMode) {
+            send("printer.gcode.script", { script: gcode });
+        }
     };
 </script>
 
-<PanelModule title="MOTION">
+<PanelModule title={panel.title}>
     <div class="action-buttons">
-        {#each macros as macro}
+        {#each sortedMacros as macro (macro.id)}
             <CncButton
-                variant={macro.style || "action"}
+                variant={macro.color || "action"}
                 on:click={() => runMacro(macro.gcode)}
+                disabled={editMode}
             >
                 {macro.label}
             </CncButton>

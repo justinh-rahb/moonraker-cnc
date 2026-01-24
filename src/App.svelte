@@ -4,9 +4,12 @@
   import ToolheadControl from "./lib/components/modules/ToolheadControl.svelte";
   import ExtruderControl from "./lib/components/modules/ExtruderControl.svelte";
   import TemperaturePanel from "./lib/components/modules/TemperaturePanel.svelte";
-  import MotionPanel from "./lib/components/modules/MotionPanel.svelte";
-  import PowerPanel from "./lib/components/modules/PowerPanel.svelte";
+  import MacroPanel from "./lib/components/modules/MacroPanel.svelte";
   import ConnectionModal from "./lib/components/ui/ConnectionModal.svelte";
+  import { configStore } from "./stores/configStore.js";
+
+  // Sort panels by order
+  $: sortedPanels = [...$configStore.panels].sort((a, b) => a.order - b.order);
 </script>
 
 <Scanline />
@@ -25,8 +28,9 @@
     <!-- Right Column -->
     <div class="column">
       <TemperaturePanel />
-      <MotionPanel />
-      <PowerPanel />
+      {#each sortedPanels as panel (panel.id)}
+        <MacroPanel {panel} />
+      {/each}
     </div>
   </div>
 </div>

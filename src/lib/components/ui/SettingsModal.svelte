@@ -1,20 +1,48 @@
 <script>
     import {
         configStore,
-        updateMacro,
         updateTitle,
         updateServerConfig,
+        createPanel,
+        deletePanel,
+        renamePanel,
+        addMacroToPanel,
+        deleteMacro,
+        updateMacro,
     } from "../../../stores/configStore.js";
     import CncButton from "./CncButton.svelte";
+    import ColorPicker from "./ColorPicker.svelte";
 
     export let isOpen = false;
     export let onClose;
 
-    $: macros = $configStore.macros;
+    $: panels = $configStore.panels;
 
     const save = () => {
         // configStore auto-saves on change, so just close
         if (onClose) onClose();
+    };
+
+    const handleCreatePanel = () => {
+        createPanel("NEW PANEL");
+    };
+
+    const handleDeletePanel = (panelId) => {
+        if (confirm("Delete this panel and all its macros?")) {
+            deletePanel(panelId);
+        }
+    };
+
+    const handleAddMacro = (panelId) => {
+        addMacroToPanel(panelId, {
+            label: "NEW MACRO",
+            gcode: "",
+            color: "action",
+        });
+    };
+
+    const handleDeleteMacro = (panelId, macroId) => {
+        deleteMacro(panelId, macroId);
     };
 </script>
 
@@ -53,45 +81,111 @@
                     </label>
                 </div>
 
-                <div class="section-title">MACRO BUTTONS</div>
-                <div class="macro-list">
-                    {#each macros as macro, i}
-                        <div class="macro-row">
-                            <span class="index">#{i + 1}</span>
-                            <div class="input-col">
-                                <label>LABEL</label>
+                <div class="section-title">MACRO PANELS</div>
+
+                <div class="panels-container">
+                    {#each panels as panel (panel.id)}
+                        <div class="panel-section">
+                            <div class="panel-header-row">
                                 <input
                                     type="text"
-                                    bind:value={macro.label}
-                                    on:input={() =>
-                                        updateMacro(
-                                            i,
-                                            macro.label,
-                                            macro.gcode,
-                                        )}
+                                    class="panel-title-input"
+                                    value={panel.title}
+                                    on:input={(e) =>
+                                        renamePanel(panel.id, e.target.value)}
+                                    placeholder="Panel Title"
                                 />
+                                <button
+                                    class="delete-panel-btn"
+                                    on:click={() => handleDeletePanel(panel.id)}
+                                    title="Delete Panel"
+                                >
+                                    🗑️
+                                </button>
                             </div>
-                            <div class="input-col main">
-                                <label>G-CODE COMMAND</label>
-                                <input
-                                    type="text"
-                                    bind:value={macro.gcode}
-                                    on:input={() =>
-                                        updateMacro(
-                                            i,
-                                            macro.label,
-                                            macro.gcode,
-                                        )}
-                                />
+
+                            <div class="macro-list">
+                                {#each panel.macros as macro (macro.id)}
+                                    <div class="macro-row">
+                                        <div class="input-col">
+                                            <label>LABEL</label>
+                                            <input
+                                                type="text"
+                                                value={macro.label}
+                                                on:input={(e) =>
+                                                    updateMacro(
+                                                        panel.id,
+                                                        macro.id,
+                                                        {
+                                                            label: e.target
+                                                                .value,
+                                                        },
+                                                    )}
+                                            />
+                                        </div>
+                                        <div class="input-col main">
+                                            <label>G-CODE COMMAND</label>
+                                            <input
+                                                type="text"
+                                                value={macro.gcode}
+                                                on:input={(e) =>
+                                                    updateMacro(
+                                                        panel.id,
+                                                        macro.id,
+                                                        {
+                                                            gcode: e.target
+                                                                .value,
+                                                        },
+                                                    )}
+                                            />
+                                        </div>
+                                        <div class="input-col">
+                                            <label>COLOR</label>
+                                            <ColorPicker
+                                                selectedColor={macro.color}
+                                                onChange={(color) =>
+                                                    updateMacro(
+                                                        panel.id,
+                                                        macro.id,
+                                                        {
+                                                            color,
+                                                        },
+                                                    )}
+                                            />
+                                        </div>
+                                        <button
+                                            class="delete-macro-btn"
+                                            on:click={() =>
+                                                handleDeleteMacro(
+                                                    panel.id,
+                                                    macro.id,
+                                                )}
+                                            title="Delete Macro"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                {/each}
                             </div>
+
+                            <button
+                                class="add-macro-btn"
+                                on:click={() => handleAddMacro(panel.id)}
+                            >
+                                + ADD MACRO
+                            </button>
                         </div>
                     {/each}
                 </div>
 
+                <button class="create-panel-btn" on:click={handleCreatePanel}>
+                    + CREATE NEW PANEL
+                </button>
+
                 <div class="actions">
-                    <CncButton variant="action" on:click={save}
-                        >SAVE CONFIGURATION</CncButton
-                    >
+                    <CncButton variant="action" on:click={save}>
+                        SAVE CONFIGURATION
+                    </CncButton>
                 </div>
             </div>
         </div>
@@ -114,7 +208,7 @@
     }
 
     .modal-window {
-        width: 800px;
+        width: 900px;
         max-height: 90vh;
         background: var(--bg-module);
         border: 4px solid var(--border-color);
@@ -161,28 +255,72 @@
         margin-bottom: 15px;
         border-bottom: 1px solid #333;
         padding-bottom: 5px;
+        font-size: 14px;
+    }
+
+    .panels-container {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        margin-bottom: 20px;
+    }
+
+    .panel-section {
+        background: #0a0a0a;
+        border: 2px solid #333;
+        padding: 15px;
+    }
+
+    .panel-header-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        align-items: center;
+    }
+
+    .panel-title-input {
+        flex: 1;
+        background: #000;
+        border: 2px solid var(--retro-orange);
+        color: var(--retro-orange);
+        padding: 10px;
+        font-family: "Orbitron", monospace;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .panel-title-input:focus {
+        border-color: var(--retro-green);
+        outline: none;
+    }
+
+    .delete-panel-btn {
+        background: #440000;
+        border: 2px solid #660000;
+        color: #ff4444;
+        padding: 10px 15px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+    .delete-panel-btn:hover {
+        background: #660000;
     }
 
     .macro-list {
         display: flex;
         flex-direction: column;
-        gap: 15px;
-        margin-bottom: 25px;
+        gap: 10px;
+        margin-bottom: 15px;
     }
 
     .macro-row {
         display: flex;
-        gap: 15px;
-        align-items: center;
-        background: #0a0a0a;
+        gap: 10px;
+        align-items: flex-end;
+        background: #151515;
         padding: 10px;
-        border: 1px solid #333;
-    }
-
-    .index {
-        font-family: "Orbitron";
-        color: #666;
-        width: 30px;
+        border: 1px solid #222;
     }
 
     .input-col {
@@ -212,6 +350,58 @@
         outline: none;
     }
 
+    .delete-macro-btn {
+        background: none;
+        border: 1px solid #660000;
+        color: #ff4444;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 14px;
+        align-self: flex-end;
+    }
+
+    .delete-macro-btn:hover {
+        background: #440000;
+    }
+
+    .add-macro-btn {
+        background: #004400;
+        border: 2px solid #006600;
+        color: var(--retro-green);
+        padding: 10px;
+        font-family: "Orbitron", monospace;
+        font-size: 12px;
+        cursor: pointer;
+        width: 100%;
+        letter-spacing: 1px;
+    }
+
+    .add-macro-btn:hover {
+        background: #006600;
+    }
+
+    .create-panel-btn {
+        background: linear-gradient(
+            180deg,
+            var(--retro-orange) 0%,
+            var(--retro-orange-dim) 100%
+        );
+        border: 3px solid #ff8833;
+        color: #000;
+        padding: 15px;
+        font-family: "Orbitron", monospace;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+        letter-spacing: 2px;
+        margin-bottom: 25px;
+    }
+
+    .create-panel-btn:hover {
+        background: linear-gradient(180deg, #ff7722 0%, #dd6611 100%);
+    }
+
     .checkbox-group label {
         display: flex;
         align-items: center;
@@ -227,5 +417,16 @@
         height: 18px;
         padding: 0;
         margin: 0;
+    }
+
+    .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .input-group label {
+        font-size: 12px;
+        color: #666;
     }
 </style>
