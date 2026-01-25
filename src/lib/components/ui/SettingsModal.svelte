@@ -113,6 +113,48 @@
                     </label>
                 </div>
 
+                <div class="section-title">PRINT CONTROL MACROS</div>
+                <div class="presets-container" style="margin-bottom: 25px;">
+                    <div class="macro-row">
+                        <div class="input-col main">
+                            <label>PAUSE MACRO</label>
+                            <input
+                                type="text"
+                                value={$configStore.printControl?.pauseMacro ||
+                                    "PAUSE"}
+                                on:input={(e) =>
+                                    updatePrintControlConfig({
+                                        pauseMacro: e.target.value,
+                                    })}
+                            />
+                        </div>
+                        <div class="input-col main">
+                            <label>RESUME MACRO</label>
+                            <input
+                                type="text"
+                                value={$configStore.printControl?.resumeMacro ||
+                                    "RESUME"}
+                                on:input={(e) =>
+                                    updatePrintControlConfig({
+                                        resumeMacro: e.target.value,
+                                    })}
+                            />
+                        </div>
+                        <div class="input-col main">
+                            <label>CANCEL MACRO</label>
+                            <input
+                                type="text"
+                                value={$configStore.printControl?.cancelMacro ||
+                                    "CANCEL_PRINT"}
+                                on:input={(e) =>
+                                    updatePrintControlConfig({
+                                        cancelMacro: e.target.value,
+                                    })}
+                            />
+                        </div>
+                    </div>
+                </div>
+
                 <div class="section-title">FILAMENT MACROS</div>
                 <div class="presets-container" style="margin-bottom: 25px;">
                     <div class="macro-row">
@@ -181,48 +223,6 @@
                     </div>
                 </div>
 
-                <div class="section-title">PRINT CONTROL MACROS</div>
-                <div class="presets-container" style="margin-bottom: 25px;">
-                    <div class="macro-row">
-                        <div class="input-col main">
-                            <label>PAUSE MACRO</label>
-                            <input
-                                type="text"
-                                value={$configStore.printControl?.pauseMacro ||
-                                    "PAUSE"}
-                                on:input={(e) =>
-                                    updatePrintControlConfig({
-                                        pauseMacro: e.target.value,
-                                    })}
-                            />
-                        </div>
-                        <div class="input-col main">
-                            <label>RESUME MACRO</label>
-                            <input
-                                type="text"
-                                value={$configStore.printControl?.resumeMacro ||
-                                    "RESUME"}
-                                on:input={(e) =>
-                                    updatePrintControlConfig({
-                                        resumeMacro: e.target.value,
-                                    })}
-                            />
-                        </div>
-                        <div class="input-col main">
-                            <label>CANCEL MACRO</label>
-                            <input
-                                type="text"
-                                value={$configStore.printControl?.cancelMacro ||
-                                    "CANCEL_PRINT"}
-                                on:input={(e) =>
-                                    updatePrintControlConfig({
-                                        cancelMacro: e.target.value,
-                                    })}
-                            />
-                        </div>
-                    </div>
-                </div>
-
                 <div class="section-title">CONSOLE SETTINGS</div>
                 <div class="presets-container" style="margin-bottom: 25px;">
                     <div class="checkbox-group">
@@ -256,6 +256,65 @@
                         />
                         <div class="help-text">Number of messages to keep (100-1000)</div>
                     </div>
+                </div>
+
+                <div class="section-title">TEMPERATURE PRESETS</div>
+
+                <div class="presets-container">
+                    {#each $configStore.tempPresets || [] as preset (preset.id)}
+                        <div class="preset-row">
+                            <div class="input-col main">
+                                <label>PRESET NAME</label>
+                                <input
+                                    type="text"
+                                    value={preset.name}
+                                    on:input={(e) =>
+                                        updatePreset(preset.id, {
+                                            name: e.target.value,
+                                        })}
+                                />
+                            </div>
+                            <div class="input-col small">
+                                <label>BED °C</label>
+                                <input
+                                    type="number"
+                                    value={preset.bed}
+                                    on:input={(e) =>
+                                        updatePreset(preset.id, {
+                                            bed: parseInt(e.target.value) || 0,
+                                        })}
+                                />
+                            </div>
+                            <div class="input-col small">
+                                <label>EXT. °C</label>
+                                <input
+                                    type="number"
+                                    value={preset.extruder}
+                                    on:input={(e) =>
+                                        updatePreset(preset.id, {
+                                            extruder:
+                                                parseInt(e.target.value) || 0,
+                                        })}
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                class="delete-macro-btn"
+                                on:click|preventDefault|stopPropagation={() =>
+                                    handleDeletePreset(preset.id)}
+                                title="Delete Preset"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    {/each}
+
+                    <button
+                        class="add-preset-btn"
+                        on:click={handleCreatePreset}
+                    >
+                        + ADD PRESET
+                    </button>
                 </div>
 
                 <div class="section-title">MACRO PANELS</div>
@@ -363,65 +422,6 @@
                 <button class="create-panel-btn" on:click={handleCreatePanel}>
                     + CREATE NEW PANEL
                 </button>
-
-                <div class="section-title">TEMPERATURE PRESETS</div>
-
-                <div class="presets-container">
-                    {#each $configStore.tempPresets || [] as preset (preset.id)}
-                        <div class="preset-row">
-                            <div class="input-col main">
-                                <label>PRESET NAME</label>
-                                <input
-                                    type="text"
-                                    value={preset.name}
-                                    on:input={(e) =>
-                                        updatePreset(preset.id, {
-                                            name: e.target.value,
-                                        })}
-                                />
-                            </div>
-                            <div class="input-col small">
-                                <label>BED °C</label>
-                                <input
-                                    type="number"
-                                    value={preset.bed}
-                                    on:input={(e) =>
-                                        updatePreset(preset.id, {
-                                            bed: parseInt(e.target.value) || 0,
-                                        })}
-                                />
-                            </div>
-                            <div class="input-col small">
-                                <label>EXT. °C</label>
-                                <input
-                                    type="number"
-                                    value={preset.extruder}
-                                    on:input={(e) =>
-                                        updatePreset(preset.id, {
-                                            extruder:
-                                                parseInt(e.target.value) || 0,
-                                        })}
-                                />
-                            </div>
-                            <button
-                                type="button"
-                                class="delete-macro-btn"
-                                on:click|preventDefault|stopPropagation={() =>
-                                    handleDeletePreset(preset.id)}
-                                title="Delete Preset"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    {/each}
-
-                    <button
-                        class="add-preset-btn"
-                        on:click={handleCreatePreset}
-                    >
-                        + ADD PRESET
-                    </button>
-                </div>
 
                 <div class="actions">
                     <CncButton variant="action" on:click={save}>
