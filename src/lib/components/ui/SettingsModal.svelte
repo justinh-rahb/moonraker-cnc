@@ -23,12 +23,10 @@
         addCamera,
         deleteCamera,
         updateCamera,
-        importCamerasFromMoonraker,
         // Import/Export
         exportConfig,
         importConfig,
     } from "../../../stores/configStore.js";
-    import { fetchMoonrakerCameras, availableCameras, isFetchingCameras } from "../../../stores/cameraStore.js";
     import CncButton from "./CncButton.svelte";
     import ColorPicker from "./ColorPicker.svelte";
     import ConfirmDialog from "./ConfirmDialog.svelte";
@@ -95,13 +93,6 @@
         showConfirm("Delete this camera?", () => {
             deleteCamera(id);
         });
-    };
-
-    const handleFetchMoonrakerCameras = async () => {
-        const cameras = await fetchMoonrakerCameras();
-        if (cameras && cameras.length > 0) {
-            importCamerasFromMoonraker(cameras);
-        }
     };
 
     // Import/Export handlers
@@ -512,19 +503,6 @@
                 </button>
 
                 <div class="section-title">CAMERA SETTINGS</div>
-
-                <div class="camera-actions">
-                    <CncButton 
-                        variant="action" 
-                        on:click={handleFetchMoonrakerCameras}
-                        disabled={$isFetchingCameras}
-                    >
-                        {$isFetchingCameras ? 'FETCHING...' : 'FETCH FROM MOONRAKER'}
-                    </CncButton>
-                    {#if $availableCameras.length > 0}
-                        <span class="camera-count">{$availableCameras.length} CAMERA(S) FOUND</span>
-                    {/if}
-                </div>
 
                 <div class="cameras-container">
                     {#each $configStore.cameras || [] as camera (camera.id)}

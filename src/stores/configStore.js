@@ -211,31 +211,6 @@ export const updateCamera = (cameraId, updates) => {
     }));
 };
 
-export const importCamerasFromMoonraker = (moonrakerCameras) => {
-    configStore.update(s => {
-        const existingIds = new Set((s.cameras || []).map(c => c.id));
-        const newCameras = moonrakerCameras
-            .filter(mc => !existingIds.has(mc.uid || mc.name))
-            .map(mc => ({
-                id: mc.uid || generateId(),
-                name: mc.name || 'Camera',
-                enabled: false,
-                streamUrl: mc.stream_url || '',
-                snapshotUrl: mc.snapshot_url || '',
-                aspectRatio: '16:9',
-                flipH: mc.flip_horizontal || false,
-                flipV: mc.flip_vertical || false,
-                rotation: mc.rotation || 0,
-                showFps: false
-            }));
-        
-        return {
-            ...s,
-            cameras: [...(s.cameras || []), ...newCameras]
-        };
-    });
-};
-
 // ============ PANEL MANAGEMENT ============
 
 export const createPanel = (title = 'NEW PANEL') => {
