@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { notificationStore } from './notificationStore.js';
 
 export const connectionState = writable('disconnected'); // disconnected, connecting, connected, error
 export const lastError = writable(null);
@@ -60,6 +61,7 @@ export const connect = (url) => {
                 const { resolve, reject } = pendingRequests.get(data.id);
                 pendingRequests.delete(data.id);
                 if (data.error) {
+                    notificationStore.addError(data.error);
                     reject(data.error);
                 } else {
                     resolve(data.result);
@@ -67,6 +69,16 @@ export const connect = (url) => {
             }
             // Handle Notifications (no ID)
             else if (data.method) {
+                // Monitor for system-wide alerts
+                if (data.method === 'notify_klippy_shutdown') {
+                    notificationStore.setSystemStatus('shutdown');
+                } else if (data.method === 'notify_klippy_disconnected') {
+                     // Maybe treat disconnect same as shutdown/error?
+                     notificationStore.setSystemStatus('error');
+                } else if (data.method === 'notify_klippy_ready') {
+                    notificationStore.setSystemStatus('ready');
+                }
+                
                 eventListeners.forEach(listener => listener(data.method, data.params));
             }
         } catch (e) {

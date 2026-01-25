@@ -1,6 +1,7 @@
 import { writable, get } from 'svelte/store';
 import { send, onNotification, connectionState } from './websocket.js';
 import { configStore } from './configStore.js';
+import { notificationStore } from './notificationStore.js';
 
 // Initial state
 export const machineState = writable({
@@ -96,6 +97,20 @@ connectionState.subscribe((state) => {
 
 const initializeConnection = async () => {
     try {
+        // 0. Check Printer Info for initial system state
+        try {
+            const info = await send('printer.info');
+            if (info && info.state) {
+                if (info.state === 'shutdown' || info.state === 'error') {
+                    notificationStore.setSystemStatus(info.state);
+                } else {
+                    notificationStore.setSystemStatus('ready');
+                }
+            }
+        } catch (e) {
+            console.warn('Could not get printer info', e);
+        }
+
         // 1. List all objects to find EVERYTHING temperature/fan/pin related
         const listResponse = await send('printer.objects.list');
         const allObjects = listResponse.objects;
