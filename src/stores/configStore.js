@@ -56,7 +56,13 @@ const DEFAULT_CONFIG = {
         newestFirst: true,
         maxHistory: 500
     },
-    cameras: []
+    cameras: [],
+    gauges: {
+        maxFlowRate: 30,
+        flowRedline: 20,
+        maxSpeedOverride: null,
+        speedRedlinePercent: 90
+    }
 };
 
 // Migration function to convert old macros array to new panels structure
@@ -169,6 +175,13 @@ export const updateConsoleConfig = (updates) => {
     configStore.update(s => ({
         ...s,
         console: { ...(s.console || DEFAULT_CONFIG.console), ...updates }
+    }));
+};
+
+export const updateGaugeConfig = (updates) => {
+    configStore.update(s => ({
+        ...s,
+        gauges: { ...(s.gauges || DEFAULT_CONFIG.gauges), ...updates }
     }));
 };
 

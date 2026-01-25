@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Retro-styled dial gauges for speed and flow monitoring
+  - Semi-circular SVG gauges with animated needles and color-coded zones
+  - Speed gauge displays live toolhead velocity against machine max velocity
+  - Flow gauge shows volumetric flow rate in mm³/s
+  - Green/orange/red color zones with pulsing animation in critical red zone
+  - Digital readouts with unit labels for precise values
+  - Side-by-side layout in Print Status Panel
+  - Configurable gauge settings in Settings Modal:
+    - Max flow rate (default: 30 mm³/s)
+    - Flow redline threshold (default: 20 mm³/s)
+    - Optional speed max override (defaults to machine max velocity)
+    - Speed redline percentage (default: 90%)
+  - All settings persist via localStorage with config store
 - Layer progress display in Print Status Panel
   - Shows current layer and total layers during printing (e.g., "LAYER: 45/120")
   - Fetches layer count from file metadata on print start
