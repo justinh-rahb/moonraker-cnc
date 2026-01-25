@@ -3,6 +3,9 @@ import { send, onNotification, connectionState } from './websocket.js';
 import { configStore } from './configStore.js';
 import { notificationStore } from './notificationStore.js';
 
+// Debug logging (only in dev mode)
+const DEBUG = import.meta.env.DEV;
+
 // Initial state
 export const machineState = writable({
     status: 'STANDBY',
@@ -61,6 +64,10 @@ export const machineState = writable({
     // Live motion data (only available during printing)
     liveSpeed: 0,              // mm/s - current toolhead velocity
     liveExtruderVelocity: 0,   // mm/s - current extruder velocity
+
+    // Layer progress (only available during printing)
+    currentLayer: 0,
+    totalLayers: 0,
 
     // Idle timeout state (for detecting busy during commands)
     idleState: 'Idle',         // Idle, Printing, Ready
@@ -198,10 +205,11 @@ const initializeConnection = async () => {
         const subscriptions = {
             toolhead: ['position', 'status', 'print_time', 'homed_axes', 'max_velocity', 'max_accel', 'square_corner_velocity', 'max_accel_to_decel', 'minimum_cruise_ratio'],
             'gcode_move': ['speed_factor', 'extrude_factor', 'homing_origin'],
-            'print_stats': ['state', 'filename', 'total_duration', 'print_duration', 'filament_used'],
+            'print_stats': ['state', 'filename', 'total_duration', 'print_duration', 'filament_used', 'info'],
             'virtual_sdcard': ['progress', 'file_path'],
             'motion_report': ['live_velocity', 'live_extruder_velocity'],
             'idle_timeout': ['state'],
+            'display_status': ['message'],
         };
 
         // Add all temperature objects to subscription
@@ -231,6 +239,13 @@ const initializeConnection = async () => {
 
         const status = await send('printer.objects.query', { objects: initialQuery });
         updateStateFromStatus(status.status);
+
+        // If already printing, fetch metadata immediately
+        const currentState = get(machineState);
+        if (currentState.printStatsState === 'printing' && currentState.printFilename) {
+            if (DEBUG) console.log('[DEBUG] Print already in progress, fetching metadata');
+            fetchFileMetadata(currentState.printFilename);
+        }
 
     } catch (e) {
         console.error('Failed to initialize printer connection:', e);
@@ -385,8 +400,16 @@ const updateStateFromStatus = (status) => {
 
 
         if (status.print_stats) {
+            if (DEBUG) console.log('[DEBUG] print_stats received:', JSON.stringify(status.print_stats));
             if (status.print_stats.state !== undefined) {
+                const oldState = newState.printStatsState;
                 newState.printStatsState = status.print_stats.state;
+                
+                // Detect print start transition to fetch file metadata
+                if (oldState !== 'printing' && status.print_stats.state === 'printing' && newState.printFilename) {
+                    if (DEBUG) console.log('[DEBUG] Print starting, fetching metadata for:', newState.printFilename);
+                    fetchFileMetadata(newState.printFilename);
+                }
             }
             if (status.print_stats.filename !== undefined) {
                 newState.printFilename = status.print_stats.filename;
@@ -396,6 +419,15 @@ const updateStateFromStatus = (status) => {
             }
             if (status.print_stats.filament_used !== undefined) {
                 newState.filamentUsed = status.print_stats.filament_used;
+            }
+            // Check for layer info in print_stats
+            if (status.print_stats.info && status.print_stats.info.current_layer !== undefined) {
+                newState.currentLayer = status.print_stats.info.current_layer;
+                if (DEBUG) console.log('[DEBUG] Found current_layer in print_stats.info:', newState.currentLayer);
+            }
+            if (status.print_stats.info && status.print_stats.info.total_layer !== undefined) {
+                newState.totalLayers = status.print_stats.info.total_layer;
+                if (DEBUG) console.log('[DEBUG] Found total_layer in print_stats.info:', newState.totalLayers);
             }
         }
 
@@ -423,6 +455,7 @@ const updateStateFromStatus = (status) => {
         }
 
         if (status.virtual_sdcard) {
+            if (DEBUG) console.log('[DEBUG] virtual_sdcard received:', JSON.stringify(status.virtual_sdcard));
             if (status.virtual_sdcard.progress !== undefined) {
                 newState.printProgress = status.virtual_sdcard.progress;
             }
@@ -454,10 +487,44 @@ const updateStateFromStatus = (status) => {
             }
         }
 
+        // Parse layer information from display_status
+        if (status.display_status) {
+            if (DEBUG) console.log('[DEBUG] display_status received:', JSON.stringify(status.display_status));
+            
+            // Try direct fields first (some Moonraker versions may provide these)
+            if (status.display_status.current_layer !== undefined) {
+                newState.currentLayer = status.display_status.current_layer;
+                if (DEBUG) console.log('[DEBUG] Using current_layer from field:', newState.currentLayer);
+            }
+            if (status.display_status.total_layers !== undefined) {
+                newState.totalLayers = status.display_status.total_layers;
+                if (DEBUG) console.log('[DEBUG] Using total_layers from field:', newState.totalLayers);
+            }
+            
+            // Fallback: parse from message string if direct fields not available
+            // Format often looks like: "M73 P50 L25/100" or similar
+            if (status.display_status.message && !status.display_status.current_layer) {
+                const msg = status.display_status.message;
+                if (DEBUG) console.log('[DEBUG] Parsing message:', msg);
+                const layerMatch = msg.match(/L(\d+)\/(\d+)/);
+                if (layerMatch) {
+                    newState.currentLayer = parseInt(layerMatch[1], 10);
+                    newState.totalLayers = parseInt(layerMatch[2], 10);
+                    if (DEBUG) console.log('[DEBUG] Parsed layers from message:', newState.currentLayer, '/', newState.totalLayers);
+                }
+            }
+        }
+
         // Reset live values to 0 when not printing
         if (newState.status !== 'PRINTING') {
             newState.liveSpeed = 0;
             newState.liveExtruderVelocity = 0;
+            newState.currentLayer = 0;
+            newState.totalLayers = 0;
+        } else if (newState.totalLayers > 0 && newState.currentLayer === 0 && newState.printProgress > 0) {
+            // Estimate current layer from progress if we have total but not current
+            newState.currentLayer = Math.max(1, Math.floor(newState.printProgress * newState.totalLayers));
+            if (DEBUG) console.log('[DEBUG] Estimated current layer from progress:', newState.currentLayer);
         }
 
         return newState;
@@ -504,6 +571,34 @@ export const unloadFilament = () => {
     const gcode = `${macro} ${distParam}=${amount} ${speedParam}=${speed}`;
     send('printer.gcode.script', { script: gcode });
 };
+
+// Fetch file metadata to get layer information
+const fetchFileMetadata = async (filename) => {
+    try {
+        if (DEBUG) console.log('[DEBUG] Fetching metadata for file:', filename);
+        const response = await send('server.files.metadata', { filename });
+        if (DEBUG) console.log('[DEBUG] File metadata received:', JSON.stringify(response));
+        
+        if (response) {
+            // Check various possible locations for layer count
+            const layerCount = response.layer_count || 
+                             response.object_height ||
+                             (response.thumbnails && response.thumbnails.length > 0 ? response.layer_count : null);
+            
+            if (layerCount !== null && layerCount !== undefined) {
+                if (DEBUG) console.log('[DEBUG] Found layer count in metadata:', layerCount);
+                machineState.update(s => ({
+                    ...s,
+                    totalLayers: layerCount,
+                    currentLayer: s.currentLayer || 0
+                }));
+            }
+        }
+    } catch (e) {
+        if (DEBUG) console.warn('[DEBUG] Could not fetch file metadata:', e);
+    }
+};
+
 // Commands
 export const jog = (axis, direction) => {
     const s = get(machineState);

@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Layer progress display in Print Status Panel
+  - Shows current layer and total layers during printing (e.g., "LAYER: 45/120")
+  - Fetches layer count from file metadata on print start
+  - Estimates current layer from print progress percentage
+  - Automatically resets when print completes
 - Build version information injection and display
   - Git commit hash and tag information injected during build process
   - About section in Settings Modal displaying version/commit with GitHub links
@@ -27,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Camera selector buttons integrated into bottom info bar for space efficiency
 
 ### Changed
+- Flow rate display now clamps negative values to zero during retraction moves (prevents confusing negative flow rates)
 - Export settings filename now uses format `<machine title>-<date>.json` instead of hardcoded prefix
 - Page title now dynamically reflects the user's configured machine title from settings
 - Unified notification styling: persistent and dismissable errors now use the same visual style (persistent errors still have pulsing animation)

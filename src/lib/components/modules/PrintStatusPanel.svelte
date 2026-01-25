@@ -28,11 +28,14 @@
     $: printDuration = $machineState.printDuration;
     $: liveSpeed = $machineState.liveSpeed;
     $: liveExtruderVelocity = $machineState.liveExtruderVelocity;
+    $: currentLayer = $machineState.currentLayer;
+    $: totalLayers = $machineState.totalLayers;
 
     // Calculate volumetric flow (mm³/s) assuming 1.75mm filament
     // Cross-sectional area = π * (1.75/2)² ≈ 2.405 mm²
     const FILAMENT_CROSS_SECTION = Math.PI * Math.pow(1.75 / 2, 2);
-    $: volumetricFlow = liveExtruderVelocity * FILAMENT_CROSS_SECTION;
+    // Clamp to zero to prevent showing negative values during retraction
+    $: volumetricFlow = Math.max(0, liveExtruderVelocity * FILAMENT_CROSS_SECTION);
 
     // Config values
     $: printControl = $configStore.printControl || { pauseMacro: 'PAUSE', resumeMacro: 'RESUME', cancelMacro: 'CANCEL_PRINT' };
@@ -192,6 +195,12 @@
                     <span class="info-label">TIME:</span>
                     <span class="info-value">{formatDuration(printDuration)}</span>
                 </div>
+                {#if totalLayers > 0}
+                    <div class="progress-row">
+                        <span class="info-label">LAYER:</span>
+                        <span class="info-value">{currentLayer}/{totalLayers}</span>
+                    </div>
+                {/if}
             </div>
         {/if}
 
