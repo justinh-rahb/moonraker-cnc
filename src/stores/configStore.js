@@ -51,6 +51,10 @@ const DEFAULT_CONFIG = {
         pauseMacro: 'PAUSE',
         resumeMacro: 'RESUME',
         cancelMacro: 'CANCEL_PRINT'
+    },
+    console: {
+        newestFirst: true,
+        maxHistory: 500
     }
 };
 
@@ -157,6 +161,13 @@ export const updatePrintControlConfig = (updates) => {
     configStore.update(s => ({
         ...s,
         printControl: { ...(s.printControl || DEFAULT_CONFIG.printControl), ...updates }
+    }));
+};
+
+export const updateConsoleConfig = (updates) => {
+    configStore.update(s => ({
+        ...s,
+        console: { ...(s.console || DEFAULT_CONFIG.console), ...updates }
     }));
 };
 

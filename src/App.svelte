@@ -8,6 +8,7 @@
   import MacroPanel from "./lib/components/modules/MacroPanel.svelte";
   import PrintStatusPanel from "./lib/components/modules/PrintStatusPanel.svelte";
   import MachineLimitsPanel from "./lib/components/modules/MachineLimitsPanel.svelte";
+  import ConsolePanel from "./lib/components/modules/ConsolePanel.svelte";
   import ConnectionModal from "./lib/components/ui/ConnectionModal.svelte";
   import NotificationArea from "./lib/components/ui/NotificationArea.svelte";
   import { configStore } from "./stores/configStore.js";
@@ -29,6 +30,7 @@
       <PrintStatusPanel />
       <ToolheadControl />
       <ExtruderControl />
+      <ConsolePanel />
     </div>
 
     <!-- Right Column -->

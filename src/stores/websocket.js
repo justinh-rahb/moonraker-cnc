@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { notificationStore } from './notificationStore.js';
+import { consoleStore } from './consoleStore.js';
 
 export const connectionState = writable('disconnected'); // disconnected, connecting, connected, error
 export const lastError = writable(null);
@@ -98,6 +99,11 @@ export const send = (method, params = {}) => {
         if (!socket || socket.readyState !== WebSocket.OPEN) {
             reject(new Error('Socket not connected'));
             return;
+        }
+
+        // Log G-code commands to console
+        if (method === 'printer.gcode.script' && params.script) {
+            consoleStore.addCommand(params.script);
         }
 
         const id = ++requestId;

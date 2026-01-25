@@ -17,6 +17,8 @@
         updateFilamentConfig,
         // Print Control
         updatePrintControlConfig,
+        // Console
+        updateConsoleConfig,
     } from "../../../stores/configStore.js";
     import CncButton from "./CncButton.svelte";
     import ColorPicker from "./ColorPicker.svelte";
@@ -218,6 +220,41 @@
                                     })}
                             />
                         </div>
+                    </div>
+                </div>
+
+                <div class="section-title">CONSOLE SETTINGS</div>
+                <div class="presets-container" style="margin-bottom: 25px;">
+                    <div class="checkbox-group">
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={$configStore.console?.newestFirst ?? true}
+                                on:change={(e) =>
+                                    updateConsoleConfig({
+                                        newestFirst: e.target.checked,
+                                    })}
+                            />
+                            NEWEST MESSAGES FIRST (CHAT STYLE)
+                        </label>
+                        <div class="help-text">
+                            When enabled: Input on top, newest messages appear first.<br />
+                            When disabled: Traditional terminal (input on bottom, oldest first).
+                        </div>
+                    </div>
+                    <div class="input-group" style="margin-top: 15px;">
+                        <label>MAX CONSOLE HISTORY</label>
+                        <input
+                            type="number"
+                            min="100"
+                            max="1000"
+                            value={$configStore.console?.maxHistory ?? 500}
+                            on:input={(e) =>
+                                updateConsoleConfig({
+                                    maxHistory: parseInt(e.target.value) || 500,
+                                })}
+                        />
+                        <div class="help-text">Number of messages to keep (100-1000)</div>
                     </div>
                 </div>
 
@@ -671,5 +708,13 @@
 
     .add-preset-btn:hover {
         background: #006600;
+    }
+
+    .help-text {
+        font-size: 11px;
+        color: #888;
+        font-style: italic;
+        margin-top: 4px;
+        line-height: 1.4;
     }
 </style>
