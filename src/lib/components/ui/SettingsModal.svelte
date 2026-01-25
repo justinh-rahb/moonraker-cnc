@@ -19,6 +19,8 @@
         updatePrintControlConfig,
         // Console
         updateConsoleConfig,
+        // Gauges
+        updateGaugeConfig,
         // Cameras
         addCamera,
         deleteCamera,
@@ -316,6 +318,75 @@
                                         tempParam: e.target.value,
                                     })}
                             />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-title">GAUGE SETTINGS</div>
+                <div class="presets-container" style="margin-bottom: 25px;">
+                    <div class="macro-row">
+                        <div class="input-col">
+                            <label>MAX FLOW RATE (mm³/s)</label>
+                            <input
+                                type="number"
+                                min="1"
+                                max="100"
+                                step="1"
+                                value={$configStore.gauges?.maxFlowRate ?? 30}
+                                on:input={(e) =>
+                                    updateGaugeConfig({
+                                        maxFlowRate: parseFloat(e.target.value) || 30,
+                                    })}
+                            />
+                            <div class="help-text">Maximum value for flow gauge scale</div>
+                        </div>
+                        <div class="input-col">
+                            <label>FLOW REDLINE (mm³/s)</label>
+                            <input
+                                type="number"
+                                min="1"
+                                max="100"
+                                step="1"
+                                value={$configStore.gauges?.flowRedline ?? 20}
+                                on:input={(e) =>
+                                    updateGaugeConfig({
+                                        flowRedline: parseFloat(e.target.value) || 20,
+                                    })}
+                            />
+                            <div class="help-text">Warning threshold for flow gauge</div>
+                        </div>
+                    </div>
+                    <div class="macro-row" style="margin-top: 15px;">
+                        <div class="input-col">
+                            <label>MAX SPEED OVERRIDE (mm/s)</label>
+                            <input
+                                type="number"
+                                min="1"
+                                max="1000"
+                                step="10"
+                                placeholder="Auto (from machine limits)"
+                                value={$configStore.gauges?.maxSpeedOverride ?? ''}
+                                on:input={(e) =>
+                                    updateGaugeConfig({
+                                        maxSpeedOverride: e.target.value ? parseFloat(e.target.value) : null,
+                                    })}
+                            />
+                            <div class="help-text">Leave empty to use machine max velocity</div>
+                        </div>
+                        <div class="input-col">
+                            <label>SPEED REDLINE (%)</label>
+                            <input
+                                type="number"
+                                min="50"
+                                max="100"
+                                step="5"
+                                value={$configStore.gauges?.speedRedlinePercent ?? 90}
+                                on:input={(e) =>
+                                    updateGaugeConfig({
+                                        speedRedlinePercent: parseFloat(e.target.value) || 90,
+                                    })}
+                            />
+                            <div class="help-text">Redline as % of max speed</div>
                         </div>
                     </div>
                 </div>

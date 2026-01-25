@@ -3,6 +3,7 @@
     import Led from "../ui/Led.svelte";
     import CncButton from "../ui/CncButton.svelte";
     import FilePickerModal from "../ui/FilePickerModal.svelte";
+    import RetroGauge from "../ui/RetroGauge.svelte";
     import {
         machineState,
         pausePrint,
@@ -39,6 +40,12 @@
 
     // Config values
     $: printControl = $configStore.printControl || { pauseMacro: 'PAUSE', resumeMacro: 'RESUME', cancelMacro: 'CANCEL_PRINT' };
+    $: gaugeConfig = $configStore.gauges || { maxFlowRate: 30, flowRedline: 20, maxSpeedOverride: null, speedRedlinePercent: 90 };
+    
+    // Gauge calculations
+    $: maxVelocity = $machineState.maxVelocity;
+    $: speedMax = gaugeConfig.maxSpeedOverride || maxVelocity || 200;
+    $: speedRedline = speedMax * (gaugeConfig.speedRedlinePercent / 100);
 
     // Derived status states
     $: isPrinting = status === 'PRINTING';
@@ -204,18 +211,22 @@
             </div>
         {/if}
 
-        <!-- Speed/Flow Info -->
-        <div class="factors-section">
-            <div class="factor-item">
-                <span class="factor-label">SPEED</span>
-                <span class="factor-value">{liveSpeed.toFixed(1)}</span>
-                <span class="factor-unit">mm/s</span>
-            </div>
-            <div class="factor-item">
-                <span class="factor-label">FLOW</span>
-                <span class="factor-value">{volumetricFlow.toFixed(2)}</span>
-                <span class="factor-unit">mm³/s</span>
-            </div>
+        <!-- Speed/Flow Gauges -->
+        <div class="gauges-section">
+            <RetroGauge
+                value={liveSpeed}
+                max={speedMax}
+                redline={speedRedline}
+                label="SPEED"
+                unit="mm/s"
+            />
+            <RetroGauge
+                value={volumetricFlow}
+                max={gaugeConfig.maxFlowRate}
+                redline={gaugeConfig.flowRedline}
+                label="FLOW"
+                unit="mm³/s"
+            />
         </div>
 
         <!-- Controls (only during active print) -->
@@ -422,42 +433,11 @@
         transition: width 0.3s ease;
     }
 
-    /* Factors Section */
-    .factors-section {
+    /* Gauges Section */
+    .gauges-section {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 12px;
-    }
-
-    .factor-item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 12px;
-        background: #0a0a0a;
-        border: 2px solid #333;
-    }
-
-    .factor-label {
-        font-family: "Orbitron", monospace;
-        font-size: 11px;
-        color: #666;
-        letter-spacing: 1px;
-        margin-bottom: 4px;
-    }
-
-    .factor-value {
-        font-family: "Orbitron", monospace;
-        font-size: 20px;
-        font-weight: 700;
-        color: var(--retro-orange);
-    }
-
-    .factor-unit {
-        font-family: "Share Tech Mono", monospace;
-        font-size: 10px;
-        color: #666;
-        margin-top: 2px;
     }
 
     /* Control Buttons */
