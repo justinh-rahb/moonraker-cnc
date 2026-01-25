@@ -18,7 +18,6 @@
     // Smoothed value state (for needle animation)
     let smoothedValue = $state(0);
     let needleElement = $state(null);
-    let activeArcElement = $state(null);
     let initialized = $state(false);
 
     // Exponential Moving Average (EMA) smoothing
@@ -33,15 +32,13 @@
         // When raw value changes, apply EMA smoothing
         const newSmoothed = ALPHA * value + (1 - ALPHA) * smoothedValue;
         
-        // Animate the smoothed value with spring physics
-        if (needleElement && activeArcElement) {
+        // Animate needle position with spring physics
+        if (needleElement) {
             const newPercentage = max > 0 ? Math.min(Math.max(newSmoothed / max, 0), 1) : 0;
             const newNeedleAngle = startAngle + newPercentage * totalAngle;
             const newNeedleEndX = centerX + (radius - 15) * Math.cos(((newNeedleAngle - 90) * Math.PI) / 180);
             const newNeedleEndY = centerY + (radius - 15) * Math.sin(((newNeedleAngle - 90) * Math.PI) / 180);
-            const newActiveArcPath = describeArc(centerX, centerY, radius, startAngle, newNeedleAngle);
 
-            // Animate needle position with spring physics
             animate(
                 needleElement,
                 { x2: newNeedleEndX, y2: newNeedleEndY },
@@ -52,21 +49,9 @@
                     mass: 0.8
                 }
             );
-
-            // Animate active arc
-            animate(
-                activeArcElement,
-                { d: newActiveArcPath },
-                { 
-                    type: 'spring',
-                    stiffness: 150,
-                    damping: 20,
-                    mass: 0.8
-                }
-            );
         }
         
-        // Update smoothed value for reactive calculations
+        // Update smoothed value for reactive calculations (arc will follow smoothly)
         smoothedValue = newSmoothed;
     });
 
@@ -165,7 +150,6 @@
 
         <!-- Active arc (shows current value) -->
         <path
-            bind:this={activeArcElement}
             d={describeArc(centerX, centerY, radius, startAngle, needleAngle)}
             fill="none"
             stroke={isRedZone ? '#ff0000' : isOrangeZone ? 'var(--retro-orange)' : 'var(--retro-green)'}

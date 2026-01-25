@@ -9,22 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Retro-styled dial gauges for speed and flow monitoring
-  - Semi-circular SVG gauges with smooth spring-physics animated needles and color-coded zones
-  - Motion One animation library for buttery-smooth needle movement with acceleration/deceleration
-  - Exponential Moving Average (EMA) filtering to smooth rapid value changes from high-frequency updates
-  - Spring physics animation (stiffness: 150, damping: 20) for natural needle motion with gentle transitions
-  - Smoothed needle and arc animations while digital readouts remain exact
-  - Speed gauge displays live toolhead velocity against machine max velocity
-  - Flow gauge shows volumetric flow rate in mm³/s
-  - Green/orange/red color zones with pulsing animation in critical red zone
-  - Digital readouts with unit labels for precise values
+  - Semi-circular SVG gauges with smooth spring-physics animated needles and green/orange/red color zones
+  - EMA filtering and Motion One spring animations for buttery-smooth needle movement with natural acceleration/deceleration
+  - Speed gauge displays live toolhead velocity, flow gauge shows volumetric flow rate (mm³/s)
+  - Exact digital readouts with smooth visual indicators
+  - Configurable max rates, redline thresholds, and zone percentages in Settings Modal
   - Side-by-side layout in Print Status Panel
-  - Configurable gauge settings in Settings Modal:
-    - Max flow rate (default: 30 mm³/s)
-    - Flow redline threshold (default: 20 mm³/s)
-    - Optional speed max override (defaults to machine max velocity)
-    - Speed redline percentage (default: 90%)
-  - All settings persist via localStorage with config store
 - Layer progress display in Print Status Panel
   - Shows current layer and total layers during printing (e.g., "LAYER: 45/120")
   - Fetches layer count from file metadata on print start
