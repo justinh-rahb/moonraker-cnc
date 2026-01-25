@@ -34,6 +34,18 @@
     export let isOpen = false;
     export let onClose;
 
+    // Build information injected at build time
+    const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
+    const gitCommit = typeof __GIT_COMMIT__ !== 'undefined' ? __GIT_COMMIT__ : 'dev';
+    const gitTag = typeof __GIT_TAG__ !== 'undefined' ? __GIT_TAG__ : '';
+    
+    // Determine display version (priority: tag > version > commit)
+    const displayVersion = gitTag || appVersion || gitCommit;
+    const repoUrl = 'https://github.com/justinh-rahb/moonraker-cnc';
+    const versionUrl = gitTag 
+        ? `${repoUrl}/releases/tag/${gitTag}`
+        : `${repoUrl}/commit/${gitCommit}`;
+
     $: panels = $configStore.panels;
 
     // Confirm dialog state
@@ -649,6 +661,32 @@
                     + ADD CAMERA
                 </button>
 
+                <div class="about-section">
+                    <div class="section-title">ABOUT</div>
+                    <div class="about-content">
+                        <div class="about-item">
+                            <span class="about-label">VERSION:</span>
+                            <a href={versionUrl} target="_blank" rel="noopener noreferrer" class="version-link">
+                                {displayVersion}
+                            </a>
+                        </div>
+                        {#if gitCommit !== displayVersion && gitCommit !== 'dev'}
+                            <div class="about-item">
+                                <span class="about-label">COMMIT:</span>
+                                <a href="{repoUrl}/commit/{gitCommit}" target="_blank" rel="noopener noreferrer" class="version-link">
+                                    {gitCommit}
+                                </a>
+                            </div>
+                        {/if}
+                        <div class="about-item">
+                            <span class="about-label">REPOSITORY:</span>
+                            <a href={repoUrl} target="_blank" rel="noopener noreferrer" class="version-link">
+                                GitHub
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="actions">
                     <CncButton variant="action" on:click={save}>
                         SAVE CONFIGURATION
@@ -1064,5 +1102,44 @@
     select:focus {
         border-color: var(--retro-green);
         outline: none;
+    }
+
+    /* About Section Styles */
+    .about-section {
+        background: #0a0a0a;
+        border: 2px solid #333;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .about-content {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .about-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 12px;
+    }
+
+    .about-label {
+        color: var(--retro-orange);
+        min-width: 100px;
+    }
+
+    .version-link {
+        color: var(--retro-green);
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition: all 0.2s ease;
+    }
+
+    .version-link:hover {
+        color: #fff;
+        border-bottom-color: var(--retro-green);
     }
 </style>
