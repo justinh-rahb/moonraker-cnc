@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-24
+
+### Added
+- Machine Limits Panel for configuring max velocity, max acceleration, square corner velocity, and cruise ratio/max_accel_to_decel (auto-detects Klipper version)
+- Console Panel with configurable message ordering (newest-first/oldest-first), command history navigation, and adjustable input position
+- File Picker Modal for browsing Klipper's gcode directory with subdirectory navigation, file uploads, and "Send & Print" functionality
+- Z-offset baby-stepping controls on toolhead panel with configurable increments (0.01mm, 0.05mm, 0.1mm, 0.25mm)
+- Notification system for displaying unhandled errors and Klipper state issues with dismissal and status light integration
+- File selection via File bar click when no file is loaded
+
+### Changed
+- Jog increment button styling and behavior
+
 ## [0.2.0] - 2026-01-24
 
 ### Added
