@@ -56,6 +56,7 @@ export const machineState = writable({
     printProgress: 0,
     printDuration: 0,      // seconds elapsed
     filamentUsed: 0,       // mm of filament used
+    lastCompletedFilename: '', // Stores filename when print completes for reprint functionality
 
     // Live motion data (only available during printing)
     liveSpeed: 0,              // mm/s - current toolhead velocity
@@ -416,6 +417,11 @@ const updateStateFromStatus = (status) => {
             newState.status = rawStatus;
         }
 
+        // Store the filename when a print completes for reprint functionality
+        if (rawStatus === 'COMPLETE' && newState.printFilename) {
+            newState.lastCompletedFilename = newState.printFilename;
+        }
+
         if (status.virtual_sdcard) {
             if (status.virtual_sdcard.progress !== undefined) {
                 newState.printProgress = status.virtual_sdcard.progress;
@@ -549,6 +555,16 @@ export const resumePrint = (macroName = 'RESUME') => {
 
 export const cancelPrint = (macroName = 'CANCEL_PRINT') => {
     send('printer.gcode.script', { script: macroName });
+};
+
+// Start a print job
+export const startPrint = async (filename) => {
+    return send('printer.print.start', { filename });
+};
+
+// Clear the completed print status (resets to standby)
+export const clearPrintStatus = () => {
+    send('printer.gcode.script', { script: 'SDCARD_RESET_FILE' });
 };
 
 // Motion Limits Control
