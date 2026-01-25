@@ -7,6 +7,7 @@
   import MiscPanel from "./lib/components/modules/MiscPanel.svelte";
   import MacroPanel from "./lib/components/modules/MacroPanel.svelte";
   import PrintStatusPanel from "./lib/components/modules/PrintStatusPanel.svelte";
+  import MachineLimitsPanel from "./lib/components/modules/MachineLimitsPanel.svelte";
   import ConnectionModal from "./lib/components/ui/ConnectionModal.svelte";
   import NotificationArea from "./lib/components/ui/NotificationArea.svelte";
   import { configStore } from "./stores/configStore.js";
@@ -33,6 +34,7 @@
     <!-- Right Column -->
     <div class="column">
       <TemperaturePanel />
+      <MachineLimitsPanel />
       <MiscPanel />
       {#each sortedPanels as panel (panel.id)}
         <MacroPanel {panel} />
