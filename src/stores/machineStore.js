@@ -49,13 +49,14 @@ export const machineState = writable({
     maxAccel: 0,                   // mm/s²
     squareCornerVelocity: 0,       // mm/s
     maxAccelToDecel: null,         // mm/s² (older Klipper)
-    cruiseRatio: null,             // ratio (newer Klipper, replaces max_accel_to_decel)
+    minimumCruiseRatio: null,      // ratio 0.0-1.0 (newer Klipper, replaces max_accel_to_decel)
 
     // Print status
     printFilename: '',
     printProgress: 0,
     printDuration: 0,      // seconds elapsed
     filamentUsed: 0,       // mm of filament used
+    lastCompletedFilename: '', // Stores filename when print completes for reprint functionality
 
     // Live motion data (only available during printing)
     liveSpeed: 0,              // mm/s - current toolhead velocity
@@ -195,7 +196,7 @@ const initializeConnection = async () => {
 
         // 2. Build subscription map
         const subscriptions = {
-            toolhead: ['position', 'status', 'print_time', 'homed_axes', 'max_velocity', 'max_accel', 'square_corner_velocity', 'max_accel_to_decel', 'cruise_ratio'],
+            toolhead: ['position', 'status', 'print_time', 'homed_axes', 'max_velocity', 'max_accel', 'square_corner_velocity', 'max_accel_to_decel', 'minimum_cruise_ratio'],
             'gcode_move': ['speed_factor', 'extrude_factor', 'homing_origin'],
             'print_stats': ['state', 'filename', 'total_duration', 'print_duration', 'filament_used'],
             'virtual_sdcard': ['progress', 'file_path'],
@@ -289,13 +290,13 @@ const updateStateFromStatus = (status) => {
             if (status.toolhead.square_corner_velocity !== undefined) {
                 newState.squareCornerVelocity = status.toolhead.square_corner_velocity;
             }
-            // Klipper version detection: cruise_ratio vs max_accel_to_decel
-            if (status.toolhead.cruise_ratio !== undefined) {
-                newState.cruiseRatio = status.toolhead.cruise_ratio;
-                newState.maxAccelToDecel = null; // Clear old value
+            // Klipper version detection: minimum_cruise_ratio vs max_accel_to_decel
+            if (status.toolhead.minimum_cruise_ratio !== undefined) {
+                newState.minimumCruiseRatio = status.toolhead.minimum_cruise_ratio;
+                newState.maxAccelToDecel = null; // Clear legacy value
             } else if (status.toolhead.max_accel_to_decel !== undefined) {
                 newState.maxAccelToDecel = status.toolhead.max_accel_to_decel;
-                newState.cruiseRatio = null; // Clear new value
+                newState.minimumCruiseRatio = null; // Clear new value
             }
         }
 
@@ -414,6 +415,11 @@ const updateStateFromStatus = (status) => {
             newState.status = 'BUSY';
         } else {
             newState.status = rawStatus;
+        }
+
+        // Store the filename when a print completes for reprint functionality
+        if (rawStatus === 'COMPLETE' && newState.printFilename) {
+            newState.lastCompletedFilename = newState.printFilename;
         }
 
         if (status.virtual_sdcard) {
@@ -551,11 +557,21 @@ export const cancelPrint = (macroName = 'CANCEL_PRINT') => {
     send('printer.gcode.script', { script: macroName });
 };
 
+// Start a print job
+export const startPrint = async (filename) => {
+    return send('printer.print.start', { filename });
+};
+
+// Clear the completed print status (resets to standby)
+export const clearPrintStatus = () => {
+    send('printer.gcode.script', { script: 'SDCARD_RESET_FILE' });
+};
+
 // Motion Limits Control
 export const setVelocityLimit = (params) => {
-    // params can include: VELOCITY, ACCEL, SQUARE_CORNER_VELOCITY, CRUISE_RATIO, or ACCEL_TO_DECEL
+    // params can include: VELOCITY, ACCEL, SQUARE_CORNER_VELOCITY, MINIMUM_CRUISE_RATIO, or ACCEL_TO_DECEL
     const parts = [];
-    
+
     if (params.velocity !== undefined && params.velocity !== null) {
         parts.push(`VELOCITY=${params.velocity}`);
     }
@@ -565,13 +581,13 @@ export const setVelocityLimit = (params) => {
     if (params.squareCornerVelocity !== undefined && params.squareCornerVelocity !== null) {
         parts.push(`SQUARE_CORNER_VELOCITY=${params.squareCornerVelocity}`);
     }
-    if (params.cruiseRatio !== undefined && params.cruiseRatio !== null) {
-        parts.push(`CRUISE_RATIO=${params.cruiseRatio}`);
+    if (params.minimumCruiseRatio !== undefined && params.minimumCruiseRatio !== null) {
+        parts.push(`MINIMUM_CRUISE_RATIO=${params.minimumCruiseRatio}`);
     }
     if (params.accelToDecel !== undefined && params.accelToDecel !== null) {
         parts.push(`ACCEL_TO_DECEL=${params.accelToDecel}`);
     }
-    
+
     if (parts.length > 0) {
         const gcode = `SET_VELOCITY_LIMIT ${parts.join(' ')}`;
         send('printer.gcode.script', { script: gcode });
