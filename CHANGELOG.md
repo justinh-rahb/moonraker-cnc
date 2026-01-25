@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Build version information injection and display
+  - Git commit hash and tag information injected during build process
+  - About section in Settings Modal displaying version/commit with GitHub links
+  - Automatic fallback to "dev" when git information unavailable
+  - TypeScript declarations for build-time variables
+  - Repository field added to package.json for proper GitHub linking
 - Camera Panel for MJPEG stream display
   - Support for multiple cameras with compact switching buttons
   - Configurable stream URL and snapshot URL per camera
