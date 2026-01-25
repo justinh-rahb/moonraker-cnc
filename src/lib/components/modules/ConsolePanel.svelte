@@ -33,11 +33,9 @@
         unsubscribeNotification = onNotification((method, params) => {
             if (method === "notify_gcode_response") {
                 consoleStore.addResponse(params[0]);
+                scrollToEnd();
             }
         });
-
-        // Focus the input
-        focusInput();
     });
 
     onDestroy(() => {
@@ -46,7 +44,12 @@
         }
     });
 
-    afterUpdate(() => {
+    // Watch for message changes and scroll
+    $: if ($consoleStore.length && scrollContainer) {
+        scrollToEnd();
+    }
+
+    const scrollToEnd = () => {
         // Auto-scroll to the appropriate end
         if (scrollContainer) {
             if (newestFirst) {
@@ -55,7 +58,7 @@
                 scrollContainer.scrollTop = scrollContainer.scrollHeight;
             }
         }
-    });
+    };
 
     const sendCommand = async () => {
         const cmd = commandInput.trim();
