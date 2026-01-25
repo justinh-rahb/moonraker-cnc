@@ -1,7 +1,7 @@
 <script>
     import { onMount, onDestroy, afterUpdate } from "svelte";
     import PanelModule from "../ui/PanelModule.svelte";
-    import { send, onNotification } from "../../../stores/websocket.js";
+    import { send, onNotification, connectionState } from "../../../stores/websocket.js";
     import { configStore, updateConsoleConfig } from "../../../stores/configStore.js";
     import { consoleStore } from "../../../stores/consoleStore.js";
 
@@ -25,17 +25,15 @@
         consoleStore.trimToLimit(maxHistory);
     }
 
+    // Note: gcode responses are automatically sent via notify_gcode_response notifications
+    // No explicit subscription needed - they come automatically when connected
+
     onMount(() => {
         // Subscribe to Klipper console output
         unsubscribeNotification = onNotification((method, params) => {
             if (method === "notify_gcode_response") {
                 consoleStore.addResponse(params[0]);
             }
-        });
-
-        // Subscribe to console output via Moonraker
-        send("server.gcode_store.subscribe", {}).catch((err) => {
-            console.error("Failed to subscribe to gcode store:", err);
         });
 
         // Focus the input
