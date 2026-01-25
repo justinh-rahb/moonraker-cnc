@@ -175,26 +175,25 @@
 
     .select-btn {
         flex: 1;
-        background: #111;
-        border: 1px solid #333;
-        color: #888;
-        padding: 8px 4px;
+        background: #1a1a1a;
+        border: 2px solid #333;
+        color: var(--retro-orange);
+        padding: 10px;
         font-family: "Share Tech Mono", monospace;
-        font-size: 13px;
+        font-size: 12px;
         cursor: pointer;
         transition: all 0.2s;
     }
 
     .select-btn:hover {
         border-color: #555;
-        color: #fff;
     }
 
     .select-btn.active {
-        background: #331100;
+        background: var(--retro-orange);
+        color: #000;
         border-color: var(--retro-orange);
-        color: var(--retro-orange);
-        box-shadow: 0 0 10px rgba(255, 100, 0, 0.2);
+        box-shadow: 0 0 20px var(--retro-orange);
     }
 
     .divider {

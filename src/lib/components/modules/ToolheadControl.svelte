@@ -22,7 +22,7 @@
     $: speed = $machineState.speedFactor;
 
     const distances = [0.1, 1, 10, 25, 50, 100];
-    const zOffsetIncrements = [0.01, 0.05, 0.1, 0.25];
+    const zOffsetIncrements = [0.005, 0.01, 0.05, 0.1];
 </script>
 
 <PanelModule title="TOOLHEAD CONTROL">
@@ -253,8 +253,8 @@
     .increment-button {
         flex: 1;
         background: #1a1a1a;
-        border: 2px solid var(--retro-orange);
-        color: var(--retro-orange);
+        border: 2px solid #333;
+        color: var(--retro-green);
         padding: 10px;
         font-family: "Share Tech Mono", monospace;
         font-size: 12px;
@@ -263,9 +263,9 @@
     }
 
     .increment-button.active {
-        background: var(--retro-orange);
+        background: var(--retro-green);
         color: #000;
-        border-color: var(--retro-orange);
-        box-shadow: 0 0 20px var(--retro-orange);
+        border-color: var(--retro-green);
+        box-shadow: 0 0 20px var(--retro-green);
     }
 </style>
