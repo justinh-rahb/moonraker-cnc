@@ -59,9 +59,16 @@
         selectedFile = null;
 
         try {
-            // Build the full path including root
-            const fullPath = path ? `gcodes/${path}` : "gcodes";
-            const result = await send("server.files.get_directory", { path: fullPath, extended: true });
+            // Moonraker expects root and path as separate parameters
+            // Don't send empty string for path - omit it for root directory
+            const params = { 
+                root: "gcodes", 
+                extended: true 
+            };
+            if (path) {
+                params.path = path;
+            }
+            const result = await send("server.files.get_directory", params);
             
             // The API returns { dirs: [...], files: [...], disk_usage: {...}, root_info: {...} }
             // Filter files to only show gcode files
