@@ -449,8 +449,8 @@ const updateStateFromStatus = (status) => {
             newState.status = rawStatus;
         }
 
-        // Store the filename when a print completes for reprint functionality
-        if (rawStatus === 'COMPLETE' && newState.printFilename) {
+        // Store the filename when a print completes or is cancelled for reprint functionality
+        if ((rawStatus === 'COMPLETE' || rawStatus === 'CANCELLED') && newState.printFilename) {
             newState.lastCompletedFilename = newState.printFilename;
         }
 

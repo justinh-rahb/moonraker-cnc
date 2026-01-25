@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Page title now dynamically reflects the user's configured machine title from settings
 - Unified notification styling: persistent and dismissable errors now use the same visual style (persistent errors still have pulsing animation)
 - Default connection IP now auto-detects from the page hostname (falls back to `localhost` if unavailable) instead of hardcoded `192.168.2.241`
+- Clear and Reprint buttons now also appear when print is CANCELLED (not just COMPLETE)
+  - Preserves filename for reprint functionality on both COMPLETE and CANCELLED statuses
+  - Allows users to clear cancelled prints or immediately restart them
 
 ## [1.0.0] - 2026-01-25
 

@@ -251,6 +251,21 @@
                 </CncButton>
             </div>
         {/if}
+
+        {#if isCancelled}
+            <div class="completion-buttons">
+                <CncButton variant="dark" on:click={handleClear}>
+                    CLEAR
+                </CncButton>
+                <CncButton
+                    variant="action"
+                    on:click={handleReprint}
+                    disabled={isReprinting || !(lastCompletedFilename || printFilename)}
+                >
+                    {isReprinting ? 'STARTING...' : 'REPRINT'}
+                </CncButton>
+            </div>
+        {/if}
     </div>
 
     <!-- File Picker Modal -->
