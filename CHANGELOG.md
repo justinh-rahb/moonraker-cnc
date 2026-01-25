@@ -10,9 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Settings import/export functionality with JSON file download and upload
 - Support for `minimum_cruise_ratio` parameter in Machine Limits Panel for newer Klipper versions (auto-detects and falls back to `max_accel_to_decel` for legacy versions)
+- Clear and Reprint buttons to print status panel when print completes
+  - Clear button resets print status to idle state
+  - Reprint button immediately restarts the same print job
+  - Track lastCompletedFilename in machineStore for reprint functionality
+  - Add startPrint and clearPrintStatus functions to machineStore
 
 ### Changed
 - Rearranged settings modal sections to align with main UI panel order (Print Control, Filament, Console, Temperature Presets, Macro Panels)
+- Improved installer to automatically serve files with Python http.server when nginx is unavailable or declined
+  - Better nginx prompts with clearer messaging
+  - Automatic fallback to Python file server
+  - Provides immediate access URL and server management commands
+  - Uninstaller now also stops running Python servers
 
 ### Fixed
 - Console panel scroll to bottom behavior for proper auto-scrolling

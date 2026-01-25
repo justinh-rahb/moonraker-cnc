@@ -108,33 +108,25 @@ download_and_install() {
     print_success "Installation complete"
 }
 
-setup_nginx() {
-    if ! command -v nginx &> /dev/null; then
-        print_warning "nginx not found, skipping web server configuration"
-        echo "  You can manually serve the files from: ${INSTALL_DIR}"
-        return
-    fi
+setup_serving() {
+    local port=8080
+    local use_nginx=false
 
-    if [ ! -d "$NGINX_AVAILABLE" ]; then
-        print_warning "nginx sites-available directory not found, skipping configuration"
-        return
-    fi
+    # Check if nginx is available and properly configured
+    if command -v nginx &> /dev/null && [ -d "$NGINX_AVAILABLE" ]; then
+        echo ""
+        print_info "nginx detected - would you like to use nginx? [Y/n]"
+        read -p "> " -r
+        echo ""
 
-    echo ""
-    read -p "Would you like to configure nginx to serve Retro CNC Panel? [y/N] " -n 1 -r
-    echo ""
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            use_nginx=true
+            read -p "Enter port number for Retro CNC Panel [8080]: " port
+            port=${port:-8080}
 
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        print_info "Skipping nginx configuration"
-        return
-    fi
+            print_info "Creating nginx configuration..."
 
-    read -p "Enter port number for Retro CNC Panel [8080]: " port
-    port=${port:-8080}
-
-    print_info "Creating nginx configuration..."
-
-    sudo tee "${NGINX_AVAILABLE}/${NGINX_CONF}" > /dev/null <<EOF
+            sudo tee "${NGINX_AVAILABLE}/${NGINX_CONF}" > /dev/null <<EOF
 server {
     listen ${port};
     listen [::]:${port};
@@ -156,20 +148,62 @@ server {
 }
 EOF
 
-    # Enable the site
-    if [ ! -L "${NGINX_ENABLED}/${NGINX_CONF}" ]; then
-        sudo ln -s "${NGINX_AVAILABLE}/${NGINX_CONF}" "${NGINX_ENABLED}/${NGINX_CONF}"
+            # Enable the site
+            if [ ! -L "${NGINX_ENABLED}/${NGINX_CONF}" ]; then
+                sudo ln -s "${NGINX_AVAILABLE}/${NGINX_CONF}" "${NGINX_ENABLED}/${NGINX_CONF}"
+            fi
+
+            # Test and reload nginx
+            if sudo nginx -t 2>/dev/null; then
+                sudo systemctl reload nginx
+                print_success "nginx configured and reloaded"
+                echo ""
+                print_success "✓ Retro CNC Panel is now available at: http://localhost:${port}"
+                echo ""
+                return
+            else
+                print_error "nginx configuration test failed, falling back to Python server"
+                sudo rm -f "${NGINX_AVAILABLE}/${NGINX_CONF}" "${NGINX_ENABLED}/${NGINX_CONF}"
+                use_nginx=false
+            fi
+        fi
     fi
 
-    # Test and reload nginx
-    if sudo nginx -t; then
-        sudo systemctl reload nginx
-        print_success "nginx configured and reloaded"
+    # Fallback to Python file server
+    if [ "$use_nginx" = false ]; then
+        if ! command -v python3 &> /dev/null; then
+            print_warning "python3 not found - cannot start file server automatically"
+            echo ""
+            echo "Installation directory: ${INSTALL_DIR}"
+            echo "Please serve the files manually or install python3"
+            return
+        fi
+
         echo ""
-        print_success "Retro CNC Panel is now available at: http://localhost:${port}"
-    else
-        print_error "nginx configuration test failed"
-        sudo rm -f "${NGINX_AVAILABLE}/${NGINX_CONF}" "${NGINX_ENABLED}/${NGINX_CONF}"
+        print_info "Starting Python file server on port ${port}..."
+
+        # Kill any existing server on this port
+        pkill -f "http.server.*${INSTALL_DIR}" 2>/dev/null || true
+
+        # Start server in background
+        cd "$INSTALL_DIR" && nohup python3 -m http.server ${port} > /dev/null 2>&1 &
+        SERVER_PID=$!
+
+        # Wait a moment and check if server started
+        sleep 1
+        if kill -0 $SERVER_PID 2>/dev/null; then
+            print_success "File server started (PID: ${SERVER_PID})"
+            echo ""
+            print_success "✓ Retro CNC Panel is now available at: http://localhost:${port}"
+            echo ""
+            print_info "To stop the server: kill ${SERVER_PID}"
+            print_info "To restart: cd ${INSTALL_DIR} && python3 -m http.server ${port} &"
+        else
+            print_error "Failed to start file server"
+            echo ""
+            echo "Try manually: cd ${INSTALL_DIR} && python3 -m http.server ${port}"
+        fi
+        echo ""
     fi
 }
 
@@ -181,9 +215,6 @@ print_footer() {
     echo ""
     echo "Installation directory: ${INSTALL_DIR}"
     echo ""
-    echo "To serve manually with Python:"
-    echo "  cd ${INSTALL_DIR} && python3 -m http.server 8080"
-    echo ""
     echo "To update in the future, simply run this installer again."
     echo ""
 }
@@ -191,6 +222,9 @@ print_footer() {
 uninstall() {
     print_header
     print_info "Uninstalling Retro CNC Panel..."
+
+    # Kill any running Python servers
+    pkill -f "http.server.*${INSTALL_DIR}" 2>/dev/null || true
 
     if [ -d "$INSTALL_DIR" ]; then
         rm -rf "$INSTALL_DIR"
@@ -228,7 +262,7 @@ main() {
     check_dependencies
     get_latest_version
     download_and_install
-    setup_nginx
+    setup_serving
     print_footer
 }
 
