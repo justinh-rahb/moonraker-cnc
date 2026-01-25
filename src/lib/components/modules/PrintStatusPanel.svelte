@@ -2,6 +2,7 @@
     import PanelModule from "../ui/PanelModule.svelte";
     import Led from "../ui/Led.svelte";
     import CncButton from "../ui/CncButton.svelte";
+    import FilePickerModal from "../ui/FilePickerModal.svelte";
     import {
         machineState,
         pausePrint,
@@ -10,6 +11,9 @@
     } from "../../../stores/machineStore.js";
     import { hasErrors } from "../../../stores/notificationStore.js";
     import { configStore } from "../../../stores/configStore.js";
+
+    // File picker modal state
+    let filePickerOpen = false;
 
     // Reactive state values
     $: status = $machineState.status;
@@ -35,6 +39,10 @@
     $: isError = status === 'ERROR' || status === 'SHUTDOWN';
     $: isCancelled = status === 'CANCELLED';
     $: isBusy = status === 'BUSY';
+
+    // Check if file bar should be clickable (no file loaded and not busy)
+    $: noFileLoaded = !printFilename || printFilename === '';
+    $: fileBarClickable = noFileLoaded && !isPrinting && !isPaused && !isBusy;
 
     // Show controls only when printing or paused
     $: showControls = isPrinting || isPaused;
@@ -78,6 +86,25 @@
     const handleCancel = () => {
         cancelPrint(printControl.cancelMacro);
     };
+
+    // Handle file bar click
+    const handleFileBarClick = () => {
+        if (fileBarClickable) {
+            filePickerOpen = true;
+        }
+    };
+
+    // Handle file loaded from picker (without starting print)
+    const handleFileLoaded = (event) => {
+        // The file is loaded, the machineState will update via websocket
+        console.log('File loaded:', event.detail.path);
+    };
+
+    // Handle print started from picker
+    const handlePrintStarted = (event) => {
+        // Print started, the machineState will update via websocket
+        console.log('Print started:', event.detail.path);
+    };
 </script>
 
 <PanelModule title="PRINT STATUS">
@@ -102,12 +129,22 @@
         </div>
 
         <!-- File Info -->
-        <div class="info-section">
+        <button 
+            class="info-section file-bar" 
+            class:clickable={fileBarClickable}
+            on:click={handleFileBarClick}
+            disabled={!fileBarClickable}
+        >
             <div class="info-row">
                 <span class="info-label">FILE:</span>
-                <span class="info-value filename" title={printFilename}>{getFilename(printFilename)}</span>
+                <span class="info-value filename" title={printFilename}>
+                    {getFilename(printFilename)}
+                    {#if fileBarClickable}
+                        <span class="click-hint">▸</span>
+                    {/if}
+                </span>
             </div>
-        </div>
+        </button>
 
         <!-- Print Progress (only when printing or paused) -->
         {#if showControls || isComplete}
@@ -158,6 +195,14 @@
             </div>
         {/if}
     </div>
+
+    <!-- File Picker Modal -->
+    <FilePickerModal 
+        bind:isOpen={filePickerOpen}
+        on:fileLoaded={handleFileLoaded}
+        on:printStarted={handlePrintStarted}
+        on:close={() => filePickerOpen = false}
+    />
 </PanelModule>
 
 <style>
@@ -209,6 +254,43 @@
         padding: 12px;
         background: #0f0f0f;
         border: 2px solid #2a2a2a;
+        width: 100%;
+        text-align: left;
+    }
+
+    .info-section.file-bar {
+        cursor: default;
+        transition: all 0.2s ease;
+    }
+
+    .info-section.file-bar.clickable {
+        cursor: pointer;
+        border-color: #3a3a3a;
+    }
+
+    .info-section.file-bar.clickable:hover {
+        background: #1a1a1a;
+        border-color: var(--retro-green-dim);
+    }
+
+    .info-section.file-bar.clickable:active {
+        background: #0a0a0a;
+    }
+
+    .info-section.file-bar:disabled {
+        cursor: default;
+    }
+
+    .click-hint {
+        color: var(--retro-green-dim);
+        font-size: 10px;
+        margin-left: 8px;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
     }
 
     .info-row {
