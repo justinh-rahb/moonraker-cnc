@@ -9,9 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Settings import/export functionality with JSON file download and upload
+- Support for `minimum_cruise_ratio` parameter in Machine Limits Panel for newer Klipper versions (auto-detects and falls back to `max_accel_to_decel` for legacy versions)
 
 ### Changed
 - Rearranged settings modal sections to align with main UI panel order (Print Control, Filament, Console, Temperature Presets, Macro Panels)
+
+### Fixed
+- Console panel scroll to bottom behavior for proper auto-scrolling
+- File Picker Modal various issues for improved stability
+- Moonraker API call to use combined path parameter for correct file operations
+
+### Documentation
+- Expanded project documentation
 
 ## [0.3.3] - 2026-01-25
 
