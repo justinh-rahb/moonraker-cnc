@@ -7,14 +7,14 @@
     $: maxVelocity = $machineState.maxVelocity;
     $: maxAccel = $machineState.maxAccel;
     $: squareCornerVelocity = $machineState.squareCornerVelocity;
-    $: cruiseRatio = $machineState.cruiseRatio;
+    $: minimumCruiseRatio = $machineState.minimumCruiseRatio;
     $: maxAccelToDecel = $machineState.maxAccelToDecel;
 
-    // Determine which decel parameter is active
-    $: usingCruiseRatio = cruiseRatio !== null;
-    $: activeDecelValue = usingCruiseRatio ? cruiseRatio : maxAccelToDecel;
-    $: decelLabel = usingCruiseRatio ? "Cruise Ratio" : "Max Accel to Decel";
-    $: decelUnit = usingCruiseRatio ? "" : "mm/s²";
+    // Determine which decel parameter is active (newer Klipper uses minimum_cruise_ratio)
+    $: usingMinimumCruiseRatio = minimumCruiseRatio !== null;
+    $: activeDecelValue = usingMinimumCruiseRatio ? minimumCruiseRatio : maxAccelToDecel;
+    $: decelLabel = usingMinimumCruiseRatio ? "Min Cruise Ratio" : "Max Accel to Decel";
+    $: decelUnit = usingMinimumCruiseRatio ? "" : "mm/s²";
 
     // Edit states for each value
     let editingVelocity = false;
@@ -95,14 +95,14 @@
 
     const applyDecel = () => {
         const value = Number(decelInput);
-        if (usingCruiseRatio) {
-            // Cruise ratio should be between 0 and 1
-            if (!isNaN(value) && value > 0 && value <= 1) {
-                setVelocityLimit({ cruiseRatio: value });
+        if (usingMinimumCruiseRatio) {
+            // Minimum cruise ratio: 0.0 = disabled, 0.5 = default, 1.0 = maximum
+            if (!isNaN(value) && value >= 0 && value <= 1) {
+                setVelocityLimit({ minimumCruiseRatio: value });
                 editingDecel = false;
             }
         } else {
-            // Max accel to decel
+            // Max accel to decel (legacy)
             if (!isNaN(value) && value > 0 && value <= 50000) {
                 setVelocityLimit({ accelToDecel: value });
                 editingDecel = false;
@@ -269,17 +269,17 @@
             {/if}
         </div>
 
-        <!-- Cruise Ratio / Max Accel to Decel -->
+        <!-- Minimum Cruise Ratio / Max Accel to Decel -->
         <div class="limit-row">
             <div
                 class="limit-label"
-                title={usingCruiseRatio
-                    ? "Fraction of acceleration used for deceleration (0.5 = half)"
-                    : "Maximum deceleration rate"}
+                title={usingMinimumCruiseRatio
+                    ? "Minimum distance at cruise speed relative to total distance (0.0 = disabled, 0.5 = default)"
+                    : "Maximum deceleration rate (legacy)"}
             >
                 {decelLabel}
                 <span class="version-indicator"
-                    >{usingCruiseRatio ? "(New)" : "(Legacy)"}</span
+                    >{usingMinimumCruiseRatio ? "(New)" : "(Legacy)"}</span
                 >
             </div>
             {#if editingDecel}
@@ -290,9 +290,9 @@
                         bind:value={decelInput}
                         data-field="decel"
                         on:keydown={(e) => handleKeydown(e, applyDecel)}
-                        step={usingCruiseRatio ? 0.05 : 100}
-                        min={usingCruiseRatio ? 0.01 : 1}
-                        max={usingCruiseRatio ? 1 : 50000}
+                        step={usingMinimumCruiseRatio ? 0.05 : 100}
+                        min={usingMinimumCruiseRatio ? 0 : 1}
+                        max={usingMinimumCruiseRatio ? 1 : 50000}
                     />
                     <button
                         class="btn btn-apply"
@@ -318,8 +318,8 @@
                     on:keydown={(e) => e.key === 'Enter' && startEdit("decel")}
                 >
                     <span class="value">
-                        {activeDecelValue
-                            ? usingCruiseRatio
+                        {activeDecelValue !== null
+                            ? usingMinimumCruiseRatio
                                 ? activeDecelValue.toFixed(2)
                                 : activeDecelValue.toFixed(0)
                             : "N/A"}
