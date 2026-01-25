@@ -55,7 +55,8 @@ const DEFAULT_CONFIG = {
     console: {
         newestFirst: true,
         maxHistory: 500
-    }
+    },
+    cameras: []
 };
 
 // Migration function to convert old macros array to new panels structure
@@ -169,6 +170,70 @@ export const updateConsoleConfig = (updates) => {
         ...s,
         console: { ...(s.console || DEFAULT_CONFIG.console), ...updates }
     }));
+};
+
+// ============ CAMERA MANAGEMENT ============
+
+export const addCamera = () => {
+    configStore.update(s => ({
+        ...s,
+        cameras: [
+            ...(s.cameras || []),
+            {
+                id: generateId(),
+                name: 'NEW CAMERA',
+                enabled: false,
+                streamUrl: '',
+                snapshotUrl: '',
+                aspectRatio: '16:9',
+                flipH: false,
+                flipV: false,
+                rotation: 0,
+                showFps: false
+            }
+        ]
+    }));
+};
+
+export const deleteCamera = (cameraId) => {
+    configStore.update(s => ({
+        ...s,
+        cameras: (s.cameras || []).filter(c => c.id !== cameraId)
+    }));
+};
+
+export const updateCamera = (cameraId, updates) => {
+    configStore.update(s => ({
+        ...s,
+        cameras: (s.cameras || []).map(c =>
+            c.id === cameraId ? { ...c, ...updates } : c
+        )
+    }));
+};
+
+export const importCamerasFromMoonraker = (moonrakerCameras) => {
+    configStore.update(s => {
+        const existingIds = new Set((s.cameras || []).map(c => c.id));
+        const newCameras = moonrakerCameras
+            .filter(mc => !existingIds.has(mc.uid || mc.name))
+            .map(mc => ({
+                id: mc.uid || generateId(),
+                name: mc.name || 'Camera',
+                enabled: false,
+                streamUrl: mc.stream_url || '',
+                snapshotUrl: mc.snapshot_url || '',
+                aspectRatio: '16:9',
+                flipH: mc.flip_horizontal || false,
+                flipV: mc.flip_vertical || false,
+                rotation: mc.rotation || 0,
+                showFps: false
+            }));
+        
+        return {
+            ...s,
+            cameras: [...(s.cameras || []), ...newCameras]
+        };
+    });
 };
 
 // ============ PANEL MANAGEMENT ============

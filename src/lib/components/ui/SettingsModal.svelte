@@ -19,10 +19,16 @@
         updatePrintControlConfig,
         // Console
         updateConsoleConfig,
+        // Cameras
+        addCamera,
+        deleteCamera,
+        updateCamera,
+        importCamerasFromMoonraker,
         // Import/Export
         exportConfig,
         importConfig,
     } from "../../../stores/configStore.js";
+    import { fetchMoonrakerCameras, availableCameras, isFetchingCameras } from "../../../stores/cameraStore.js";
     import CncButton from "./CncButton.svelte";
     import ColorPicker from "./ColorPicker.svelte";
     import ConfirmDialog from "./ConfirmDialog.svelte";
@@ -78,6 +84,24 @@
         showConfirm("Delete this preset?", () => {
             deletePreset(id);
         });
+    };
+
+    // Camera handlers
+    const handleCreateCamera = () => {
+        addCamera();
+    };
+
+    const handleDeleteCamera = (id) => {
+        showConfirm("Delete this camera?", () => {
+            deleteCamera(id);
+        });
+    };
+
+    const handleFetchMoonrakerCameras = async () => {
+        const cameras = await fetchMoonrakerCameras();
+        if (cameras && cameras.length > 0) {
+            importCamerasFromMoonraker(cameras);
+        }
     };
 
     // Import/Export handlers
@@ -487,6 +511,160 @@
                     + CREATE NEW PANEL
                 </button>
 
+                <div class="section-title">CAMERA SETTINGS</div>
+
+                <div class="camera-actions">
+                    <CncButton 
+                        variant="action" 
+                        on:click={handleFetchMoonrakerCameras}
+                        disabled={$isFetchingCameras}
+                    >
+                        {$isFetchingCameras ? 'FETCHING...' : 'FETCH FROM MOONRAKER'}
+                    </CncButton>
+                    {#if $availableCameras.length > 0}
+                        <span class="camera-count">{$availableCameras.length} CAMERA(S) FOUND</span>
+                    {/if}
+                </div>
+
+                <div class="cameras-container">
+                    {#each $configStore.cameras || [] as camera (camera.id)}
+                        <div class="camera-section">
+                            <div class="camera-header-row">
+                                <input
+                                    type="text"
+                                    class="camera-name-input"
+                                    value={camera.name}
+                                    on:input={(e) =>
+                                        updateCamera(camera.id, { name: e.target.value })}
+                                    placeholder="Camera Name"
+                                />
+                                <label class="checkbox-inline">
+                                    <input
+                                        type="checkbox"
+                                        checked={camera.enabled}
+                                        on:change={(e) =>
+                                            updateCamera(camera.id, {
+                                                enabled: e.target.checked,
+                                            })}
+                                    />
+                                    ENABLED
+                                </label>
+                                <button
+                                    type="button"
+                                    class="delete-panel-btn"
+                                    on:click|preventDefault|stopPropagation={() =>
+                                        handleDeleteCamera(camera.id)}
+                                    title="Delete Camera"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <div class="camera-config">
+                                <div class="input-group">
+                                    <label>STREAM URL</label>
+                                    <input
+                                        type="text"
+                                        value={camera.streamUrl}
+                                        on:input={(e) =>
+                                            updateCamera(camera.id, {
+                                                streamUrl: e.target.value,
+                                            })}
+                                        placeholder="http://192.168.1.100/webcam/?action=stream"
+                                    />
+                                </div>
+
+                                <div class="input-group">
+                                    <label>SNAPSHOT URL</label>
+                                    <input
+                                        type="text"
+                                        value={camera.snapshotUrl}
+                                        on:input={(e) =>
+                                            updateCamera(camera.id, {
+                                                snapshotUrl: e.target.value,
+                                            })}
+                                        placeholder="http://192.168.1.100/webcam/?action=snapshot"
+                                    />
+                                </div>
+
+                                <div class="camera-row">
+                                    <div class="input-col">
+                                        <label>ASPECT RATIO</label>
+                                        <select
+                                            value={camera.aspectRatio}
+                                            on:change={(e) =>
+                                                updateCamera(camera.id, {
+                                                    aspectRatio: e.target.value,
+                                                })}
+                                        >
+                                            <option value="16:9">16:9</option>
+                                            <option value="4:3">4:3</option>
+                                            <option value="1:1">1:1</option>
+                                            <option value="21:9">21:9</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="input-col">
+                                        <label>ROTATION</label>
+                                        <select
+                                            value={camera.rotation}
+                                            on:change={(e) =>
+                                                updateCamera(camera.id, {
+                                                    rotation: parseInt(e.target.value),
+                                                })}
+                                        >
+                                            <option value="0">0°</option>
+                                            <option value="90">90°</option>
+                                            <option value="180">180°</option>
+                                            <option value="270">270°</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="checkbox-group">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked={camera.flipH}
+                                            on:change={(e) =>
+                                                updateCamera(camera.id, {
+                                                    flipH: e.target.checked,
+                                                })}
+                                        />
+                                        FLIP HORIZONTAL
+                                    </label>
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked={camera.flipV}
+                                            on:change={(e) =>
+                                                updateCamera(camera.id, {
+                                                    flipV: e.target.checked,
+                                                })}
+                                        />
+                                        FLIP VERTICAL
+                                    </label>
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked={camera.showFps}
+                                            on:change={(e) =>
+                                                updateCamera(camera.id, {
+                                                    showFps: e.target.checked,
+                                                })}
+                                        />
+                                        SHOW FPS
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    {/each}
+                </div>
+
+                <button class="create-panel-btn" on:click={handleCreateCamera}>
+                    + ADD CAMERA
+                </button>
+
                 <div class="actions">
                     <CncButton variant="action" on:click={save}>
                         SAVE CONFIGURATION
@@ -813,5 +991,94 @@
         color: #ff4444;
         font-size: 12px;
         margin-top: 5px;
+    }
+
+    /* Camera Settings Styles */
+    .camera-actions {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .camera-count {
+        color: var(--retro-green);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 12px;
+    }
+
+    .cameras-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .camera-section {
+        background: #0a0a0a;
+        border: 2px solid #333;
+        padding: 15px;
+    }
+
+    .camera-header-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        align-items: center;
+    }
+
+    .camera-name-input {
+        flex: 1;
+        background: #000;
+        border: 2px solid var(--retro-orange);
+        color: var(--retro-orange);
+        padding: 10px;
+        font-family: "Orbitron", monospace;
+        font-size: 14px;
+        font-weight: bold;
+    }
+
+    .camera-name-input:focus {
+        border-color: var(--retro-green);
+        outline: none;
+    }
+
+    .checkbox-inline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--retro-green);
+        font-family: 'Orbitron', monospace;
+        white-space: nowrap;
+    }
+
+    .checkbox-inline input[type="checkbox"] {
+        width: auto;
+    }
+
+    .camera-config {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .camera-row {
+        display: flex;
+        gap: 15px;
+    }
+
+    select {
+        background: #000;
+        border: 1px solid #333;
+        color: var(--retro-green);
+        padding: 8px;
+        font-family: "Share Tech Mono", monospace;
+        width: 100%;
+    }
+
+    select:focus {
+        border-color: var(--retro-green);
+        outline: none;
     }
 </style>
