@@ -38,4 +38,15 @@
             inset 0 0 8px rgba(0, 0, 0, 0.8),
             0 0 5px var(--retro-red);
     }
+
+    .led.orange.on {
+        background: radial-gradient(
+            circle at 30% 30%,
+            var(--retro-orange),
+            var(--retro-orange-dim)
+        );
+        box-shadow:
+            inset 0 0 8px rgba(0, 0, 0, 0.8),
+            0 0 5px var(--retro-orange);
+    }
 </style>

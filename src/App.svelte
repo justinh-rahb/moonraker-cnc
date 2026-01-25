@@ -6,6 +6,7 @@
   import TemperaturePanel from "./lib/components/modules/TemperaturePanel.svelte";
   import MiscPanel from "./lib/components/modules/MiscPanel.svelte";
   import MacroPanel from "./lib/components/modules/MacroPanel.svelte";
+  import PrintStatusPanel from "./lib/components/modules/PrintStatusPanel.svelte";
   import ConnectionModal from "./lib/components/ui/ConnectionModal.svelte";
   import { configStore } from "./stores/configStore.js";
 
@@ -22,6 +23,7 @@
   <div class="panel-grid">
     <!-- Left Column -->
     <div class="column">
+      <PrintStatusPanel />
       <ToolheadControl />
       <ExtruderControl />
     </div>
