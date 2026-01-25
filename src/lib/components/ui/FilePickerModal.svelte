@@ -403,7 +403,7 @@
                                 class="file-item" 
                                 class:selected={selectedFile === file}
                                 on:click={() => selectFile(file)}
-                                on:dblclick={loadFile}
+                                on:dblclick={startPrint}
                             >
                                 <span class="file-icon">📄</span>
                                 <span class="file-name">
