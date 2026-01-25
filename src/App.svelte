@@ -16,6 +16,11 @@
 
   // Sort panels by order
   $: sortedPanels = [...$configStore.panels].sort((a, b) => a.order - b.order);
+
+  // Update page title dynamically based on user's configured machine title
+  $: if (typeof document !== 'undefined') {
+    document.title = $configStore.title || 'Retro CNC Panel';
+  }
 </script>
 
 <Scanline />

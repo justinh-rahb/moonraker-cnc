@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Panel positioned in right column above Temperature Panel
   - Camera selector buttons integrated into bottom info bar for space efficiency
 
+### Changed
+- Page title now dynamically reflects the user's configured machine title from settings
+
 ## [1.0.0] - 2026-01-25
 
 ### Added
