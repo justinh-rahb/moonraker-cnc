@@ -12,23 +12,66 @@ A retro-styled, reactive web interface for controlling 3D printers and CNC machi
 - **Multi-Axis Jogging**: Precise movement control with configurable step sizes (0.1mm - 100mm)
 - **Individual & Combined Homing**: Home all axes or individual X, Y, Z axes
 - **Motors Control**: Quick motors off (M84) for manual intervention
+- **Z-Offset Baby-Stepping**: Real-time Z offset adjustment during printing with configurable increments (0.005mm - 0.1mm)
+- **Speed Factor Control**: Adjust print speed in real-time (0-200%)
 
-### 🔥 Temperature Monitoring
-- **Dynamic Sensor Detection**: Automatically discovers and displays all temperature sensors
+### 🖨️ Print Management
+- **Print Status Panel**: Comprehensive print monitoring with color-coded LED indicators (Green/Orange/Red)
+- **Live Metrics**: Real-time display of progress, elapsed time, speed (mm/s), and volumetric flow (mm³/s)
+- **Print Controls**: Pause/Resume/Cancel with configurable macro names
+- **File Picker**: Browse Klipper's gcode directory with subdirectory navigation
+- **File Uploads**: Drag-and-drop file upload support
+- **Send & Print**: Start prints directly from the file browser
+
+### 🔥 Temperature Management
+- **Dynamic Sensor Detection**: Automatically discovers all temperature sensors (extruders, bed, MCU, CPU)
 - **Multi-Extruder Support**: Detects and controls multiple extruders (T0, T1, T2+)
-- **Live Graph**: Real-time temperature visualization
+- **Live Graph**: Real-time temperature visualization with 300-point history
+- **Temperature Presets**: Quick presets for PLA, PETG, ABS (customizable)
+- **Target Temperature Control**: Adjustable increments (1-50°C steps)
+
+### 🔧 Extruder Control
+- **Extrusion Factor**: Adjust flow rate (0-200%)
+- **Filament Management**: Configurable load/unload macros with distance and speed parameters
+- **Pressure Advance Tuning**: Real-time adjustment in 0.005 increments
+- **Smooth Time Tuning**: Fine-tune extruder smooth time
+
+### ⚡ Machine Limits
+- **Velocity Control**: Configure max velocity (mm/s)
+- **Acceleration Settings**: Adjust max acceleration (mm/s²)
+- **Square Corner Velocity**: Fine-tune cornering behavior
+- **Cruise Ratio / Max Accel to Decel**: Auto-detects Klipper version for correct parameter
+
+### 📟 Console
+- **G-code Console**: Send commands directly to Klipper
+- **Command History**: Navigate previous commands with arrow keys
+- **Message Ordering**: Configurable newest-first or oldest-first display
+- **Response Logging**: Real-time command/response tracking
+
+### 🌡️ Fans & Output Control
+- **Dynamic Device Detection**: Auto-discovers all fans and output pins
+- **Fan Speed Control**: Slider-based adjustment (0-100%)
+- **Output Pin Control**: Toggle and adjust output pins
 
 ### ⚙️ Customization
-- **Configurable Macros**: 8 customizable macro buttons (labels + G-code)
+- **Customizable Macro Panels**: Create, edit, delete, and reorder macro panels
+- **Unlimited Macros**: Add as many macros as needed with custom labels, G-code, and colors
+- **Panel Reordering**: Drag and organize panels to your preference
 - **Custom Panel Title**: Rename the interface for your machine
-- **Persistent Settings**: Auto-save to localStorage (IP, autoconnect, macros, title)
+- **Persistent Settings**: Auto-save all settings to localStorage
 - **Autoconnect**: Optional automatic connection on page load
+
+### 🔔 Notifications
+- **Error Handling**: Display and track API errors
+- **System Status Monitoring**: Detects Klipper shutdown/error states
+- **Status LED Integration**: Visual indicators for RUN/ERR states
 
 ### 🎨 Retro Aesthetic
 - **CRT Scanline Effect**: Authentic terminal appearance
 - **Glowing Green Displays**: Classic monochrome look
 - **Tactile Button Feedback**: Shadow-based 3D press effects
 - **Orbitron Font**: Retro-futuristic typography
+- **Color-Coded Controls**: Orange accents, cyan system controls, red danger buttons
 
 ## Installation
 
@@ -93,9 +136,10 @@ Open your browser to `http://localhost:5173`
 1. **First Launch**: Enter your Moonraker IP address (e.g., `192.168.1.100:7125`)
 2. **Enable Autoconnect** (optional): Check the box to skip the connection modal on future visits
 3. **Customize** (optional):
-   - Click "CONFIGURE PANEL" in the bottom-right
+   - Click the gear icon to open Settings
    - Set your machine name (e.g., "SNAPMAKER U1")
-   - Customize macro buttons for your workflow
+   - Create and customize macro panels for your workflow
+   - Configure temperature presets, filament macros, and console settings
 
 ## Configuration
 
@@ -104,14 +148,27 @@ Open your browser to `http://localhost:5173`
 - **Port**: Default is `7125`
 - **Autoconnect**: Automatically connect on page load
 
-### Macro Buttons
-Each of the 8 macro buttons can be customized with:
-- **Label**: Display name
-- **G-code**: Command to execute (supports any Klipper macro)
+### Macro Panels
+Create unlimited custom macro panels, each with customizable macros:
+- **Panel Management**: Create, delete, and reorder panels
+- **Macro Customization**: Label, G-code command, and color for each macro
+- **Move Macros**: Reorganize macros between panels
 
-**Default Macros**:
-- Motion Panel: Z Offset Test, Compensation, PID Tuning
-- Power Panel: Firmware Restart, System Info, Power controls
+**Default Panels**:
+- CALIBRATION: BED_MESH_CALIBRATE, PROBE_CALIBRATE, PID_EXTRUDER, PID_BED
+- SYSTEM: FIRMWARE_RESTART, SYSTEM_INFO
+
+### Print Control Macros
+Configure custom macro names for print operations:
+- **Pause Macro**: Default `PAUSE`
+- **Resume Macro**: Default `RESUME`
+- **Cancel Macro**: Default `CANCEL_PRINT`
+
+### Filament Macros
+Configure load/unload operations:
+- **Load Macro**: Default `LOAD_FILAMENT`
+- **Unload Macro**: Default `UNLOAD_FILAMENT`
+- **Parameters**: Configurable distance and speed parameter names
 
 All settings persist to browser localStorage automatically.
 
@@ -130,17 +187,40 @@ All settings persist to browser localStorage automatically.
 
 ### Extruder Panel
 - Tool selector (T0/T1/T2...) for multi-extruder setups
-- Extrusion factor control
-- Retract/Extrude buttons
+- Extrusion factor control (0-200%)
+- Retract/Extrude with configurable amounts (1-100mm) and speeds
+- Load/Unload filament macros
+- Pressure advance tuning
+- Smooth time adjustment
 
 ### Temperature Panel
+- Live temperature graph with historical data
 - Dynamically displays all detected temperature sensors
-- Extruders, heated bed, MCU, host CPU
+- Quick presets for PLA, PETG, ABS
+- Target temperature controls with adjustable increments
+
+### Print Status Panel
+- Color-coded status LEDs (Green/Orange/Red)
+- Progress bar with percentage
+- Elapsed time display
+- Live speed (mm/s) and volumetric flow (mm³/s)
+- Pause/Resume/Cancel controls
+
+### Console Panel
+- Direct G-code command input
+- Command history navigation (Arrow Up/Down)
+- Real-time response logging
+- Configurable message ordering
+
+### Machine Limits Panel
+- Max velocity and acceleration settings
+- Square corner velocity control
+- Cruise ratio / max_accel_to_decel (auto-detects Klipper version)
 
 ## Tech Stack
 
-- **Framework**: Svelte 4 + Vite
-- **Communication**: WebSocket (JSON-RPC 2.0)
+- **Framework**: Svelte 5 + Vite
+- **Communication**: WebSocket (JSON-RPC 2.0) with Moonraker API
 - **Styling**: Vanilla CSS with CSS variables
 - **State Management**: Svelte stores
 - **Persistence**: localStorage API
@@ -172,16 +252,18 @@ npm run preview
 
 ```
 src/
-├── stores/              # State management
-│   ├── machineStore.js  # Printer state & commands
-│   ├── configStore.js   # Settings persistence
-│   └── websocket.js     # WebSocket client
+├── stores/                    # State management
+│   ├── machineStore.js        # Printer state & commands
+│   ├── configStore.js         # Settings persistence
+│   ├── websocket.js           # WebSocket client
+│   ├── notificationStore.js   # Error & notification handling
+│   └── consoleStore.js        # Console history & commands
 ├── lib/
 │   └── components/
-│       ├── ui/          # Reusable components
-│       └── modules/     # Feature panels
-├── app.css              # Global styles
-└── App.svelte           # Main app layout
+│       ├── ui/                # Reusable components
+│       └── modules/           # Feature panels
+├── app.css                    # Global styles
+└── App.svelte                 # Main app layout
 ```
 
 ## Contributing
