@@ -1,9 +1,10 @@
 <script>
-    export let value = 0;
-    export let max = 100;
-    export let redline = 80;
-    export let label = "GAUGE";
-    export let unit = "";
+    import { animate } from 'motion';
+
+    const { value = 0, max = 100, redline = 80, label = "GAUGE", unit = "" } = $props();
+    
+    // EMA smoothing configuration
+    const ALPHA = 0.35; // Smoothing factor (0.35 = good balance)
 
     // Gauge configuration
     const startAngle = -135; // Start at bottom left
@@ -14,15 +15,70 @@
     const centerY = 100;
     const strokeWidth = 12;
 
-    // Calculate needle angle based on value
-    $: percentage = max > 0 ? Math.min(Math.max(value / max, 0), 1) : 0;
-    $: needleAngle = startAngle + percentage * totalAngle;
-    $: redlinePercentage = max > 0 ? redline / max : 0.8;
+    // Smoothed value state (for needle animation)
+    let smoothedValue = $state(0);
+    let needleElement = $state(null);
+    let activeArcElement = $state(null);
+    let initialized = $state(false);
+
+    // Exponential Moving Average (EMA) smoothing
+    $effect(() => {
+        // Initialize smoothedValue on first run
+        if (!initialized) {
+            smoothedValue = value;
+            initialized = true;
+            return;
+        }
+        
+        // When raw value changes, apply EMA smoothing
+        const newSmoothed = ALPHA * value + (1 - ALPHA) * smoothedValue;
+        
+        // Animate the smoothed value with spring physics
+        if (needleElement && activeArcElement) {
+            const newPercentage = max > 0 ? Math.min(Math.max(newSmoothed / max, 0), 1) : 0;
+            const newNeedleAngle = startAngle + newPercentage * totalAngle;
+            const newNeedleEndX = centerX + (radius - 15) * Math.cos(((newNeedleAngle - 90) * Math.PI) / 180);
+            const newNeedleEndY = centerY + (radius - 15) * Math.sin(((newNeedleAngle - 90) * Math.PI) / 180);
+            const newActiveArcPath = describeArc(centerX, centerY, radius, startAngle, newNeedleAngle);
+
+            // Animate needle position with spring physics
+            animate(
+                needleElement,
+                { x2: newNeedleEndX, y2: newNeedleEndY },
+                { 
+                    type: 'spring',
+                    stiffness: 150,
+                    damping: 20,
+                    mass: 0.8
+                }
+            );
+
+            // Animate active arc
+            animate(
+                activeArcElement,
+                { d: newActiveArcPath },
+                { 
+                    type: 'spring',
+                    stiffness: 150,
+                    damping: 20,
+                    mass: 0.8
+                }
+            );
+        }
+        
+        // Update smoothed value for reactive calculations
+        smoothedValue = newSmoothed;
+    });
+
+    // Calculate needle angle based on smoothed value
+    const percentage = $derived(max > 0 ? Math.min(Math.max(smoothedValue / max, 0), 1) : 0);
+    const needleAngle = $derived(startAngle + percentage * totalAngle);
+    const redlinePercentage = $derived(max > 0 ? redline / max : 0.8);
     
     // Determine color zones
-    $: isRedZone = percentage >= 0.9;
-    $: isOrangeZone = !isRedZone && percentage >= redlinePercentage;
-    $: isGreenZone = !isRedZone && !isOrangeZone;
+    const isRedZone = $derived(percentage >= 0.9);
+    const isOrangeZone = $derived(!isRedZone && percentage >= redlinePercentage);
+    const isGreenZone = $derived(!isRedZone && !isOrangeZone);
 
     // Calculate arc paths for the colored zones
     const polarToCartesian = (centerX, centerY, radius, angleInDegrees) => {
@@ -53,16 +109,16 @@
     };
 
     // Arc paths for zones
-    $: greenArc = describeArc(centerX, centerY, radius, startAngle, startAngle + redlinePercentage * totalAngle);
-    $: orangeArc = describeArc(centerX, centerY, radius, startAngle + redlinePercentage * totalAngle, startAngle + 0.9 * totalAngle);
-    $: redArc = describeArc(centerX, centerY, radius, startAngle + 0.9 * totalAngle, endAngle);
+    const greenArc = $derived(describeArc(centerX, centerY, radius, startAngle, startAngle + redlinePercentage * totalAngle));
+    const orangeArc = $derived(describeArc(centerX, centerY, radius, startAngle + redlinePercentage * totalAngle, startAngle + 0.9 * totalAngle));
+    const redArc = $derived(describeArc(centerX, centerY, radius, startAngle + 0.9 * totalAngle, endAngle));
 
-    // Needle path
-    $: needleEndX = centerX + (radius - 15) * Math.cos(((needleAngle - 90) * Math.PI) / 180);
-    $: needleEndY = centerY + (radius - 15) * Math.sin(((needleAngle - 90) * Math.PI) / 180);
+    // Needle path (initial position)
+    const needleEndX = $derived(centerX + (radius - 15) * Math.cos(((needleAngle - 90) * Math.PI) / 180));
+    const needleEndY = $derived(centerY + (radius - 15) * Math.sin(((needleAngle - 90) * Math.PI) / 180));
 
-    // Format value for display
-    $: displayValue = value.toFixed(value >= 100 ? 0 : 1);
+    // Format value for display (use raw value, not smoothed)
+    const displayValue = $derived(value.toFixed(value >= 100 ? 0 : 1));
 </script>
 
 <div class="gauge-container">
@@ -109,6 +165,7 @@
 
         <!-- Active arc (shows current value) -->
         <path
+            bind:this={activeArcElement}
             d={describeArc(centerX, centerY, radius, startAngle, needleAngle)}
             fill="none"
             stroke={isRedZone ? '#ff0000' : isOrangeZone ? 'var(--retro-orange)' : 'var(--retro-green)'}
@@ -120,6 +177,7 @@
 
         <!-- Needle -->
         <line
+            bind:this={needleElement}
             x1={centerX}
             y1={centerY}
             x2={needleEndX}
@@ -193,8 +251,6 @@
     }
 
     .needle {
-        transition: transform 0.2s ease-out;
-        transform-origin: center;
         filter: drop-shadow(0 0 2px currentColor);
     }
 

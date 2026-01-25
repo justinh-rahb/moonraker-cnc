@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Retro-styled dial gauges for speed and flow monitoring
-  - Semi-circular SVG gauges with animated needles and color-coded zones
+  - Semi-circular SVG gauges with smooth spring-physics animated needles and color-coded zones
+  - Motion One animation library for buttery-smooth needle movement with acceleration/deceleration
+  - Exponential Moving Average (EMA) filtering to smooth rapid value changes from high-frequency updates
+  - Spring physics animation (stiffness: 150, damping: 20) for natural needle motion with gentle transitions
+  - Smoothed needle and arc animations while digital readouts remain exact
   - Speed gauge displays live toolhead velocity against machine max velocity
   - Flow gauge shows volumetric flow rate in mm³/s
   - Green/orange/red color zones with pulsing animation in critical red zone
