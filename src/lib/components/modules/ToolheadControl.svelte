@@ -6,6 +6,8 @@
         machineState,
         jog,
         setJogDistance,
+        setZOffsetIncrement,
+        adjustZOffset,
         home,
         homeX,
         homeY,
@@ -15,9 +17,12 @@
 
     $: pos = $machineState.position;
     $: currentDist = $machineState.jogDistance;
+    $: currentZOffsetIncrement = $machineState.zOffsetIncrement;
+    $: zOffset = $machineState.zOffset;
     $: speed = $machineState.speedFactor;
 
     const distances = [0.1, 1, 10, 25, 50, 100];
+    const zOffsetIncrements = [0.01, 0.05, 0.1, 0.25];
 </script>
 
 <PanelModule title="TOOLHEAD CONTROL">
@@ -77,6 +82,33 @@
                 {dist}
             </button>
         {/each}
+    </div>
+
+    <!-- Z-Offset Baby-Stepping -->
+    <div class="z-offset-section">
+        <div class="z-offset-header">
+            <div class="z-offset-label">Z-OFFSET</div>
+            <div class="z-offset-value">
+                {zOffset >= 0 ? '+' : ''}{zOffset.toFixed(3)}
+            </div>
+        </div>
+        
+        <div class="z-offset-controls">
+            <CncButton variant="arrow" on:click={() => adjustZOffset(1)}>+</CncButton>
+            <CncButton variant="arrow" on:click={() => adjustZOffset(-1)}>-</CncButton>
+        </div>
+
+        <div class="z-offset-increments">
+            {#each zOffsetIncrements as increment}
+                <button
+                    class="increment-button"
+                    class:active={currentZOffsetIncrement === increment}
+                    on:click={() => setZOffsetIncrement(increment)}
+                >
+                    {increment}
+                </button>
+            {/each}
+        </div>
     </div>
 
     <RetroSlider label="SPEED FACTOR" bind:value={$machineState.speedFactor} />
@@ -174,5 +206,66 @@
         color: #000;
         border-color: var(--retro-green);
         box-shadow: 0 0 20px var(--retro-green);
+    }
+
+    .z-offset-section {
+        margin-bottom: 20px;
+    }
+
+    .z-offset-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding: 8px;
+        background: #000;
+        border: 2px solid #333;
+    }
+
+    .z-offset-label {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--retro-orange);
+        letter-spacing: 2px;
+    }
+
+    .z-offset-value {
+        font-family: "Orbitron", monospace;
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--retro-green);
+        letter-spacing: 2px;
+    }
+
+    .z-offset-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .z-offset-increments {
+        display: flex;
+        gap: 6px;
+    }
+
+    .increment-button {
+        flex: 1;
+        background: #1a1a1a;
+        border: 2px solid var(--retro-orange);
+        color: var(--retro-orange);
+        padding: 10px;
+        font-family: "Share Tech Mono", monospace;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .increment-button.active {
+        background: var(--retro-orange);
+        color: #000;
+        border-color: var(--retro-orange);
+        box-shadow: 0 0 20px var(--retro-orange);
     }
 </style>

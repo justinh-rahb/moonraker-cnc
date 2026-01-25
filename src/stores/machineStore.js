@@ -36,6 +36,10 @@ export const machineState = writable({
     extrudeAmount: 10,
     extrudeSpeed: 5, // mm/s
 
+    // Z-Offset Baby-Stepping
+    zOffset: 0.0,          // Current z-offset (from gcode_move.homing_origin[2])
+    zOffsetIncrement: 0.05, // Selected increment for baby-stepping
+
     // Extruder Tuning
     pressureAdvance: 0.0,
     smoothTime: 0.040,
@@ -70,6 +74,10 @@ export const setExtrudeAmount = (amount) => {
 
 export const setExtrudeSpeed = (speed) => {
     machineState.update(s => ({ ...s, extrudeSpeed: speed }));
+};
+
+export const setZOffsetIncrement = (increment) => {
+    machineState.update(s => ({ ...s, zOffsetIncrement: increment }));
 };
 
 export const setActiveExtruder = (extruderName) => {
@@ -181,7 +189,7 @@ const initializeConnection = async () => {
         // 2. Build subscription map
         const subscriptions = {
             toolhead: ['position', 'status', 'print_time', 'homed_axes'],
-            'gcode_move': ['speed_factor', 'extrude_factor'],
+            'gcode_move': ['speed_factor', 'extrude_factor', 'homing_origin'],
             'print_stats': ['state', 'filename', 'total_duration', 'print_duration', 'filament_used'],
             'virtual_sdcard': ['progress', 'file_path'],
             'motion_report': ['live_velocity', 'live_extruder_velocity'],
@@ -393,8 +401,16 @@ const updateStateFromStatus = (status) => {
         }
 
         if (status.gcode_move) {
-            newState.speedFactor = Math.round(status.gcode_move.speed_factor * 100);
-            newState.extrusionFactor = Math.round(status.gcode_move.extrude_factor * 100);
+            if (status.gcode_move.speed_factor !== undefined) {
+                newState.speedFactor = Math.round(status.gcode_move.speed_factor * 100);
+            }
+            if (status.gcode_move.extrude_factor !== undefined) {
+                newState.extrusionFactor = Math.round(status.gcode_move.extrude_factor * 100);
+            }
+            // Track z-offset from homing_origin (index 2 is Z axis)
+            if (status.gcode_move.homing_origin && status.gcode_move.homing_origin.length >= 3) {
+                newState.zOffset = status.gcode_move.homing_origin[2];
+            }
         }
 
         if (status.motion_report) {
@@ -464,6 +480,16 @@ export const jog = (axis, direction) => {
 
     // Simpler Relative Move
     const gcode = `G91\nG1 ${axis.toUpperCase()}${direction * dist} F${feedrate}\nG90`;
+    send('printer.gcode.script', { script: gcode });
+};
+
+export const adjustZOffset = (direction) => {
+    const s = get(machineState);
+    const increment = s.zOffsetIncrement;
+    const adjustment = direction * increment;
+    
+    // Use SET_GCODE_OFFSET with Z_ADJUST to incrementally adjust z-offset
+    const gcode = `SET_GCODE_OFFSET Z_ADJUST=${adjustment.toFixed(3)} MOVE=1`;
     send('printer.gcode.script', { script: gcode });
 };
 
