@@ -8,6 +8,7 @@
         resumePrint,
         cancelPrint,
     } from "../../../stores/machineStore.js";
+    import { hasErrors } from "../../../stores/notificationStore.js";
     import { configStore } from "../../../stores/configStore.js";
 
     // Reactive state values
@@ -41,7 +42,7 @@
     // Determine LED states
     $: greenOn = isStandby || isComplete;
     $: orangeOn = isPaused || isPrinting || isBusy;
-    $: redOn = isError || isCancelled;
+    $: redOn = isError || isCancelled || $hasErrors;
 
     // Format duration as HH:MM:SS
     const formatDuration = (seconds) => {
