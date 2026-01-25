@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-01-24
+
+### Added
+- **Print Status Panel with Real-Time Monitoring**
+  - New `PrintStatusPanel` component displaying comprehensive print information
+  - Color-coded LED status indicators:
+    - Green: Ready/Complete
+    - Orange: Printing/Paused/Busy
+    - Red: Error
+  - Real-time display of current filename, progress, duration, speed (mm/s), and volumetric flow (mm³/s)
+  - Pause/Resume and Cancel buttons (visible only during active prints)
+  - Configurable macro names for pause/resume/cancel operations in settings
+  - Panel positioned at top of left column for prominent visibility
+
+- **Live Speed and Flow Metrics**
+  - Motion report subscription for `live_velocity` and `live_extruder_velocity`
+  - Volumetric flow calculation from extruder velocity (assumes 1.75mm filament)
+  - Displays 0 values when not actively printing
+
+- **BUSY Status Detection**
+  - Monitors `idle_timeout` state from Klipper
+  - Shows BUSY status when executing commands (homing, probing, macros) without active print job
+  - Detects when `idle_timeout` is "Printing" while `print_stats` is "standby"
+  - Orange RUN LED indicator during BUSY state
+
+- **Animated SVG Icons in Header**
+  - Settings button: Custom gear/cog SVG with spin animation on hover
+  - E-STOP button: Hexagonal stop symbol SVG with pulse animation
+  - Enhanced button styling with flexbox layout and hover effects
+
+### Changed
+- Updated `machineStore` to track print data (filename, progress, duration)
+- Added orange LED color support to `Led` component
+- Improved button visual feedback throughout interface
+- Updated `package-lock.json`
+
+### Fixed
+- BUSY status now correctly reverts to STANDBY when commands complete
+  - Separated raw `printStatsState` from derived display status
+  - Status now re-derives from both `printStatsState` and `idleState` on every change
+  - Ensures accurate status updates when either state changes independently
+
+### Removed
+- Redundant status indicator from Header (functionality moved to `PrintStatusPanel`)
+
 ## [0.1.1] - 2026-01-24
 
 ### Changed
