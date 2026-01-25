@@ -346,3 +346,34 @@ export const updateMacroLegacy = (index, label, gcode) => {
     // This will be removed once all components are updated
     console.warn('updateMacroLegacy is deprecated. Use updateMacro instead.');
 };
+
+// ============ IMPORT / EXPORT ============
+
+export const exportConfig = () => {
+    let currentConfig;
+    configStore.subscribe(val => currentConfig = val)();
+    return JSON.stringify(currentConfig, null, 2);
+};
+
+export const importConfig = (jsonString) => {
+    try {
+        const parsed = JSON.parse(jsonString);
+
+        // Basic validation - check for required fields
+        if (typeof parsed !== 'object' || parsed === null) {
+            throw new Error('Invalid configuration format');
+        }
+
+        // Migrate if needed and merge with defaults
+        const migrated = migrateConfig(parsed);
+        const merged = { ...DEFAULT_CONFIG, ...migrated };
+
+        // Update the store
+        configStore.set(merged);
+
+        return { success: true };
+    } catch (e) {
+        console.error('Failed to import config', e);
+        return { success: false, error: e.message };
+    }
+};
