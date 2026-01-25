@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Camera Panel for MJPEG stream display
+  - Support for multiple cameras with compact switching buttons
+  - Configurable stream URL and snapshot URL per camera
+  - Aspect ratio options (16:9, 4:3, 1:1, 21:9) with proper container sizing
+  - Flip horizontal/vertical and rotation controls (0°, 90°, 180°, 270°)
+  - Live FPS counter overlay (optional per camera)
+  - CSS transform support for camera orientation adjustments
+  - Camera settings section in Settings Modal with enable/disable toggles
+  - Auto-refresh MJPEG stream support for adaptive MJPEG from ustreamer/camera-streamer
+  - Panel positioned in right column above Temperature Panel
+  - Camera selector buttons integrated into bottom info bar for space efficiency
+
 ## [1.0.0] - 2026-01-25
 
 ### Added

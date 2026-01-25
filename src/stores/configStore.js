@@ -55,7 +55,8 @@ const DEFAULT_CONFIG = {
     console: {
         newestFirst: true,
         maxHistory: 500
-    }
+    },
+    cameras: []
 };
 
 // Migration function to convert old macros array to new panels structure
@@ -168,6 +169,45 @@ export const updateConsoleConfig = (updates) => {
     configStore.update(s => ({
         ...s,
         console: { ...(s.console || DEFAULT_CONFIG.console), ...updates }
+    }));
+};
+
+// ============ CAMERA MANAGEMENT ============
+
+export const addCamera = () => {
+    configStore.update(s => ({
+        ...s,
+        cameras: [
+            ...(s.cameras || []),
+            {
+                id: generateId(),
+                name: 'NEW CAMERA',
+                enabled: false,
+                streamUrl: '',
+                snapshotUrl: '',
+                aspectRatio: '16:9',
+                flipH: false,
+                flipV: false,
+                rotation: 0,
+                showFps: false
+            }
+        ]
+    }));
+};
+
+export const deleteCamera = (cameraId) => {
+    configStore.update(s => ({
+        ...s,
+        cameras: (s.cameras || []).filter(c => c.id !== cameraId)
+    }));
+};
+
+export const updateCamera = (cameraId, updates) => {
+    configStore.update(s => ({
+        ...s,
+        cameras: (s.cameras || []).map(c =>
+            c.id === cameraId ? { ...c, ...updates } : c
+        )
     }));
 };
 
