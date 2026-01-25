@@ -8,6 +8,8 @@
         pausePrint,
         resumePrint,
         cancelPrint,
+        startPrint,
+        clearPrintStatus,
     } from "../../../stores/machineStore.js";
     import { hasErrors } from "../../../stores/notificationStore.js";
     import { configStore } from "../../../stores/configStore.js";
@@ -15,8 +17,12 @@
     // File picker modal state
     let filePickerOpen = false;
 
+    // Reprint loading state
+    let isReprinting = false;
+
     // Reactive state values
     $: status = $machineState.status;
+    $: lastCompletedFilename = $machineState.lastCompletedFilename;
     $: printFilename = $machineState.printFilename;
     $: printProgress = $machineState.printProgress;
     $: printDuration = $machineState.printDuration;
@@ -85,6 +91,32 @@
 
     const handleCancel = () => {
         cancelPrint(printControl.cancelMacro);
+    };
+
+    // Clear completed print status
+    const handleClear = () => {
+        clearPrintStatus();
+    };
+
+    // Reprint the last completed file
+    const handleReprint = async () => {
+        // Use the stored lastCompletedFilename or current printFilename
+        const fileToReprint = lastCompletedFilename || printFilename;
+
+        if (!fileToReprint) {
+            console.error('No file available to reprint');
+            return;
+        }
+
+        isReprinting = true;
+        try {
+            await startPrint(fileToReprint);
+            console.log('Reprint started:', fileToReprint);
+        } catch (e) {
+            console.error('Failed to start reprint:', e);
+        } finally {
+            isReprinting = false;
+        }
     };
 
     // Handle file bar click
@@ -191,6 +223,22 @@
                 {/if}
                 <CncButton variant="danger" on:click={handleCancel}>
                     CANCEL
+                </CncButton>
+            </div>
+        {/if}
+
+        <!-- Completion Actions (only when print is complete) -->
+        {#if isComplete}
+            <div class="completion-buttons">
+                <CncButton variant="dark" on:click={handleClear}>
+                    CLEAR
+                </CncButton>
+                <CncButton
+                    variant="action"
+                    on:click={handleReprint}
+                    disabled={isReprinting || !(lastCompletedFilename || printFilename)}
+                >
+                    {isReprinting ? 'STARTING...' : 'REPRINT'}
                 </CncButton>
             </div>
         {/if}
@@ -390,6 +438,14 @@
 
     /* Control Buttons */
     .control-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 8px;
+    }
+
+    /* Completion Buttons (Clear/Reprint) */
+    .completion-buttons {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 12px;
