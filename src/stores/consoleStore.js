@@ -17,6 +17,11 @@ const createConsoleStore = () => {
             });
         },
         addResponse: (response) => {
+            // Filter out temperature events (e.g., "B:62.5 /65.0 T0:29.9 /0.0")
+            if (/^[BT]\d*:[\d.]+\s*\/[\d.]+/.test(response)) {
+                return;
+            }
+            
             update(messages => {
                 const newMessage = {
                     type: 'response',

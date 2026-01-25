@@ -112,32 +112,6 @@
         selectedFile = selectedFile === file ? null : file;
     };
 
-    // Load file without starting print
-    const loadFile = async () => {
-        if (!selectedFile) return;
-        
-        const filePath = currentPath 
-            ? `${currentPath}/${selectedFile.filename}` 
-            : selectedFile.filename;
-        
-        try {
-            // Use SDCARD_PRINT_FILE to load without starting
-            // First, we need to reset any current print state, then set the file
-            await send("printer.gcode.script", { 
-                script: `SDCARD_PRINT_FILE FILENAME="${filePath}"`
-            });
-            
-            // Immediately pause to just load the file without printing
-            // Actually, let's use a different approach - just update the virtual_sdcard
-            // For "load only", we'll dispatch the event and let parent handle it
-            dispatch("fileLoaded", { path: filePath, file: selectedFile });
-            handleClose();
-        } catch (e) {
-            console.error("Failed to load file:", e);
-            error = e.message || "Failed to load file";
-        }
-    };
-
     // Start print immediately
     const startPrint = async () => {
         if (!selectedFile || !canStartPrint) return;
@@ -449,13 +423,6 @@
                     />
                     <CncButton variant="home" on:click={triggerUpload} disabled={uploading}>
                         UPLOAD
-                    </CncButton>
-                    <CncButton 
-                        variant="action" 
-                        on:click={loadFile} 
-                        disabled={!selectedFile}
-                    >
-                        LOAD
                     </CncButton>
                     <CncButton 
                         variant="action" 
