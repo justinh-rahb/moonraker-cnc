@@ -9,7 +9,7 @@ const generateId = () => `id-${Date.now()}-${Math.random().toString(36).substr(2
 const DEFAULT_CONFIG = {
     title: 'RETRO CNC PANEL',
     server: {
-        ip: '192.168.2.241',
+        ip: window.location.hostname || 'localhost',
         port: '7125',
         autoConnect: false
     },

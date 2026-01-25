@@ -21,8 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Camera selector buttons integrated into bottom info bar for space efficiency
 
 ### Changed
+- Export settings filename now uses format `<machine title>-<date>.json` instead of hardcoded prefix
 - Page title now dynamically reflects the user's configured machine title from settings
 - Unified notification styling: persistent and dismissable errors now use the same visual style (persistent errors still have pulsing animation)
+- Default connection IP now auto-detects from the page hostname (falls back to `localhost` if unavailable) instead of hardcoded `192.168.2.241`
 
 ## [1.0.0] - 2026-01-25
 

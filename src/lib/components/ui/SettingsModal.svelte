@@ -105,7 +105,13 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `retro-cnc-config-${new Date().toISOString().split("T")[0]}.json`;
+        // Sanitize machine title for filename: lowercase, replace spaces with hyphens, remove special chars
+        const sanitizedTitle = $configStore.title
+            .toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9-]/g, '');
+        const date = new Date().toISOString().split("T")[0];
+        a.download = `${sanitizedTitle}-${date}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

@@ -12,7 +12,7 @@
     import { onMount } from "svelte";
 
     // Local state for inputs
-    let ipAddress = "192.168.2.241";
+    let ipAddress = window.location.hostname || "localhost";
     let port = "7125";
     let autoConnect = false;
 
