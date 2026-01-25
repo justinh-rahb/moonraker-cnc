@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Page title now dynamically reflects the user's configured machine title from settings
+- Unified notification styling: persistent and dismissable errors now use the same visual style (persistent errors still have pulsing animation)
 
 ## [1.0.0] - 2026-01-25
 
