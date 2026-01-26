@@ -4,6 +4,7 @@
     import { emergencyStop } from "../../../stores/machineStore.js";
     import { configStore } from "../../../stores/configStore.js";
     import { currentPowerDevice, togglePower } from "../../../stores/powerStore.js";
+    import { filePickerOpen } from "../../../stores/uiStore.js";
 
     let isSettingsOpen = false;
     let confirmPowerOpen = false;
@@ -48,6 +49,15 @@
 <div class="panel-header">
     <div class="machine-title">{$configStore.title}</div>
     <div class="header-controls">
+        <button
+            class="settings-btn"
+            on:click={() => ($filePickerOpen = true)}
+            title="Files"
+        >
+            <svg class="icon-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+        </button>
         <button
             class="settings-btn"
             on:click={() => (isSettingsOpen = true)}
@@ -294,5 +304,16 @@
     @keyframes pulse-stop {
         0%, 100% { opacity: 1; transform: scale(1); }
         50% { opacity: 0.8; transform: scale(1.1); }
+    }
+
+    .icon-folder {
+        width: 24px;
+        height: 24px;
+        stroke-linecap: round;
+        transition: transform 0.2s;
+    }
+
+    .settings-btn:hover .icon-folder {
+        transform: scale(1.1);
     }
 </style>

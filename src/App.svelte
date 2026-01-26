@@ -11,8 +11,10 @@
   import ConsolePanel from "./lib/components/modules/ConsolePanel.svelte";
   import CameraPanel from "./lib/components/modules/CameraPanel.svelte";
   import ConnectionModal from "./lib/components/ui/ConnectionModal.svelte";
+  import FilePickerModal from "./lib/components/ui/FilePickerModal.svelte";
   import NotificationArea from "./lib/components/ui/NotificationArea.svelte";
   import { configStore } from "./stores/configStore.js";
+  import { filePickerOpen } from "./stores/uiStore.js";
 
   // Sort panels by order
   $: sortedPanels = [...$configStore.panels].sort((a, b) => a.order - b.order);
@@ -25,6 +27,7 @@
 
 <Scanline />
 <ConnectionModal />
+<FilePickerModal bind:isOpen={$filePickerOpen} />
 <NotificationArea />
 
 <div class="machine-panel">

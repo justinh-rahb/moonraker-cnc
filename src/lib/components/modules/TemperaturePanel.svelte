@@ -9,21 +9,16 @@
     $: history = $machineState.tempHistory;
     $: presets = $configStore.tempPresets || [];
 
+    // Settings
+    $: showGraph = $configStore.temperature?.showGraph ?? true;
+    $: autoscale = $configStore.temperature?.autoscale ?? true;
+    $: hideMonitors = $configStore.temperature?.hideMonitors ?? false;
+
     // Step selection
     let tempStep = 10;
     const steps = [1, 5, 10, 25, 50];
 
-    // List sensors, prioritizing main heaters
-    $: keys = Object.keys(temps).sort((a, b) => {
-        // Bed first
-        if (a === "heater_bed") return -1;
-        if (b === "heater_bed") return 1;
-        // Extruders next
-        if (a.startsWith("extruder") && !b.startsWith("extruder")) return -1;
-        if (!a.startsWith("extruder") && b.startsWith("extruder")) return 1;
-        return a.localeCompare(b);
-    });
-
+    // Helper to check settable
     const isSettable = (key) => {
         return (
             key === "heater_bed" ||
@@ -31,6 +26,22 @@
             key.startsWith("heater_generic")
         );
     };
+
+    // List sensors, prioritizing main heaters
+    $: keys = Object.keys(temps)
+        .filter((k) => {
+            if (!hideMonitors) return true;
+            return isSettable(k);
+        })
+        .sort((a, b) => {
+            // Bed first
+            if (a === "heater_bed") return -1;
+            if (b === "heater_bed") return 1;
+            // Extruders next
+            if (a.startsWith("extruder") && !b.startsWith("extruder")) return -1;
+            if (!a.startsWith("extruder") && b.startsWith("extruder")) return 1;
+            return a.localeCompare(b);
+        });
 
     // Helper Commands
     const setTemp = (key, target) => {
@@ -84,8 +95,30 @@
     // Graph Dimensions
     const width = 400; // viewBox width
     const height = 150; // viewBox height
+
     // Temperature range
-    const maxTemp = 300;
+    $: maxTemp = (() => {
+        if (!autoscale) return 300;
+        let max = 0;
+        if (history && history.length) {
+            history.forEach((pt) => {
+                keys.forEach((k) => {
+                    const val = pt.sensors[k];
+                    if (val > max) max = val;
+                });
+            });
+        }
+        return Math.max(max * 1.1, 60); // Min 60 (bed usually 60), add 10% buffer
+    })();
+
+    $: gridLines = (() => {
+        const step = maxTemp > 100 ? 50 : 20;
+        const lines = [];
+        for (let t = step; t < maxTemp; t += step) {
+            lines.push(t);
+        }
+        return lines;
+    })();
 
     // Generate SVG path for a sensor
     $: getPath = (sensorKey) => {
@@ -106,6 +139,32 @@
 
         return path;
     };
+
+    // --- Graph Interaction ---
+    let hoverIndex = -1;
+    let showTooltip = false;
+    let tooltipX = 0;
+
+    const handleGraphMouseMove = (e) => {
+        if (!history || history.length < 2) return;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const offsetX = e.clientX - rect.left;
+        const relX = Math.max(0, Math.min(1, offsetX / rect.width));
+
+        // Map relX to history index
+        // history index 0 is left (oldest) if we draw 0->width
+        hoverIndex = Math.round(relX * (history.length - 1));
+        tooltipX = offsetX;
+        showTooltip = true;
+    };
+
+    const handleGraphMouseLeave = () => {
+        showTooltip = false;
+        hoverIndex = -1;
+    };
+    
+    $: hoverData = (hoverIndex >= 0 && history && history[hoverIndex]) ? history[hoverIndex].sensors : null;
 </script>
 
 <PanelModule title="TEMPERATURES">
@@ -205,36 +264,73 @@
         <button class="cool-all-btn" on:click={cooldownAll}>OFF</button>
     </div>
 
-    <div class="graph">
-        <!-- SVG Graph -->
-        <svg viewBox="0 0 {width} {height}" preserveAspectRatio="none">
-            <!-- Grid Lines (Horizontal) -->
-            {#each [50, 100, 150, 200, 250] as t}
-                <line
-                    x1="0"
-                    y1={height - (t / maxTemp) * height}
-                    x2={width}
-                    y2={height - (t / maxTemp) * height}
-                    stroke="#1a1a1a"
-                    stroke-width="1"
-                />
-            {/each}
+    {#if showGraph}
+        <div
+            class="graph"
+            on:mousemove={handleGraphMouseMove}
+            on:mouseleave={handleGraphMouseLeave}
+        >
+            <!-- SVG Graph -->
+            <svg viewBox="0 0 {width} {height}" preserveAspectRatio="none">
+                <!-- Grid Lines (Horizontal) -->
+                {#each gridLines as t}
+                    <line
+                        x1="0"
+                        y1={height - (t / maxTemp) * height}
+                        x2={width}
+                        y2={height - (t / maxTemp) * height}
+                        stroke="#1a1a1a"
+                        stroke-width="1"
+                    />
+                    <!-- Axis Label -->
+                    <text
+                        x="5"
+                        y={height - (t / maxTemp) * height - 2}
+                        fill="#444"
+                        font-family="monospace"
+                        font-size="8">{t}</text
+                    >
+                {/each}
 
-            <!-- Sensor Lines -->
-            {#each keys as key}
-                <path
-                    d={getPath(key)}
-                    fill="none"
-                    stroke={getSensorColor(key)}
-                    stroke-width="2"
-                    vector-effect="non-scaling-stroke"
-                    opacity="0.8"
-                />
-            {/each}
-        </svg>
+                <!-- Sensor Lines -->
+                {#each keys as key}
+                    <path
+                        d={getPath(key)}
+                        fill="none"
+                        stroke={getSensorColor(key)}
+                        stroke-width="2"
+                        vector-effect="non-scaling-stroke"
+                        opacity="0.8"
+                    />
+                {/each}
+            </svg>
 
-        <div class="graph-grid-overlay"></div>
-    </div>
+            {#if showTooltip && hoverIndex >= 0}
+                <!-- Cursor Line -->
+                <div
+                    class="cursor-line"
+                    style="left: {(hoverIndex / (history.length - 1)) * 100}%;"
+                ></div>
+
+                <!-- Tooltip -->
+                <div
+                    class="graph-tooltip"
+                    style="left: {Math.min(Math.max(tooltipX, 50), width - 50)}px;"
+                >
+                    {#if hoverData}
+                        {#each keys as key}
+                            <div class="tooltip-row">
+                                <span class="t-name" style="color: {getSensorColor(key)}">{temps[key]?.label || key.substring(0,3)}</span>
+                                <span class="t-val">{(hoverData[key] || 0.0).toFixed(1)}</span>
+                            </div>
+                        {/each}
+                    {/if}
+                </div>
+            {/if}
+
+            <div class="graph-grid-overlay"></div>
+        </div>
+    {/if}
 </PanelModule>
 
 <style>
@@ -523,5 +619,47 @@
             );
         background-size: 50px 50px;
         pointer-events: none;
+    }
+
+    .cursor-line {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background: rgba(255, 255, 255, 0.5);
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    .graph-tooltip {
+        position: absolute;
+        top: 10px;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.9);
+        border: 1px solid #333;
+        padding: 5px;
+        pointer-events: none;
+        z-index: 20;
+        border-radius: 4px;
+        min-width: 80px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .tooltip-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        line-height: 1.4;
+    }
+
+    .t-name {
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    .t-val {
+        color: #fff;
     }
 </style>

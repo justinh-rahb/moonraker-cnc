@@ -1,15 +1,32 @@
 <script>
-    import { onDestroy } from "svelte";
+    import { onDestroy, tick } from "svelte";
 
     export let isOpen = false;
-    export let title = "CONFIRM";
-    export let message = "Are you sure?";
+    export let title = "INPUT";
+    export let message = "Enter value:";
+    export let value = "";
+    export let placeholder = "";
     export let confirmButtonText = "CONFIRM";
     export let onConfirm = () => {};
     export let onCancel = () => {};
 
+    let inputEl;
+
     $: if (typeof document !== "undefined") {
         document.body.style.overflow = isOpen ? "hidden" : "";
+    }
+
+    // Auto-focus input when opened
+    $: if (isOpen) {
+        focusInput();
+    }
+
+    async function focusInput() {
+        await tick();
+        if (inputEl) {
+            inputEl.focus();
+            inputEl.select();
+        }
     }
 
     onDestroy(() => {
@@ -20,7 +37,7 @@
 
     const handleConfirm = () => {
         isOpen = false;
-        onConfirm();
+        onConfirm(value);
     };
 
     const handleCancel = () => {
@@ -34,6 +51,10 @@
             e.preventDefault();
             handleCancel();
         }
+        if (e.key === "Enter") {
+            e.preventDefault();
+            handleConfirm();
+        }
     };
 
     const handleOverlayClick = (e) => {
@@ -46,6 +67,7 @@
 <svelte:window on:keydown={handleKeydown} />
 
 {#if isOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
     <div class="confirm-overlay" on:click={handleOverlayClick}>
         <div class="confirm-dialog">
             <div class="confirm-header">
@@ -53,6 +75,13 @@
             </div>
             <div class="confirm-body">
                 <p>{message}</p>
+                <input 
+                    type="text" 
+                    bind:this={inputEl}
+                    bind:value 
+                    {placeholder}
+                    spellcheck="false"
+                />
             </div>
             <div class="confirm-actions">
                 <button class="cancel-btn" on:click={handleCancel}>
@@ -84,9 +113,9 @@
     .confirm-dialog {
         width: 400px;
         background: var(--bg-module);
-        border: 4px solid var(--retro-orange);
+        border: 4px solid var(--retro-green);
         box-shadow:
-            0 0 30px rgba(255, 136, 0, 0.3),
+            0 0 30px rgba(0, 255, 0, 0.1),
             0 0 0 2px #000;
     }
 
@@ -94,15 +123,18 @@
         font-family: "Orbitron", monospace;
         font-size: 16px;
         font-weight: 900;
-        color: var(--retro-orange);
+        color: var(--retro-green);
         padding: 12px 15px;
         background: #000;
-        border-bottom: 2px solid var(--retro-orange);
+        border-bottom: 2px solid var(--retro-green);
         letter-spacing: 2px;
     }
 
     .confirm-body {
         padding: 25px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
     }
 
     .confirm-body p {
@@ -111,6 +143,21 @@
         font-size: 14px;
         margin: 0;
         line-height: 1.5;
+    }
+
+    input {
+        background: #000;
+        border: 2px solid #333;
+        color: var(--retro-green);
+        font-family: "Share Tech Mono", monospace;
+        font-size: 16px;
+        padding: 10px;
+        width: 100%;
+        outline: none;
+    }
+
+    input:focus {
+        border-color: var(--retro-green);
     }
 
     .confirm-actions {
@@ -145,13 +192,14 @@
     }
 
     .confirm-btn {
-        background: #440000;
-        border-color: #880000;
-        color: #ff4444;
+        background: linear-gradient(180deg, #1a2a1a 0%, #0a1a0a 100%);
+        border-color: var(--retro-green-dim);
+        color: var(--retro-green);
     }
 
     .confirm-btn:hover {
-        background: #660000;
-        border-color: #aa0000;
+        background: #1f3f1f;
+        border-color: var(--retro-green);
+        box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
     }
 </style>

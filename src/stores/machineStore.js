@@ -6,6 +6,34 @@ import { notificationStore } from './notificationStore.js';
 // Debug logging (only in dev mode)
 const DEBUG = import.meta.env.DEV;
 
+// localStorage key for step increments
+const STORAGE_KEY_INCREMENTS = 'retro_cnc_increments_v1';
+
+// Load saved increments from localStorage
+const loadIncrements = () => {
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY_INCREMENTS);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (e) {
+        console.error('Failed to load step increments from localStorage', e);
+    }
+    return null;
+};
+
+// Save increments to localStorage
+const saveIncrements = (increments) => {
+    try {
+        localStorage.setItem(STORAGE_KEY_INCREMENTS, JSON.stringify(increments));
+    } catch (e) {
+        console.error('Failed to save step increments to localStorage', e);
+    }
+};
+
+// Load saved values
+const savedIncrements = loadIncrements();
+
 // Initial state
 export const machineState = writable({
     status: 'STANDBY',
@@ -35,13 +63,13 @@ export const machineState = writable({
     extrusionFactor: 100, // %
 
     // Selected options
-    jogDistance: 10,
-    extrudeAmount: 10,
-    extrudeSpeed: 5, // mm/s
+    jogDistance: savedIncrements?.jogDistance ?? 10,
+    extrudeAmount: savedIncrements?.extrudeAmount ?? 10,
+    extrudeSpeed: savedIncrements?.extrudeSpeed ?? 5, // mm/s
 
     // Z-Offset Baby-Stepping
     zOffset: 0.0,          // Current z-offset (from gcode_move.homing_origin[2])
-    zOffsetIncrement: 0.05, // Selected increment for baby-stepping
+    zOffsetIncrement: savedIncrements?.zOffsetIncrement ?? 0.05, // Selected increment for baby-stepping
 
     // Extruder Tuning
     pressureAdvance: 0.0,
@@ -80,23 +108,72 @@ const HISTORY_points = 300; // Keep last ~5-10 mins depending on update rate
 
 // Helper actions
 export const setJogDistance = (dist) => {
-    machineState.update(s => ({ ...s, jogDistance: dist }));
+    machineState.update(s => {
+        const newState = { ...s, jogDistance: dist };
+        saveIncrements({
+            jogDistance: newState.jogDistance,
+            extrudeAmount: newState.extrudeAmount,
+            extrudeSpeed: newState.extrudeSpeed,
+            zOffsetIncrement: newState.zOffsetIncrement
+        });
+        return newState;
+    });
 };
 
 export const setExtrudeAmount = (amount) => {
-    machineState.update(s => ({ ...s, extrudeAmount: amount }));
+    machineState.update(s => {
+        const newState = { ...s, extrudeAmount: amount };
+        saveIncrements({
+            jogDistance: newState.jogDistance,
+            extrudeAmount: newState.extrudeAmount,
+            extrudeSpeed: newState.extrudeSpeed,
+            zOffsetIncrement: newState.zOffsetIncrement
+        });
+        return newState;
+    });
 };
 
 export const setExtrudeSpeed = (speed) => {
-    machineState.update(s => ({ ...s, extrudeSpeed: speed }));
+    machineState.update(s => {
+        const newState = { ...s, extrudeSpeed: speed };
+        saveIncrements({
+            jogDistance: newState.jogDistance,
+            extrudeAmount: newState.extrudeAmount,
+            extrudeSpeed: newState.extrudeSpeed,
+            zOffsetIncrement: newState.zOffsetIncrement
+        });
+        return newState;
+    });
 };
 
 export const setZOffsetIncrement = (increment) => {
-    machineState.update(s => ({ ...s, zOffsetIncrement: increment }));
+    machineState.update(s => {
+        const newState = { ...s, zOffsetIncrement: increment };
+        saveIncrements({
+            jogDistance: newState.jogDistance,
+            extrudeAmount: newState.extrudeAmount,
+            extrudeSpeed: newState.extrudeSpeed,
+            zOffsetIncrement: newState.zOffsetIncrement
+        });
+        return newState;
+    });
 };
 
 export const setActiveExtruder = (extruderName) => {
     machineState.update(s => ({ ...s, activeExtruder: extruderName }));
+};
+
+// Speed and Extrusion Factor Control
+export const setSpeedFactor = (percent) => {
+    // Clamp value between 1 and 200
+    const value = Math.max(1, Math.min(200, Math.round(percent)));
+    send('printer.gcode.script', { script: `M220 S${value}` });
+};
+
+export const setExtrusionFactor = (percent) => {
+    // Clamp value between 1 and 200
+    const value = Math.max(1, Math.min(200, Math.round(percent)));
+    send('printer.gcode.script', { script: `M221 S${value}` });
 };
 
 export const updatePressureAdvance = (val) => {
@@ -404,7 +481,7 @@ const updateStateFromStatus = (status) => {
             if (status.print_stats.state !== undefined) {
                 const oldState = newState.printStatsState;
                 newState.printStatsState = status.print_stats.state;
-                
+
                 // Detect print start transition to fetch file metadata
                 if (oldState !== 'printing' && status.print_stats.state === 'printing' && newState.printFilename) {
                     if (DEBUG) console.log('[DEBUG] Print starting, fetching metadata for:', newState.printFilename);
@@ -494,7 +571,7 @@ const updateStateFromStatus = (status) => {
         // Parse layer information from display_status
         if (status.display_status) {
             if (DEBUG) console.log('[DEBUG] display_status received:', JSON.stringify(status.display_status));
-            
+
             // Try direct fields first (some Moonraker versions may provide these)
             if (status.display_status.current_layer !== undefined) {
                 newState.currentLayer = status.display_status.current_layer;
@@ -504,7 +581,7 @@ const updateStateFromStatus = (status) => {
                 newState.totalLayers = status.display_status.total_layers;
                 if (DEBUG) console.log('[DEBUG] Using total_layers from field:', newState.totalLayers);
             }
-            
+
             // Fallback: parse from message string if direct fields not available
             // Format often looks like: "M73 P50 L25/100" or similar
             if (status.display_status.message && !status.display_status.current_layer) {
@@ -524,7 +601,7 @@ const updateStateFromStatus = (status) => {
         if (newState.status !== 'PRINTING') {
             newState.liveSpeed = 0;
             newState.liveExtruderVelocity = 0;
-            
+
             // Only reset layers if we just stopped printing (state transition)
             if (oldStatus === 'PRINTING' && (newState.status === 'COMPLETE' || newState.status === 'CANCELLED' || newState.status === 'STANDBY')) {
                 newState.currentLayer = 0;
@@ -540,7 +617,7 @@ const updateStateFromStatus = (status) => {
                 if (DEBUG) console.log('[DEBUG] Estimated current layer from progress:', newState.currentLayer, '/', newState.totalLayers, 'at', Math.round(newState.printProgress * 100) + '%');
             }
         }
-        
+
         if (DEBUG && (newState.currentLayer > 0 || newState.totalLayers > 0)) {
             console.log('[DEBUG] Layer state at end of update:', newState.currentLayer, '/', newState.totalLayers, 'Status:', newState.status);
         }
@@ -596,13 +673,13 @@ const fetchFileMetadata = async (filename) => {
         if (DEBUG) console.log('[DEBUG] Fetching metadata for file:', filename);
         const response = await send('server.files.metadata', { filename });
         if (DEBUG) console.log('[DEBUG] File metadata received:', JSON.stringify(response));
-        
+
         if (response) {
             // Check various possible locations for layer count
-            const layerCount = response.layer_count || 
-                             response.object_height ||
-                             (response.thumbnails && response.thumbnails.length > 0 ? response.layer_count : null);
-            
+            const layerCount = response.layer_count ||
+                response.object_height ||
+                (response.thumbnails && response.thumbnails.length > 0 ? response.layer_count : null);
+
             if (layerCount !== null && layerCount !== undefined) {
                 if (DEBUG) console.log('[DEBUG] Found layer count in metadata:', layerCount);
                 machineState.update(s => ({
@@ -632,7 +709,7 @@ export const adjustZOffset = (direction) => {
     const s = get(machineState);
     const increment = s.zOffsetIncrement;
     const adjustment = direction * increment;
-    
+
     // Use SET_GCODE_OFFSET with Z_ADJUST to incrementally adjust z-offset
     const gcode = `SET_GCODE_OFFSET Z_ADJUST=${adjustment.toFixed(3)} MOVE=1`;
     send('printer.gcode.script', { script: gcode });

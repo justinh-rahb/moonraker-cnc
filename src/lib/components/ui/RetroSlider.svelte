@@ -1,16 +1,43 @@
 <script>
+    import { createEventDispatcher } from "svelte";
+
     export let value = 100;
     export let min = 0;
     export let max = 200;
     export let label = "VALUE";
+
+    const dispatch = createEventDispatcher();
+
+    // Local value for smooth slider interaction
+    let localValue = value;
+
+    // Sync local value when prop changes from outside
+    $: localValue = value;
+
+    const handleInput = (e) => {
+        localValue = parseInt(e.target.value, 10);
+    };
+
+    const handleChange = (e) => {
+        const newValue = parseInt(e.target.value, 10);
+        dispatch("change", { value: newValue, target: e.target });
+    };
 </script>
 
 <div class="slider-control">
     <div class="slider-label">
         <span>{label}</span>
-        <span>{value}%</span>
+        <span>{localValue}%</span>
     </div>
-    <input type="range" class="slider" {min} {max} bind:value on:input />
+    <input
+        type="range"
+        class="slider"
+        {min}
+        {max}
+        bind:value={localValue}
+        on:input={handleInput}
+        on:change={handleChange}
+    />
 </div>
 
 <style>

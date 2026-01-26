@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-01-26
+
+### Added
+- **File Access**:
+  - Added dedicated "Files" button to the Global Header for quick access from any screen.
+  - File Browser can now be opened during active prints (view-only), allowing file management and inspection without interrupting the job.
+- **File Management**:
+  - Full file capabilities in File Browser: Delete (files & directories), Rename, Move, and Create New Folder.
+  - Double-click to enter directories, single-click to select for actions.
+- **UI Improvements**:
+  - **Tabbed Settings**: Settings Modal now organized into 5 logical tabs (General, Interface, Macros, Panels, Cameras) to reduce scrolling and improve navigability.
+  - **Modal Scroll Lock**: Background page scrolling is now locked when any modal is open (Settings, Connection, File Picker, Confirmation dialogs).
+- Temperature Panel improvements
+  - **Autoscale Graph**: Graph Y-axis now dynamically scales to the highest visible temperature (plus 10% buffer), improving visibility for lower-temp prints (e.g., PLA at 200°C vs 300°C max).
+  - **Interactive Cursor**: Hovering over the graph now displays a vertical cursor and a floating tooltip showing exact temperature values for all sensors at that specific time point.
+  - **Hide Monitors**: New setting to hide passive temperature sensors (like Raspberry Pi or MCU temps) from the graph and list, focusing only on heaters (Bed, Extruder).
+  - **Hide Graph**: Option to completely hide the temperature graph for a compact view.
+  - **Settings Integration**: New "TEMPERATURE DISPLAY" section in Settings Modal to toggle these features. Preserves user preferences.
+
+### Changed
+- **Settings UX**: 
+  - Relocated "Save" button in Settings Modal to the header bar for quicker access.
+  - Updated "Save" button style to match other action buttons (orange gradient).
+  - Standardized "Close" button style across Settings and File Picker modals.
+- **File Browser UX**: 
+  - Relocated "Upload" button to the header for consistency.
+  - Reorganized footer actions to accommodate new file management tools in a clearer layout.
+- **Visuals**:
+  - Improved modal positioning: Settings and File Picker modals now have a fixed top offset to prevent vertical jumping during content resizing.
+  - Consistent modal width for Settings and File Picker.
+
+### Fixed
+- Speed Factor and Extrusion Factor sliders now properly sync with the printer
+  - Sliders now send M220 (speed) and M221 (extrusion) G-code commands when changed
+  - Previously, slider changes only updated local UI state and were immediately overwritten by subscription updates from Moonraker
+  - RetroSlider component updated to use local value + change event pattern instead of direct store binding
+  - Added `setSpeedFactor()` and `setExtrusionFactor()` functions to machineStore
+- Step increments (jog distance, extrude amount/speed, z-offset increment) now persist across page reloads via localStorage
+- MiscPanel fan speed control for named fans
+  - Correctly extracts fan name from Moonraker key (removes "fan_generic "prefix)
+  - Sends proper SET_FAN_SPEED command with extracted fan name
+- Remove unused print status handling functions from PrintStatusPanel fixing broken build
+
 ## [1.1.0] - 2026-01-25
 
 ### Added

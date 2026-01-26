@@ -35,6 +35,11 @@ const DEFAULT_CONFIG = {
             ]
         }
     ],
+    temperature: {
+        autoscale: true,
+        showGraph: true,
+        hideMonitors: false
+    },
     tempPresets: [
         { id: 'pla', name: 'PLA', bed: 60, extruder: 200 },
         { id: 'petg', name: 'PETG', bed: 80, extruder: 240 },
@@ -120,6 +125,7 @@ const migrateConfig = (config) => {
     return {
         ...config,
         tempPresets: config.tempPresets || DEFAULT_CONFIG.tempPresets,
+        temperature: config.temperature || DEFAULT_CONFIG.temperature,
         power: config.power || DEFAULT_CONFIG.power,
         panels: [
             // ... (rest of logic handles panels)
