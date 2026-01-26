@@ -2,7 +2,6 @@
     import PanelModule from "../ui/PanelModule.svelte";
     import Led from "../ui/Led.svelte";
     import CncButton from "../ui/CncButton.svelte";
-    import FilePickerModal from "../ui/FilePickerModal.svelte";
     import RetroGauge from "../ui/RetroGauge.svelte";
     import ConfirmDialog from "../ui/ConfirmDialog.svelte";
     import {
@@ -15,9 +14,7 @@
     } from "../../../stores/machineStore.js";
     import { hasErrors } from "../../../stores/notificationStore.js";
     import { configStore } from "../../../stores/configStore.js";
-
-    // File picker modal state
-    let filePickerOpen = false;
+    import { filePickerOpen } from "../../../stores/uiStore.js";
 
     // Reprint loading state
     let isReprinting = false;
@@ -57,9 +54,9 @@
     $: isCancelled = status === 'CANCELLED';
     $: isBusy = status === 'BUSY';
 
-    // Check if file bar should be clickable (whenever not actively printing)
+    // Check if file bar should be clickable
     $: noFileLoaded = !printFilename || printFilename === '';
-    $: fileBarClickable = !isPrinting;
+    $: fileBarClickable = true;
 
     // Show controls only when printing or paused
     $: showControls = isPrinting || isPaused;
@@ -160,20 +157,8 @@
     // Handle file bar click
     const handleFileBarClick = () => {
         if (fileBarClickable) {
-            filePickerOpen = true;
+            $filePickerOpen = true;
         }
-    };
-
-    // Handle file loaded from picker (without starting print)
-    const handleFileLoaded = (event) => {
-        // The file is loaded, the machineState will update via websocket
-        console.log('File loaded:', event.detail.path);
-    };
-
-    // Handle print started from picker
-    const handlePrintStarted = (event) => {
-        // Print started, the machineState will update via websocket
-        console.log('Print started:', event.detail.path);
     };
 </script>
 
@@ -308,14 +293,6 @@
             </div>
         {/if}
     </div>
-
-    <!-- File Picker Modal -->
-    <FilePickerModal 
-        bind:isOpen={filePickerOpen}
-        on:fileLoaded={handleFileLoaded}
-        on:printStarted={handlePrintStarted}
-        on:close={() => filePickerOpen = false}
-    />
 
     <!-- Confirm Dialog -->
     <ConfirmDialog

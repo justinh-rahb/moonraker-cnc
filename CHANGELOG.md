@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.1] - TBD
 
 ### Added
+- **File Access**:
+  - Added dedicated "Files" button to the Global Header for quick access from any screen.
+  - File Browser can now be opened during active prints (view-only), allowing file management and inspection without interrupting the job.
 - **File Management**:
   - Full file capabilities in File Browser: Delete (files & directories), Rename, Move, and Create New Folder.
   - Double-click to enter directories, single-click to select for actions.
