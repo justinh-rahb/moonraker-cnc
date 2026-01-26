@@ -12,6 +12,7 @@
         updateSmoothTime,
         loadFilament,
         unloadFilament,
+        setExtrusionFactor,
     } from "../../../stores/machineStore.js";
     import { send } from "../../../stores/websocket.js";
 
@@ -45,6 +46,10 @@
         const val = Math.max(0, st + delta);
         updateSmoothTime(val);
     };
+
+    const onExtrusionChange = (e) => {
+        setExtrusionFactor(e.detail.value);
+    };
 </script>
 
 <PanelModule title="EXTRUDER">
@@ -64,7 +69,8 @@
 
     <RetroSlider
         label="EXTRUSION FACTOR ({$machineState.extrusionFactor}%)"
-        bind:value={$machineState.extrusionFactor}
+        value={$machineState.extrusionFactor}
+        on:change={onExtrusionChange}
     />
 
     <div class="divider"></div>

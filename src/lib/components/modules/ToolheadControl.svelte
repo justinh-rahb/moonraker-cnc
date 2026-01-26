@@ -13,6 +13,7 @@
         homeY,
         homeZ,
         motorsOff,
+        setSpeedFactor,
     } from "../../../stores/machineStore.js";
 
     $: pos = $machineState.position;
@@ -23,6 +24,10 @@
 
     const distances = [0.1, 1, 10, 25, 50, 100];
     const zOffsetIncrements = [0.005, 0.01, 0.05, 0.1];
+
+    const onSpeedChange = (e) => {
+        setSpeedFactor(e.detail.value);
+    };
 </script>
 
 <PanelModule title="TOOLHEAD CONTROL">
@@ -89,13 +94,17 @@
         <div class="z-offset-header">
             <div class="z-offset-label">Z-OFFSET</div>
             <div class="z-offset-value">
-                {zOffset >= 0 ? '+' : ''}{zOffset.toFixed(3)}
+                {zOffset >= 0 ? "+" : ""}{zOffset.toFixed(3)}
             </div>
         </div>
-        
+
         <div class="z-offset-controls">
-            <CncButton variant="arrow" on:click={() => adjustZOffset(1)}>+</CncButton>
-            <CncButton variant="arrow" on:click={() => adjustZOffset(-1)}>-</CncButton>
+            <CncButton variant="arrow" on:click={() => adjustZOffset(1)}
+                >+</CncButton
+            >
+            <CncButton variant="arrow" on:click={() => adjustZOffset(-1)}
+                >-</CncButton
+            >
         </div>
 
         <div class="z-offset-increments">
@@ -111,7 +120,11 @@
         </div>
     </div>
 
-    <RetroSlider label="SPEED FACTOR" bind:value={$machineState.speedFactor} />
+    <RetroSlider
+        label="SPEED FACTOR"
+        value={$machineState.speedFactor}
+        on:change={onSpeedChange}
+    />
 </PanelModule>
 
 <style>
