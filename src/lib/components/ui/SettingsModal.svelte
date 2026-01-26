@@ -25,10 +25,13 @@
         addCamera,
         deleteCamera,
         updateCamera,
+        // Power
+        updatePowerConfig,
         // Import/Export
         exportConfig,
         importConfig,
     } from "../../../stores/configStore.js";
+    import { availablePowerDevices } from "../../../stores/powerStore.js";
     import CncButton from "./CncButton.svelte";
     import ColorPicker from "./ColorPicker.svelte";
     import ConfirmDialog from "./ConfirmDialog.svelte";
@@ -285,6 +288,41 @@
                                     })}
                             />
                             CONFIRM BEFORE STARTING PRINT
+                        </label>
+                    </div>
+                </div>
+
+                <div class="section-title">POWER DEVICE</div>
+                <div class="presets-container" style="margin-bottom: 25px;">
+                    <div class="macro-row">
+                        <div class="input-col main">
+                            <label>SELECTED DEVICE</label>
+                            <select
+                                value={$configStore.power?.selectedDevice || 'OFF'}
+                                on:change={(e) =>
+                                    updatePowerConfig({
+                                        selectedDevice: e.target.value,
+                                    })}
+                            >
+                                <option value="OFF">OFF (Hidden)</option>
+                                <option value="AUTO">AUTO (Recommended)</option>
+                                {#each $availablePowerDevices as deviceName}
+                                    <option value={deviceName}>{deviceName}</option>
+                                {/each}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="checkbox-group" style="margin-top: 15px;">
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={$configStore.power?.confirmToggle ?? true}
+                                on:change={(e) =>
+                                    updatePowerConfig({
+                                        confirmToggle: e.target.checked,
+                                    })}
+                            />
+                            CONFIRM POWER TOGGLE
                         </label>
                     </div>
                 </div>

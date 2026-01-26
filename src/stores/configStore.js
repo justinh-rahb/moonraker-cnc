@@ -66,6 +66,10 @@ const DEFAULT_CONFIG = {
         maxSpeedOverride: null,
         speedRedlinePercent: 90,
         showGaugeGraphics: true
+    },
+    power: {
+        selectedDevice: 'OFF',
+        confirmToggle: true
     }
 };
 
@@ -116,6 +120,7 @@ const migrateConfig = (config) => {
     return {
         ...config,
         tempPresets: config.tempPresets || DEFAULT_CONFIG.tempPresets,
+        power: config.power || DEFAULT_CONFIG.power,
         panels: [
             // ... (rest of logic handles panels)
         ]
@@ -270,6 +275,15 @@ export const reorderPanels = (panelIds) => {
             .filter(Boolean);
         return { ...s, panels: reorderedPanels };
     });
+};
+
+// ============ POWER DEVICE MANAGEMENT ============
+
+export const updatePowerConfig = (updates) => {
+    configStore.update(s => ({
+        ...s,
+        power: { ...(s.power || DEFAULT_CONFIG.power), ...updates }
+    }));
 };
 
 // ============ MACRO MANAGEMENT ============

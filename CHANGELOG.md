@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Power Device Control integration with Moonraker's device_power plugin
+  - Icon button in header (middle position) for toggling power device on/off
+  - Settings dropdown to select device: OFF (hidden), AUTO (recommended), or specific device
+  - AUTO mode automatically selects device named "printer" or first available device
+  - Real-time status updates via websocket notifications with 5-second polling fallback
+  - Visual states: green glow when on, grey when off, disabled when locked during print
+  - Orange hover effect with fill-up circle animation
+  - Configurable confirmation dialog for power toggle (enabled by default)
+  - Tooltip displays device name and current status
+  - Graceful error recovery with automatic status re-fetch on API failures
+  - Respects `locked_while_printing` flag to prevent power-off during active prints
+  - Default setting is OFF (button hidden) until user enables in settings
 - Confirmation dialogs for critical print actions (configurable in Settings)
   - Pause, Cancel, and Start Print actions can each require user confirmation
   - Generic "Are you sure?" confirmation modal with configurable button text
