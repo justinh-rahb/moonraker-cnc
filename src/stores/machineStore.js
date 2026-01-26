@@ -6,6 +6,34 @@ import { notificationStore } from './notificationStore.js';
 // Debug logging (only in dev mode)
 const DEBUG = import.meta.env.DEV;
 
+// localStorage key for step increments
+const STORAGE_KEY_INCREMENTS = 'retro_cnc_increments_v1';
+
+// Load saved increments from localStorage
+const loadIncrements = () => {
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY_INCREMENTS);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (e) {
+        console.error('Failed to load step increments from localStorage', e);
+    }
+    return null;
+};
+
+// Save increments to localStorage
+const saveIncrements = (increments) => {
+    try {
+        localStorage.setItem(STORAGE_KEY_INCREMENTS, JSON.stringify(increments));
+    } catch (e) {
+        console.error('Failed to save step increments to localStorage', e);
+    }
+};
+
+// Load saved values
+const savedIncrements = loadIncrements();
+
 // Initial state
 export const machineState = writable({
     status: 'STANDBY',
@@ -35,13 +63,13 @@ export const machineState = writable({
     extrusionFactor: 100, // %
 
     // Selected options
-    jogDistance: 10,
-    extrudeAmount: 10,
-    extrudeSpeed: 5, // mm/s
+    jogDistance: savedIncrements?.jogDistance ?? 10,
+    extrudeAmount: savedIncrements?.extrudeAmount ?? 10,
+    extrudeSpeed: savedIncrements?.extrudeSpeed ?? 5, // mm/s
 
     // Z-Offset Baby-Stepping
     zOffset: 0.0,          // Current z-offset (from gcode_move.homing_origin[2])
-    zOffsetIncrement: 0.05, // Selected increment for baby-stepping
+    zOffsetIncrement: savedIncrements?.zOffsetIncrement ?? 0.05, // Selected increment for baby-stepping
 
     // Extruder Tuning
     pressureAdvance: 0.0,
@@ -80,19 +108,55 @@ const HISTORY_points = 300; // Keep last ~5-10 mins depending on update rate
 
 // Helper actions
 export const setJogDistance = (dist) => {
-    machineState.update(s => ({ ...s, jogDistance: dist }));
+    machineState.update(s => {
+        const newState = { ...s, jogDistance: dist };
+        saveIncrements({
+            jogDistance: newState.jogDistance,
+            extrudeAmount: newState.extrudeAmount,
+            extrudeSpeed: newState.extrudeSpeed,
+            zOffsetIncrement: newState.zOffsetIncrement
+        });
+        return newState;
+    });
 };
 
 export const setExtrudeAmount = (amount) => {
-    machineState.update(s => ({ ...s, extrudeAmount: amount }));
+    machineState.update(s => {
+        const newState = { ...s, extrudeAmount: amount };
+        saveIncrements({
+            jogDistance: newState.jogDistance,
+            extrudeAmount: newState.extrudeAmount,
+            extrudeSpeed: newState.extrudeSpeed,
+            zOffsetIncrement: newState.zOffsetIncrement
+        });
+        return newState;
+    });
 };
 
 export const setExtrudeSpeed = (speed) => {
-    machineState.update(s => ({ ...s, extrudeSpeed: speed }));
+    machineState.update(s => {
+        const newState = { ...s, extrudeSpeed: speed };
+        saveIncrements({
+            jogDistance: newState.jogDistance,
+            extrudeAmount: newState.extrudeAmount,
+            extrudeSpeed: newState.extrudeSpeed,
+            zOffsetIncrement: newState.zOffsetIncrement
+        });
+        return newState;
+    });
 };
 
 export const setZOffsetIncrement = (increment) => {
-    machineState.update(s => ({ ...s, zOffsetIncrement: increment }));
+    machineState.update(s => {
+        const newState = { ...s, zOffsetIncrement: increment };
+        saveIncrements({
+            jogDistance: newState.jogDistance,
+            extrudeAmount: newState.extrudeAmount,
+            extrudeSpeed: newState.extrudeSpeed,
+            zOffsetIncrement: newState.zOffsetIncrement
+        });
+        return newState;
+    });
 };
 
 export const setActiveExtruder = (extruderName) => {

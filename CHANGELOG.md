@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Previously, slider changes only updated local UI state and were immediately overwritten by subscription updates from Moonraker
   - RetroSlider component updated to use local value + change event pattern instead of direct store binding
   - Added `setSpeedFactor()` and `setExtrusionFactor()` functions to machineStore
+- Step increments (jog distance, extrude amount/speed, z-offset increment) now persist across page reloads via localStorage
 - MiscPanel fan speed control for named fans
   - Correctly extracts fan name from Moonraker key (removes "fan_generic "prefix)
   - Sends proper SET_FAN_SPEED command with extracted fan name
