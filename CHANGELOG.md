@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.1] - TBD
 
+### Added
+- Temperature Panel improvements
+  - **Autoscale Graph**: Graph Y-axis now dynamically scales to the highest visible temperature (plus 10% buffer), improving visibility for lower-temp prints (e.g., PLA at 200°C vs 300°C max).
+  - **Interactive Cursor**: Hovering over the graph now displays a vertical cursor and a floating tooltip showing exact temperature values for all sensors at that specific time point.
+  - **Hide Monitors**: New setting to hide passive temperature sensors (like Raspberry Pi or MCU temps) from the graph and list, focusing only on heaters (Bed, Extruder).
+  - **Hide Graph**: Option to completely hide the temperature graph for a compact view.
+  - **Settings Integration**: New "TEMPERATURE DISPLAY" section in Settings Modal to toggle these features. Preserves user preferences.
+
 ### Fixed
 - Speed Factor and Extrusion Factor sliders now properly sync with the printer
   - Sliders now send M220 (speed) and M221 (extrusion) G-code commands when changed

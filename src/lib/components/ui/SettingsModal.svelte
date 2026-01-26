@@ -515,6 +515,47 @@
                     </div>
                 </div>
 
+                <div class="section-title">TEMPERATURE DISPLAY</div>
+
+                <div class="checkbox-group" style="margin-bottom: 25px;">
+                    <label style="margin-bottom: 15px;">
+                        <input
+                            type="checkbox"
+                            checked={$configStore.temperature?.showGraph}
+                            on:change={(e) =>
+                                ($configStore.temperature = {
+                                    ...$configStore.temperature,
+                                    showGraph: e.target.checked,
+                                })}
+                        />
+                        SHOW GRAPH
+                    </label>
+                    <label style="margin-bottom: 15px;">
+                        <input
+                            type="checkbox"
+                            checked={$configStore.temperature?.autoscale}
+                            on:change={(e) =>
+                                ($configStore.temperature = {
+                                    ...$configStore.temperature,
+                                    autoscale: e.target.checked,
+                                })}
+                        />
+                        AUTOSCALE GRAPH
+                    </label>
+                    <label>
+                        <input
+                            type="checkbox"
+                            checked={$configStore.temperature?.hideMonitors}
+                            on:change={(e) =>
+                                ($configStore.temperature = {
+                                    ...$configStore.temperature,
+                                    hideMonitors: e.target.checked,
+                                })}
+                        />
+                        HIDE MONITORS (HOST/MCU)
+                    </label>
+                </div>
+
                 <div class="section-title">TEMPERATURE PRESETS</div>
 
                 <div class="presets-container">
