@@ -14,11 +14,15 @@ A retro-styled, reactive web interface for controlling 3D printers and CNC machi
 - **Motors Control**: Quick motors off (M84) for manual intervention
 - **Z-Offset Baby-Stepping**: Real-time Z offset adjustment during printing with configurable increments (0.005mm - 0.1mm)
 - **Speed Factor Control**: Adjust print speed in real-time (0-200%)
+- **Power Device Control**: Toggle printer power on/off via Moonraker's device_power plugin with visual status indicators
 
 ### 🖨️ Print Management
 - **Print Status Panel**: Comprehensive print monitoring with color-coded LED indicators (Green/Orange/Red)
+- **Retro Dial Gauges**: Animated speed and flow gauges with spring-physics needles and configurable zones
 - **Live Metrics**: Real-time display of progress, elapsed time, speed (mm/s), and volumetric flow (mm³/s)
-- **Print Controls**: Pause/Resume/Cancel with configurable macro names
+- **Layer Progress**: Track current layer vs. total layers during printing
+- **Print Controls**: Pause/Resume/Cancel with configurable macro names and optional confirmation dialogs
+- **Clear & Reprint**: Quick buttons to clear completed/cancelled prints or restart the same job
 - **File Picker**: Browse Klipper's gcode directory with subdirectory navigation
 - **File Uploads**: Drag-and-drop file upload support
 - **Send & Print**: Start prints directly from the file browser
@@ -53,18 +57,30 @@ A retro-styled, reactive web interface for controlling 3D printers and CNC machi
 - **Fan Speed Control**: Slider-based adjustment (0-100%)
 - **Output Pin Control**: Toggle and adjust output pins
 
+### 📷 Camera Integration
+- **MJPEG Stream Support**: Display live camera feeds from ustreamer/camera-streamer
+- **Multiple Cameras**: Configure and switch between multiple cameras with compact buttons
+- **Orientation Controls**: Flip horizontal/vertical and rotate (0°, 90°, 180°, 270°)
+- **Aspect Ratio Options**: Support for 16:9, 4:3, 1:1, and 21:9 ratios
+- **FPS Counter**: Optional live FPS overlay per camera
+- **Configurable Refresh Rate**: Per-camera target refresh rate settings
+
 ### ⚙️ Customization
 - **Customizable Macro Panels**: Create, edit, delete, and reorder macro panels
 - **Unlimited Macros**: Add as many macros as needed with custom labels, G-code, and colors
 - **Panel Reordering**: Drag and organize panels to your preference
 - **Custom Panel Title**: Rename the interface for your machine
 - **Persistent Settings**: Auto-save all settings to localStorage
+- **Settings Import/Export**: Backup and restore all settings via JSON file
 - **Autoconnect**: Optional automatic connection on page load
+- **Version Information**: Build version and commit hash displayed in Settings with GitHub links
 
-### 🔔 Notifications
+### 🔔 Notifications & Safety
 - **Error Handling**: Display and track API errors
 - **System Status Monitoring**: Detects Klipper shutdown/error states
 - **Status LED Integration**: Visual indicators for RUN/ERR states
+- **Confirmation Dialogs**: Optional confirmations for Pause, Cancel, and Start Print actions
+- **Power Lock Protection**: Respects `locked_while_printing` flag to prevent accidental power-off
 
 ### 🎨 Retro Aesthetic
 - **CRT Scanline Effect**: Authentic terminal appearance
@@ -170,6 +186,22 @@ Configure load/unload operations:
 - **Unload Macro**: Default `UNLOAD_FILAMENT`
 - **Parameters**: Configurable distance and speed parameter names
 
+### Power Device
+- **Device Selection**: OFF (hidden), AUTO (recommended), or specific device
+- **AUTO Mode**: Automatically selects device named "printer" or first available
+- **Confirmation Dialog**: Optional confirmation before toggling power
+
+### Camera Settings
+- **Multiple Cameras**: Add, configure, and enable/disable cameras
+- **Stream URLs**: Configure MJPEG stream and snapshot URLs per camera
+- **Orientation**: Flip and rotation controls per camera
+- **Refresh Rate**: Target FPS for adaptive MJPEG streams
+
+### Dial Gauge Settings
+- **Max Rates**: Configure maximum speed and flow values
+- **Redline Thresholds**: Set warning zone thresholds
+- **Graphics Mode**: Option to show only numeric values without gauges
+
 All settings persist to browser localStorage automatically.
 
 ## Control Layout
@@ -201,10 +233,12 @@ All settings persist to browser localStorage automatically.
 
 ### Print Status Panel
 - Color-coded status LEDs (Green/Orange/Red)
-- Progress bar with percentage
+- Animated dial gauges for speed and flow with color zones
+- Progress bar with percentage and layer count
 - Elapsed time display
 - Live speed (mm/s) and volumetric flow (mm³/s)
-- Pause/Resume/Cancel controls
+- Pause/Resume/Cancel controls with optional confirmations
+- Clear and Reprint buttons after print completion
 
 ### Console Panel
 - Direct G-code command input
