@@ -46,6 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Camera selector buttons integrated into bottom info bar for space efficiency
 
 ### Changed
+- Print Status Panel filename display now uses flexible width to show more of the filename
+- File picker is now accessible whenever machine is not actively printing (previously only when no file loaded)
 - Flow rate display now clamps negative values to zero during retraction moves (prevents confusing negative flow rates)
 - Export settings filename now uses format `<machine title>-<date>.json` instead of hardcoded prefix
 - Page title now dynamically reflects the user's configured machine title from settings

@@ -57,9 +57,9 @@
     $: isCancelled = status === 'CANCELLED';
     $: isBusy = status === 'BUSY';
 
-    // Check if file bar should be clickable (no file loaded and not busy)
+    // Check if file bar should be clickable (whenever not actively printing)
     $: noFileLoaded = !printFilename || printFilename === '';
-    $: fileBarClickable = noFileLoaded && !isPrinting && !isPaused && !isBusy;
+    $: fileBarClickable = !isPrinting;
 
     // Show controls only when printing or paused
     $: showControls = isPrinting || isPaused;
@@ -434,10 +434,11 @@
     }
 
     .info-value.filename {
-        max-width: 200px;
+        flex: 1;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        text-align: right;
     }
 
     /* Progress Section */
