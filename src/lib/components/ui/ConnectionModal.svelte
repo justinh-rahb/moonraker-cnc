@@ -9,7 +9,7 @@
         updateServerConfig,
     } from "../../../stores/configStore.js";
     import CncButton from "./CncButton.svelte";
-    import { onMount } from "svelte";
+    import { onMount, onDestroy } from "svelte";
 
     // Local state for inputs
     let ipAddress = window.location.hostname || "localhost";
@@ -28,6 +28,16 @@
     $: fullUrl = `${ipAddress}:${port}`;
     $: state = $connectionState;
     $: error = $lastError;
+
+    $: if (typeof document !== "undefined") {
+        document.body.style.overflow = state !== "connected" ? "hidden" : "";
+    }
+
+    onDestroy(() => {
+        if (typeof document !== "undefined") {
+            document.body.style.overflow = "";
+        }
+    });
 
     const handleConnect = () => {
         if (state === "connecting") return;

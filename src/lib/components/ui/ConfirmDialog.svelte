@@ -1,10 +1,22 @@
 <script>
+    import { onDestroy } from "svelte";
+
     export let isOpen = false;
     export let title = "CONFIRM";
     export let message = "Are you sure?";
     export let confirmButtonText = "CONFIRM";
     export let onConfirm = () => {};
     export let onCancel = () => {};
+
+    $: if (typeof document !== "undefined") {
+        document.body.style.overflow = isOpen ? "hidden" : "";
+    }
+
+    onDestroy(() => {
+        if (typeof document !== "undefined") {
+            document.body.style.overflow = "";
+        }
+    });
 
     const handleConfirm = () => {
         isOpen = false;

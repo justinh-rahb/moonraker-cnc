@@ -8,6 +8,16 @@
 
     export let isOpen = false;
 
+    $: if (typeof document !== "undefined") {
+        document.body.style.overflow = isOpen ? "hidden" : "";
+    }
+
+    onDestroy(() => {
+        if (typeof document !== "undefined") {
+            document.body.style.overflow = "";
+        }
+    });
+
     const dispatch = createEventDispatcher();
 
     // State
