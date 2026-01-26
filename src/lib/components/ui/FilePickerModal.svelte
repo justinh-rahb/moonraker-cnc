@@ -481,7 +481,8 @@
         z-index: 2000;
         display: flex;
         justify-content: center;
-        align-items: center;
+        align-items: flex-start;
+        padding-top: 50px;
         backdrop-filter: blur(4px);
     }
 
@@ -490,9 +491,9 @@
     }
 
     .modal-window {
-        width: 700px;
+        width: 900px;
         max-width: 90vw;
-        max-height: 80vh;
+        max-height: calc(100vh - 100px);
         background: var(--bg-module);
         border: 4px solid var(--border-color);
         box-shadow:
