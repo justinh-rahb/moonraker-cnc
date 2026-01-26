@@ -209,7 +209,7 @@ const initializeConnection = async () => {
             'virtual_sdcard': ['progress', 'file_path'],
             'motion_report': ['live_velocity', 'live_extruder_velocity'],
             'idle_timeout': ['state'],
-            'display_status': ['message'],
+            'display_status': ['message', 'progress'],
         };
 
         // Add all temperature objects to subscription
@@ -420,14 +420,17 @@ const updateStateFromStatus = (status) => {
             if (status.print_stats.filament_used !== undefined) {
                 newState.filamentUsed = status.print_stats.filament_used;
             }
-            // Check for layer info in print_stats
-            if (status.print_stats.info && status.print_stats.info.current_layer !== undefined) {
-                newState.currentLayer = status.print_stats.info.current_layer;
-                if (DEBUG) console.log('[DEBUG] Found current_layer in print_stats.info:', newState.currentLayer);
-            }
-            if (status.print_stats.info && status.print_stats.info.total_layer !== undefined) {
-                newState.totalLayers = status.print_stats.info.total_layer;
-                if (DEBUG) console.log('[DEBUG] Found total_layer in print_stats.info:', newState.totalLayers);
+            // Check for layer info in print_stats.info
+            if (status.print_stats.info) {
+                if (DEBUG) console.log('[DEBUG] print_stats.info found:', JSON.stringify(status.print_stats.info));
+                if (status.print_stats.info.current_layer !== undefined) {
+                    newState.currentLayer = status.print_stats.info.current_layer;
+                    if (DEBUG) console.log('[DEBUG] Updated current_layer to:', newState.currentLayer);
+                }
+                if (status.print_stats.info.total_layer !== undefined) {
+                    newState.totalLayers = status.print_stats.info.total_layer;
+                    if (DEBUG) console.log('[DEBUG] Updated total_layer to:', newState.totalLayers);
+                }
             }
         }
 
@@ -440,6 +443,7 @@ const updateStateFromStatus = (status) => {
         // Always derive the display status from the raw states
         // This ensures status updates correctly when either state changes
         const rawStatus = newState.printStatsState.toUpperCase();
+        const oldStatus = newState.status; // Track old status for transition detection
 
         // Determine BUSY state: when idle_timeout is "Printing" but not actually printing a file
         // This happens during homing, probing, manual moves, macros, etc.
@@ -515,16 +519,30 @@ const updateStateFromStatus = (status) => {
             }
         }
 
-        // Reset live values to 0 when not printing
+        // Reset live speed/flow when not printing
+        // Only reset layers when transitioning OUT of printing state
         if (newState.status !== 'PRINTING') {
             newState.liveSpeed = 0;
             newState.liveExtruderVelocity = 0;
-            newState.currentLayer = 0;
-            newState.totalLayers = 0;
-        } else if (newState.totalLayers > 0 && newState.currentLayer === 0 && newState.printProgress > 0) {
-            // Estimate current layer from progress if we have total but not current
-            newState.currentLayer = Math.max(1, Math.floor(newState.printProgress * newState.totalLayers));
-            if (DEBUG) console.log('[DEBUG] Estimated current layer from progress:', newState.currentLayer);
+            
+            // Only reset layers if we just stopped printing (state transition)
+            if (oldStatus === 'PRINTING' && (newState.status === 'COMPLETE' || newState.status === 'CANCELLED' || newState.status === 'STANDBY')) {
+                newState.currentLayer = 0;
+                newState.totalLayers = 0;
+                if (DEBUG) console.log('[DEBUG] Print ended, resetting layers');
+            }
+        } else if (newState.totalLayers > 0 && newState.printProgress > 0) {
+            // Always estimate current layer from progress when we have total layers
+            // This updates continuously as progress changes
+            const estimatedLayer = Math.max(1, Math.round(newState.printProgress * newState.totalLayers));
+            if (estimatedLayer !== newState.currentLayer) {
+                newState.currentLayer = estimatedLayer;
+                if (DEBUG) console.log('[DEBUG] Estimated current layer from progress:', newState.currentLayer, '/', newState.totalLayers, 'at', Math.round(newState.printProgress * 100) + '%');
+            }
+        }
+        
+        if (DEBUG && (newState.currentLayer > 0 || newState.totalLayers > 0)) {
+            console.log('[DEBUG] Layer state at end of update:', newState.currentLayer, '/', newState.totalLayers, 'Status:', newState.status);
         }
 
         return newState;

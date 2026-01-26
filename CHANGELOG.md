@@ -48,6 +48,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Preserves filename for reprint functionality on both COMPLETE and CANCELLED statuses
   - Allows users to clear cancelled prints or immediately restart them
 
+### Fixed
+- Current layer count now updates in real-time during active prints
+  - Layer estimate now recalculates continuously based on progress percentage
+  - Previously only calculated once when layer was 0, causing stale display
+- RetroGauge infinite loop causing "maximum update depth exceeded" error
+  - Fixed `$effect` to track previous value and only update when value actually changes
+  - Prevents infinite loop from reading and writing the same state
+
 ## [1.0.0] - 2026-01-25
 
 ### Added
