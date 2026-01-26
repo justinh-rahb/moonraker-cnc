@@ -739,6 +739,22 @@
                                     </div>
                                 </div>
 
+                                <div class="camera-row">
+                                    <div class="input-col">
+                                        <label>TARGET REFRESH RATE (FPS)</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="30"
+                                            value={camera.targetRefreshRate || 5}
+                                            on:input={(e) =>
+                                                updateCamera(camera.id, {
+                                                    targetRefreshRate: parseInt(e.target.value) || 5,
+                                                })}
+                                        />
+                                    </div>
+                                </div>
+
                                 <div class="checkbox-group">
                                     <label>
                                         <input

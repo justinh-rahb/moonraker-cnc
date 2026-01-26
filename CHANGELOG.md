@@ -48,6 +48,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Print Status Panel filename display now uses flexible width to show more of the filename
 - File picker is now accessible whenever machine is not actively printing (previously only when no file loaded)
+
+### Fixed
+- Camera switching reliability issues in Camera Panel
+  - Camera selection now persists to localStorage, surviving page reloads and component re-mounts
+  - Eliminated race condition between user selection and reactive fallback logic
+  - Decoupled stream URL updates from camera selection reactive chain to prevent unintended resets
+  - Added per-camera configurable target refresh rate (default 5 FPS) with dynamic interval adjustment
+  - Refresh interval now updates automatically when switching between cameras with different refresh rates
+  - Camera selection now only falls back to first camera when saved camera is deleted/disabled, not on every reactive update
+  - Switching cameras now works reliably on first click without requiring multiple toggles
 - Flow rate display now clamps negative values to zero during retraction moves (prevents confusing negative flow rates)
 - Export settings filename now uses format `<machine title>-<date>.json` instead of hardcoded prefix
 - Page title now dynamically reflects the user's configured machine title from settings

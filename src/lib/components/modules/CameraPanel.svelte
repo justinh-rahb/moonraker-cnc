@@ -4,6 +4,8 @@
   import { configStore } from "../../../stores/configStore.js";
   import { onDestroy, onMount } from "svelte";
 
+  const CAMERA_SELECTION_KEY = 'retro_cnc_camera_selection';
+
   let selectedCameraId = null;
   let refreshInterval = null;
   let imageTimestamp = Date.now();
@@ -34,9 +36,21 @@
   })();
 
   // Update stream URL with timestamp for refresh
-  $: streamUrl = selectedCamera?.streamUrl 
-    ? `${selectedCamera.streamUrl}${selectedCamera.streamUrl.includes('?') ? '&' : '?'}t=${imageTimestamp}`
+  // Decoupled to prevent reactive chain re-evaluation every interval
+  $: baseStreamUrl = selectedCamera?.streamUrl || '';
+  $: streamUrl = baseStreamUrl 
+    ? `${baseStreamUrl}${baseStreamUrl.includes('?') ? '&' : '?'}t=${imageTimestamp}`
     : '';
+
+  // Update refresh interval when selected camera or its refresh rate changes
+  $: if (selectedCamera && refreshInterval) {
+    const fps = selectedCamera.targetRefreshRate || 5;
+    const intervalMs = Math.round(1000 / fps);
+    clearInterval(refreshInterval);
+    refreshInterval = setInterval(() => {
+      imageTimestamp = Date.now();
+    }, intervalMs);
+  }
 
   // Handle frame load for FPS calculation
   function handleFrameLoad() {
@@ -54,10 +68,31 @@
 
   // Start refresh interval for MJPEG streams
   onMount(() => {
-    // Refresh timestamp every 100ms to force reload
-    refreshInterval = setInterval(() => {
-      imageTimestamp = Date.now();
-    }, 100);
+    // Load saved camera selection from localStorage
+    try {
+      const savedCameraId = localStorage.getItem(CAMERA_SELECTION_KEY);
+      if (savedCameraId && enabledCameras.some(c => c.id === savedCameraId)) {
+        selectedCameraId = savedCameraId;
+      }
+    } catch (e) {
+      console.error('Failed to load camera selection', e);
+    }
+
+    // Set up refresh interval based on camera refresh rate
+    const updateInterval = () => {
+      const fps = selectedCamera?.targetRefreshRate || 5;
+      const intervalMs = Math.round(1000 / fps);
+      
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+      
+      refreshInterval = setInterval(() => {
+        imageTimestamp = Date.now();
+      }, intervalMs);
+    };
+    
+    updateInterval();
   });
 
   onDestroy(() => {
@@ -68,6 +103,14 @@
 
   function selectCamera(cameraId) {
     selectedCameraId = cameraId;
+    
+    // Persist selection to localStorage
+    try {
+      localStorage.setItem(CAMERA_SELECTION_KEY, cameraId);
+    } catch (e) {
+      console.error('Failed to save camera selection', e);
+    }
+    
     // Reset FPS counter when switching cameras
     frameCount = 0;
     currentFps = 0;
