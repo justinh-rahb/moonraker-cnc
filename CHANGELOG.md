@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- MiscPanel fan speed control for named fans
+  - Correctly extracts fan name from Moonraker key (removes "fan_generic "prefix)
+  - Sends proper SET_FAN_SPEED command with extracted fan name
+- Remove unused print status handling functions from PrintStatusPanel fixing broken build
+
 ## [1.1.0] - 2026-01-25
 
 ### Added

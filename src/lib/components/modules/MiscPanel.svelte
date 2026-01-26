@@ -13,9 +13,10 @@
             const val = Math.floor(speed * 255);
             send("printer.gcode.script", { script: `M106 S${val}` });
         } else {
-            // fan_generic expects 0.0-1.0 usually
+            // Extract fan name from object key (e.g., "fan_generic cavity_fan" -> "cavity_fan")
+            const fanName = key.replace(/^fan_generic\s+/, "");
             send("printer.gcode.script", {
-                script: `SET_FAN_SPEED FAN=${key} SPEED=${speed.toFixed(2)}`,
+                script: `SET_FAN_SPEED FAN=${fanName} SPEED=${speed.toFixed(2)}`,
             });
         }
     };
