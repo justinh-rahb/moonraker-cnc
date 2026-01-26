@@ -46,7 +46,12 @@ const fetchDevices = async () => {
         const result = await send('machine.device_power.devices');
         return result.devices || [];
     } catch (error) {
-        console.error('Failed to fetch power devices:', error);
+        // Silently handle if device_power plugin is not available (Method not found)
+        if (error.code === -32601) {
+            // Method not found - device_power plugin not configured
+            return [];
+        }
+        console.warn('Failed to fetch power devices:', error);
         powerState.update(s => ({ ...s, lastError: error.message || 'Failed to fetch devices' }));
         return [];
     }
@@ -58,7 +63,11 @@ const fetchDeviceStatus = async (deviceName) => {
         const result = await send('machine.device_power.status', { [deviceName]: null });
         return result[deviceName];
     } catch (error) {
-        console.error(`Failed to fetch status for ${deviceName}:`, error);
+        // Silently handle if device_power plugin is not available
+        if (error.code === -32601) {
+            return 'unavailable';
+        }
+        console.warn(`Failed to fetch status for ${deviceName}:`, error);
         return 'error';
     }
 };
