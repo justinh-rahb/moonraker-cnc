@@ -19,7 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Settings Integration**: New "TEMPERATURE DISPLAY" section in Settings Modal to toggle these features. Preserves user preferences.
 
 ### Changed
-- **Settings UX**: Relocated "Save" button in Settings Modal to the header bar for quicker access.
+- **Settings UX**: 
+  - Relocated "Save" button in Settings Modal to the header bar for quicker access.
+  - Updated "Save" button style to match other action buttons (orange gradient).
+  - Standardized "Close" button style across Settings and File Picker modals.
+- **Visuals**:
+  - Improved modal positioning: Settings and File Picker modals now have a fixed top offset to prevent vertical jumping during content resizing.
+  - Consistent modal width for Settings and File Picker.
 
 ### Fixed
 - Speed Factor and Extrusion Factor sliders now properly sync with the printer
