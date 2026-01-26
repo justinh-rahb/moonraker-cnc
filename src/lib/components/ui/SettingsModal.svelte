@@ -1,4 +1,5 @@
 <script>
+    import { onDestroy } from "svelte";
     import {
         configStore,
         updateTitle,
@@ -38,6 +39,16 @@
 
     export let isOpen = false;
     export let onClose;
+
+    $: if (typeof document !== "undefined") {
+        document.body.style.overflow = isOpen ? "hidden" : "";
+    }
+
+    onDestroy(() => {
+        if (typeof document !== "undefined") {
+            document.body.style.overflow = "";
+        }
+    });
 
     // Build information injected at build time
     const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
@@ -159,6 +170,10 @@
         };
         reader.readAsText(file);
     };
+
+    // Tabs
+    const tabs = ["General", "Interface", "Macros", "Panels", "Cameras"];
+    let currentTab = "General";
 </script>
 
 {#if isOpen}
@@ -169,9 +184,22 @@
                 <button class="close-btn" on:click={save}>x</button>
             </div>
 
+            <div class="tabs">
+                {#each tabs as tab}
+                    <button
+                        class="tab-btn"
+                        class:active={currentTab === tab}
+                        on:click={() => (currentTab = tab)}
+                    >
+                        {tab.toUpperCase()}
+                    </button>
+                {/each}
+            </div>
+
             <div class="modal-content">
-                <div class="section-title">GENERAL</div>
-                <div class="input-group" style="margin-bottom: 25px;">
+                {#if currentTab === "General"}
+                    <div class="section-title">GENERAL</div>
+                    <div class="input-group" style="margin-bottom: 25px;">
                     <label>MACHINE TITLE</label>
                     <input
                         type="text"
@@ -214,7 +242,9 @@
                         <div class="import-error">{importError}</div>
                     {/if}
                 </div>
+                {/if}
 
+                {#if currentTab === "Macros"}
                 <div class="section-title">PRINT CONTROL MACROS</div>
                 <div class="presets-container" style="margin-bottom: 25px;">
                     <div class="macro-row">
@@ -291,7 +321,9 @@
                         </label>
                     </div>
                 </div>
+                {/if}
 
+                {#if currentTab === "General"}
                 <div class="section-title">POWER DEVICE</div>
                 <div class="presets-container" style="margin-bottom: 25px;">
                     <div class="macro-row">
@@ -326,7 +358,9 @@
                         </label>
                     </div>
                 </div>
+                {/if}
 
+                {#if currentTab === "Macros"}
                 <div class="section-title">FILAMENT MACROS</div>
                 <div class="presets-container" style="margin-bottom: 25px;">
                     <div class="macro-row">
@@ -394,7 +428,9 @@
                         </div>
                     </div>
                 </div>
+                {/if}
 
+                {#if currentTab === "Interface"}
                 <div class="section-title">GAUGE SETTINGS</div>
                 <div class="presets-container" style="margin-bottom: 25px;">
                     <div class="macro-row">
@@ -479,7 +515,9 @@
                         </div>
                     </div>
                 </div>
+                {/if}
 
+                {#if currentTab === "General"}
                 <div class="section-title">CONSOLE SETTINGS</div>
                 <div class="presets-container" style="margin-bottom: 25px;">
                     <div class="checkbox-group">
@@ -514,7 +552,9 @@
                         <div class="help-text">Number of messages to keep (100-1000)</div>
                     </div>
                 </div>
+                {/if}
 
+                {#if currentTab === "Interface"}
                 <div class="section-title">TEMPERATURE DISPLAY</div>
 
                 <div class="checkbox-group" style="margin-bottom: 25px;">
@@ -614,7 +654,9 @@
                         + ADD PRESET
                     </button>
                 </div>
+                {/if}
 
+                {#if currentTab === "Panels"}
                 <div class="section-title">MACRO PANELS</div>
 
                 <div class="panels-container">
@@ -720,7 +762,9 @@
                 <button class="create-panel-btn" on:click={handleCreatePanel}>
                     + CREATE NEW PANEL
                 </button>
+                {/if}
 
+                {#if currentTab === "Cameras"}
                 <div class="section-title">CAMERA SETTINGS</div>
 
                 <div class="cameras-container">
@@ -877,7 +921,9 @@
                 <button class="create-panel-btn" on:click={handleCreateCamera}>
                     + ADD CAMERA
                 </button>
+                {/if}
 
+                {#if currentTab === "General"}
                 <div class="about-section">
                     <div class="section-title">ABOUT</div>
                     <div class="about-content">
@@ -903,6 +949,7 @@
                         </div>
                     </div>
                 </div>
+                {/if}
 
                 <div class="actions">
                     <CncButton variant="action" on:click={save}>
@@ -1358,5 +1405,37 @@
     .version-link:hover {
         color: #fff;
         border-bottom-color: var(--retro-green);
+    }
+
+    /* Tab Styles */
+    .tabs {
+        display: flex;
+        background: #000;
+        border-bottom: 2px solid var(--border-color);
+        padding: 0 15px;
+    }
+
+    .tab-btn {
+        background: none;
+        border: none;
+        color: #666;
+        padding: 15px 20px;
+        font-family: "Orbitron", monospace;
+        font-size: 12px;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s ease;
+        letter-spacing: 1px;
+    }
+
+    .tab-btn:hover {
+        color: #fff;
+        background: #111;
+    }
+
+    .tab-btn.active {
+        color: var(--retro-orange);
+        border-bottom-color: var(--retro-orange);
+        background: #151515;
     }
 </style>
