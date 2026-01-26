@@ -50,7 +50,10 @@ const DEFAULT_CONFIG = {
     printControl: {
         pauseMacro: 'PAUSE',
         resumeMacro: 'RESUME',
-        cancelMacro: 'CANCEL_PRINT'
+        cancelMacro: 'CANCEL_PRINT',
+        confirmPause: false,
+        confirmCancel: true,
+        confirmStartPrint: true
     },
     console: {
         newestFirst: true,
@@ -61,7 +64,8 @@ const DEFAULT_CONFIG = {
         maxFlowRate: 30,
         flowRedline: 20,
         maxSpeedOverride: null,
-        speedRedlinePercent: 90
+        speedRedlinePercent: 90,
+        showGaugeGraphics: true
     }
 };
 

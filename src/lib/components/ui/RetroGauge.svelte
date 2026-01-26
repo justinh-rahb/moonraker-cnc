@@ -1,7 +1,7 @@
 <script>
     import { animate } from 'motion';
 
-    const { value = 0, max = 100, redline = 80, label = "GAUGE", unit = "" } = $props();
+    const { value = 0, max = 100, redline = 80, label = "GAUGE", unit = "", hideGraphics = false } = $props();
     
     // EMA smoothing configuration
     const ALPHA = 0.35; // Smoothing factor (0.35 = good balance)
@@ -107,6 +107,7 @@
 
 <div class="gauge-container">
     <div class="gauge-label">{label}</div>
+    {#if !hideGraphics}
     <svg viewBox="0 0 200 160" class="gauge-svg">
         <!-- Background arc -->
         <path
@@ -179,8 +180,9 @@
             fill={isRedZone ? '#ff0000' : isOrangeZone ? 'var(--retro-orange)' : 'var(--retro-green)'}
         />
     </svg>
-    
-    <div class="gauge-readout">
+    {/if}
+
+    <div class="gauge-readout" class:numbers-only={hideGraphics}>
         <span class="readout-value">{displayValue}</span>
         {#if unit}
             <span class="readout-unit">{unit}</span>
@@ -259,5 +261,17 @@
         font-size: 11px;
         color: #666;
         letter-spacing: 1px;
+    }
+
+    .gauge-readout.numbers-only {
+        margin-top: 0;
+    }
+
+    .gauge-readout.numbers-only .readout-value {
+        font-size: 36px;
+    }
+
+    .gauge-readout.numbers-only .readout-unit {
+        font-size: 14px;
     }
 </style>

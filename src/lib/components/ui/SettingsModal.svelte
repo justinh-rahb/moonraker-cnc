@@ -252,6 +252,41 @@
                             />
                         </div>
                     </div>
+                    <div class="checkbox-group" style="margin-top: 15px;">
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={$configStore.printControl?.confirmPause ?? false}
+                                on:change={(e) =>
+                                    updatePrintControlConfig({
+                                        confirmPause: e.target.checked,
+                                    })}
+                            />
+                            CONFIRM BEFORE PAUSING
+                        </label>
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={$configStore.printControl?.confirmCancel ?? true}
+                                on:change={(e) =>
+                                    updatePrintControlConfig({
+                                        confirmCancel: e.target.checked,
+                                    })}
+                            />
+                            CONFIRM BEFORE CANCELLING
+                        </label>
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={$configStore.printControl?.confirmStartPrint ?? true}
+                                on:change={(e) =>
+                                    updatePrintControlConfig({
+                                        confirmStartPrint: e.target.checked,
+                                    })}
+                            />
+                            CONFIRM BEFORE STARTING PRINT
+                        </label>
+                    </div>
                 </div>
 
                 <div class="section-title">FILAMENT MACROS</div>
@@ -387,6 +422,22 @@
                                     })}
                             />
                             <div class="help-text">Redline as % of max speed</div>
+                        </div>
+                    </div>
+                    <div class="checkbox-group" style="margin-top: 15px;">
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={$configStore.gauges?.showGaugeGraphics ?? true}
+                                on:change={(e) =>
+                                    updateGaugeConfig({
+                                        showGaugeGraphics: e.target.checked,
+                                    })}
+                            />
+                            SHOW GAUGE GRAPHICS
+                        </label>
+                        <div class="help-text" style="margin-left: 24px; margin-top: 4px;">
+                            When disabled, only numeric values are displayed
                         </div>
                     </div>
                 </div>

@@ -2,6 +2,7 @@
     export let isOpen = false;
     export let title = "CONFIRM";
     export let message = "Are you sure?";
+    export let confirmButtonText = "CONFIRM";
     export let onConfirm = () => {};
     export let onCancel = () => {};
 
@@ -46,7 +47,7 @@
                     CANCEL
                 </button>
                 <button class="confirm-btn" on:click={handleConfirm}>
-                    DELETE
+                    {confirmButtonText}
                 </button>
             </div>
         </div>

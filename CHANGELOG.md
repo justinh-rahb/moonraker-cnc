@@ -8,12 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Confirmation dialogs for critical print actions (configurable in Settings)
+  - Pause, Cancel, and Start Print actions can each require user confirmation
+  - Generic "Are you sure?" confirmation modal with configurable button text
+  - Cancel confirmation enabled by default, others optional
+  - Start Print confirmation applies to both new prints and reprints
+  - Settings in Print Control Macros section to enable/disable each confirmation type
 - Retro-styled dial gauges for speed and flow monitoring
   - Semi-circular SVG gauges with smooth spring-physics animated needles and green/orange/red color zones
   - EMA filtering and Motion One spring animations for buttery-smooth needle movement with natural acceleration/deceleration
   - Speed gauge displays live toolhead velocity, flow gauge shows volumetric flow rate (mm³/s)
   - Exact digital readouts with smooth visual indicators
   - Configurable max rates, redline thresholds, and zone percentages in Settings Modal
+  - Optional graphics-only mode: hide gauge graphics and show only numeric values with larger font size (36px vs 24px)
   - Side-by-side layout in Print Status Panel
 - Layer progress display in Print Status Panel
   - Shows current layer and total layers during printing (e.g., "LAYER: 45/120")

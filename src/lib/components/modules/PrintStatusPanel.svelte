@@ -4,6 +4,7 @@
     import CncButton from "../ui/CncButton.svelte";
     import FilePickerModal from "../ui/FilePickerModal.svelte";
     import RetroGauge from "../ui/RetroGauge.svelte";
+    import ConfirmDialog from "../ui/ConfirmDialog.svelte";
     import {
         machineState,
         pausePrint,
@@ -90,9 +91,24 @@
         return parts[parts.length - 1] || 'NO FILE';
     };
 
+    // Confirm dialog state
+    let confirmOpen = false;
+    let confirmMessage = '';
+    let confirmCallback = () => {};
+
+    const showConfirm = (message, callback) => {
+        confirmMessage = message;
+        confirmCallback = callback;
+        confirmOpen = true;
+    };
+
     // Control handlers
     const handlePause = () => {
-        pausePrint(printControl.pauseMacro);
+        if ($configStore.printControl?.confirmPause) {
+            showConfirm('Are you sure?', () => pausePrint(printControl.pauseMacro));
+        } else {
+            pausePrint(printControl.pauseMacro);
+        }
     };
 
     const handleResume = () => {
@@ -100,7 +116,11 @@
     };
 
     const handleCancel = () => {
-        cancelPrint(printControl.cancelMacro);
+        if ($configStore.printControl?.confirmCancel) {
+            showConfirm('Are you sure?', () => cancelPrint(printControl.cancelMacro));
+        } else {
+            cancelPrint(printControl.cancelMacro);
+        }
     };
 
     // Clear completed print status
@@ -118,14 +138,22 @@
             return;
         }
 
-        isReprinting = true;
-        try {
-            await startPrint(fileToReprint);
-            console.log('Reprint started:', fileToReprint);
-        } catch (e) {
-            console.error('Failed to start reprint:', e);
-        } finally {
-            isReprinting = false;
+        const doReprint = async () => {
+            isReprinting = true;
+            try {
+                await startPrint(fileToReprint);
+                console.log('Reprint started:', fileToReprint);
+            } catch (e) {
+                console.error('Failed to start reprint:', e);
+            } finally {
+                isReprinting = false;
+            }
+        };
+
+        if ($configStore.printControl?.confirmStartPrint ?? true) {
+            showConfirm('Are you sure?', doReprint);
+        } else {
+            await doReprint();
         }
     };
 
@@ -219,6 +247,7 @@
                 redline={speedRedline}
                 label="SPEED"
                 unit="mm/s"
+                hideGraphics={!($configStore.gauges?.showGaugeGraphics ?? true)}
             />
             <RetroGauge
                 value={volumetricFlow}
@@ -226,6 +255,7 @@
                 redline={gaugeConfig.flowRedline}
                 label="FLOW"
                 unit="mm³/s"
+                hideGraphics={!($configStore.gauges?.showGaugeGraphics ?? true)}
             />
         </div>
 
@@ -285,6 +315,14 @@
         on:fileLoaded={handleFileLoaded}
         on:printStarted={handlePrintStarted}
         on:close={() => filePickerOpen = false}
+    />
+
+    <!-- Confirm Dialog -->
+    <ConfirmDialog
+        bind:isOpen={confirmOpen}
+        message={confirmMessage}
+        onConfirm={confirmCallback}
+        onCancel={() => {}}
     />
 </PanelModule>
 
