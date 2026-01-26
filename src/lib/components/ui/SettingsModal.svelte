@@ -181,7 +181,12 @@
         <div class="modal-window">
             <div class="modal-header">
                 <span>▸ CONFIGURATION</span>
-                <button class="close-btn" on:click={save}>x</button>
+                <div class="header-actions">
+                    <button class="save-icon-btn" on:click={save} title="Save & Close">
+                        SAVE
+                    </button>
+                    <button class="close-btn" on:click={onClose}>x</button>
+                </div>
             </div>
 
             <div class="tabs">
@@ -950,12 +955,6 @@
                     </div>
                 </div>
                 {/if}
-
-                <div class="actions">
-                    <CncButton variant="action" on:click={save}>
-                        SAVE CONFIGURATION
-                    </CncButton>
-                </div>
             </div>
         </div>
     </div>
@@ -1008,6 +1007,28 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .save-icon-btn {
+        background: var(--retro-orange);
+        border: none;
+        color: #000;
+        padding: 5px 15px;
+        font-family: "Orbitron", monospace;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+        letter-spacing: 1px;
+    }
+
+    .save-icon-btn:hover {
+        background: #fff;
     }
 
     .close-btn {
