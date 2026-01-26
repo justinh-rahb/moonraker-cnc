@@ -9,7 +9,7 @@ const generateId = () => `id-${Date.now()}-${Math.random().toString(36).substr(2
 const DEFAULT_CONFIG = {
     title: 'RETRO CNC PANEL',
     server: {
-        ip: '192.168.2.241',
+        ip: window.location.hostname || 'localhost',
         port: '7125',
         autoConnect: false
     },
@@ -50,11 +50,26 @@ const DEFAULT_CONFIG = {
     printControl: {
         pauseMacro: 'PAUSE',
         resumeMacro: 'RESUME',
-        cancelMacro: 'CANCEL_PRINT'
+        cancelMacro: 'CANCEL_PRINT',
+        confirmPause: false,
+        confirmCancel: true,
+        confirmStartPrint: true
     },
     console: {
         newestFirst: true,
         maxHistory: 500
+    },
+    cameras: [],
+    gauges: {
+        maxFlowRate: 30,
+        flowRedline: 20,
+        maxSpeedOverride: null,
+        speedRedlinePercent: 90,
+        showGaugeGraphics: true
+    },
+    power: {
+        selectedDevice: 'OFF',
+        confirmToggle: true
     }
 };
 
@@ -105,6 +120,7 @@ const migrateConfig = (config) => {
     return {
         ...config,
         tempPresets: config.tempPresets || DEFAULT_CONFIG.tempPresets,
+        power: config.power || DEFAULT_CONFIG.power,
         panels: [
             // ... (rest of logic handles panels)
         ]
@@ -171,6 +187,53 @@ export const updateConsoleConfig = (updates) => {
     }));
 };
 
+export const updateGaugeConfig = (updates) => {
+    configStore.update(s => ({
+        ...s,
+        gauges: { ...(s.gauges || DEFAULT_CONFIG.gauges), ...updates }
+    }));
+};
+
+// ============ CAMERA MANAGEMENT ============
+
+export const addCamera = () => {
+    configStore.update(s => ({
+        ...s,
+        cameras: [
+            ...(s.cameras || []),
+            {
+                id: generateId(),
+                name: 'NEW CAMERA',
+                enabled: false,
+                streamUrl: '',
+                snapshotUrl: '',
+                aspectRatio: '16:9',
+                flipH: false,
+                flipV: false,
+                rotation: 0,
+                showFps: false,
+                targetRefreshRate: 5
+            }
+        ]
+    }));
+};
+
+export const deleteCamera = (cameraId) => {
+    configStore.update(s => ({
+        ...s,
+        cameras: (s.cameras || []).filter(c => c.id !== cameraId)
+    }));
+};
+
+export const updateCamera = (cameraId, updates) => {
+    configStore.update(s => ({
+        ...s,
+        cameras: (s.cameras || []).map(c =>
+            c.id === cameraId ? { ...c, ...updates } : c
+        )
+    }));
+};
+
 // ============ PANEL MANAGEMENT ============
 
 export const createPanel = (title = 'NEW PANEL') => {
@@ -212,6 +275,15 @@ export const reorderPanels = (panelIds) => {
             .filter(Boolean);
         return { ...s, panels: reorderedPanels };
     });
+};
+
+// ============ POWER DEVICE MANAGEMENT ============
+
+export const updatePowerConfig = (updates) => {
+    configStore.update(s => ({
+        ...s,
+        power: { ...(s.power || DEFAULT_CONFIG.power), ...updates }
+    }));
 };
 
 // ============ MACRO MANAGEMENT ============

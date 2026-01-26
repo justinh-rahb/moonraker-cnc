@@ -62,7 +62,10 @@ export const connect = (url) => {
                 const { resolve, reject } = pendingRequests.get(data.id);
                 pendingRequests.delete(data.id);
                 if (data.error) {
-                    notificationStore.addError(data.error);
+                    // Don't show notification for "Method not found" errors (e.g., optional plugins)
+                    if (data.error.code !== -32601) {
+                        notificationStore.addError(data.error);
+                    }
                     reject(data.error);
                 } else {
                     resolve(data.result);

@@ -3,6 +3,8 @@
     import Led from "../ui/Led.svelte";
     import CncButton from "../ui/CncButton.svelte";
     import FilePickerModal from "../ui/FilePickerModal.svelte";
+    import RetroGauge from "../ui/RetroGauge.svelte";
+    import ConfirmDialog from "../ui/ConfirmDialog.svelte";
     import {
         machineState,
         pausePrint,
@@ -28,14 +30,23 @@
     $: printDuration = $machineState.printDuration;
     $: liveSpeed = $machineState.liveSpeed;
     $: liveExtruderVelocity = $machineState.liveExtruderVelocity;
+    $: currentLayer = $machineState.currentLayer;
+    $: totalLayers = $machineState.totalLayers;
 
     // Calculate volumetric flow (mm³/s) assuming 1.75mm filament
     // Cross-sectional area = π * (1.75/2)² ≈ 2.405 mm²
     const FILAMENT_CROSS_SECTION = Math.PI * Math.pow(1.75 / 2, 2);
-    $: volumetricFlow = liveExtruderVelocity * FILAMENT_CROSS_SECTION;
+    // Clamp to zero to prevent showing negative values during retraction
+    $: volumetricFlow = Math.max(0, liveExtruderVelocity * FILAMENT_CROSS_SECTION);
 
     // Config values
     $: printControl = $configStore.printControl || { pauseMacro: 'PAUSE', resumeMacro: 'RESUME', cancelMacro: 'CANCEL_PRINT' };
+    $: gaugeConfig = $configStore.gauges || { maxFlowRate: 30, flowRedline: 20, maxSpeedOverride: null, speedRedlinePercent: 90 };
+    
+    // Gauge calculations
+    $: maxVelocity = $machineState.maxVelocity;
+    $: speedMax = gaugeConfig.maxSpeedOverride || maxVelocity || 200;
+    $: speedRedline = speedMax * (gaugeConfig.speedRedlinePercent / 100);
 
     // Derived status states
     $: isPrinting = status === 'PRINTING';
@@ -46,9 +57,9 @@
     $: isCancelled = status === 'CANCELLED';
     $: isBusy = status === 'BUSY';
 
-    // Check if file bar should be clickable (no file loaded and not busy)
+    // Check if file bar should be clickable (whenever not actively printing)
     $: noFileLoaded = !printFilename || printFilename === '';
-    $: fileBarClickable = noFileLoaded && !isPrinting && !isPaused && !isBusy;
+    $: fileBarClickable = !isPrinting;
 
     // Show controls only when printing or paused
     $: showControls = isPrinting || isPaused;
@@ -80,9 +91,24 @@
         return parts[parts.length - 1] || 'NO FILE';
     };
 
+    // Confirm dialog state
+    let confirmOpen = false;
+    let confirmMessage = '';
+    let confirmCallback = () => {};
+
+    const showConfirm = (message, callback) => {
+        confirmMessage = message;
+        confirmCallback = callback;
+        confirmOpen = true;
+    };
+
     // Control handlers
     const handlePause = () => {
-        pausePrint(printControl.pauseMacro);
+        if ($configStore.printControl?.confirmPause) {
+            showConfirm('Are you sure?', () => pausePrint(printControl.pauseMacro));
+        } else {
+            pausePrint(printControl.pauseMacro);
+        }
     };
 
     const handleResume = () => {
@@ -90,7 +116,45 @@
     };
 
     const handleCancel = () => {
-        cancelPrint(printControl.cancelMacro);
+        if ($configStore.printControl?.confirmCancel) {
+            showConfirm('Are you sure?', () => cancelPrint(printControl.cancelMacro));
+        } else {
+            cancelPrint(printControl.cancelMacro);
+        }
+    };
+
+    // Clear completed print status
+    const handleClear = () => {
+        clearPrintStatus();
+    };
+
+    // Reprint the last completed file
+    const handleReprint = async () => {
+        // Use the stored lastCompletedFilename or current printFilename
+        const fileToReprint = lastCompletedFilename || printFilename;
+
+        if (!fileToReprint) {
+            console.error('No file available to reprint');
+            return;
+        }
+
+        const doReprint = async () => {
+            isReprinting = true;
+            try {
+                await startPrint(fileToReprint);
+                console.log('Reprint started:', fileToReprint);
+            } catch (e) {
+                console.error('Failed to start reprint:', e);
+            } finally {
+                isReprinting = false;
+            }
+        };
+
+        if ($configStore.printControl?.confirmStartPrint ?? true) {
+            showConfirm('Are you sure?', doReprint);
+        } else {
+            await doReprint();
+        }
     };
 
     // Clear completed print status
@@ -192,21 +256,33 @@
                     <span class="info-label">TIME:</span>
                     <span class="info-value">{formatDuration(printDuration)}</span>
                 </div>
+                {#if totalLayers > 0}
+                    <div class="progress-row">
+                        <span class="info-label">LAYER:</span>
+                        <span class="info-value">{currentLayer}/{totalLayers}</span>
+                    </div>
+                {/if}
             </div>
         {/if}
 
-        <!-- Speed/Flow Info -->
-        <div class="factors-section">
-            <div class="factor-item">
-                <span class="factor-label">SPEED</span>
-                <span class="factor-value">{liveSpeed.toFixed(1)}</span>
-                <span class="factor-unit">mm/s</span>
-            </div>
-            <div class="factor-item">
-                <span class="factor-label">FLOW</span>
-                <span class="factor-value">{volumetricFlow.toFixed(2)}</span>
-                <span class="factor-unit">mm³/s</span>
-            </div>
+        <!-- Speed/Flow Gauges -->
+        <div class="gauges-section">
+            <RetroGauge
+                value={liveSpeed}
+                max={speedMax}
+                redline={speedRedline}
+                label="SPEED"
+                unit="mm/s"
+                hideGraphics={!($configStore.gauges?.showGaugeGraphics ?? true)}
+            />
+            <RetroGauge
+                value={volumetricFlow}
+                max={gaugeConfig.maxFlowRate}
+                redline={gaugeConfig.flowRedline}
+                label="FLOW"
+                unit="mm³/s"
+                hideGraphics={!($configStore.gauges?.showGaugeGraphics ?? true)}
+            />
         </div>
 
         <!-- Controls (only during active print) -->
@@ -242,6 +318,21 @@
                 </CncButton>
             </div>
         {/if}
+
+        {#if isCancelled}
+            <div class="completion-buttons">
+                <CncButton variant="dark" on:click={handleClear}>
+                    CLEAR
+                </CncButton>
+                <CncButton
+                    variant="action"
+                    on:click={handleReprint}
+                    disabled={isReprinting || !(lastCompletedFilename || printFilename)}
+                >
+                    {isReprinting ? 'STARTING...' : 'REPRINT'}
+                </CncButton>
+            </div>
+        {/if}
     </div>
 
     <!-- File Picker Modal -->
@@ -250,6 +341,14 @@
         on:fileLoaded={handleFileLoaded}
         on:printStarted={handlePrintStarted}
         on:close={() => filePickerOpen = false}
+    />
+
+    <!-- Confirm Dialog -->
+    <ConfirmDialog
+        bind:isOpen={confirmOpen}
+        message={confirmMessage}
+        onConfirm={confirmCallback}
+        onCancel={() => {}}
     />
 </PanelModule>
 
@@ -361,10 +460,11 @@
     }
 
     .info-value.filename {
-        max-width: 200px;
+        flex: 1;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        text-align: right;
     }
 
     /* Progress Section */
@@ -398,42 +498,11 @@
         transition: width 0.3s ease;
     }
 
-    /* Factors Section */
-    .factors-section {
+    /* Gauges Section */
+    .gauges-section {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 12px;
-    }
-
-    .factor-item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 12px;
-        background: #0a0a0a;
-        border: 2px solid #333;
-    }
-
-    .factor-label {
-        font-family: "Orbitron", monospace;
-        font-size: 11px;
-        color: #666;
-        letter-spacing: 1px;
-        margin-bottom: 4px;
-    }
-
-    .factor-value {
-        font-family: "Orbitron", monospace;
-        font-size: 20px;
-        font-weight: 700;
-        color: var(--retro-orange);
-    }
-
-    .factor-unit {
-        font-family: "Share Tech Mono", monospace;
-        font-size: 10px;
-        color: #666;
-        margin-top: 2px;
     }
 
     /* Control Buttons */

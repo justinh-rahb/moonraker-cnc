@@ -19,16 +19,37 @@
         updatePrintControlConfig,
         // Console
         updateConsoleConfig,
+        // Gauges
+        updateGaugeConfig,
+        // Cameras
+        addCamera,
+        deleteCamera,
+        updateCamera,
+        // Power
+        updatePowerConfig,
         // Import/Export
         exportConfig,
         importConfig,
     } from "../../../stores/configStore.js";
+    import { availablePowerDevices } from "../../../stores/powerStore.js";
     import CncButton from "./CncButton.svelte";
     import ColorPicker from "./ColorPicker.svelte";
     import ConfirmDialog from "./ConfirmDialog.svelte";
 
     export let isOpen = false;
     export let onClose;
+
+    // Build information injected at build time
+    const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
+    const gitCommit = typeof __GIT_COMMIT__ !== 'undefined' ? __GIT_COMMIT__ : 'dev';
+    const gitTag = typeof __GIT_TAG__ !== 'undefined' ? __GIT_TAG__ : '';
+    
+    // Determine display version (priority: tag > version > commit)
+    const displayVersion = gitTag || appVersion || gitCommit;
+    const repoUrl = 'https://github.com/justinh-rahb/moonraker-cnc';
+    const versionUrl = gitTag 
+        ? `${repoUrl}/releases/tag/${gitTag}`
+        : `${repoUrl}/commit/${gitCommit}`;
 
     $: panels = $configStore.panels;
 
@@ -80,6 +101,17 @@
         });
     };
 
+    // Camera handlers
+    const handleCreateCamera = () => {
+        addCamera();
+    };
+
+    const handleDeleteCamera = (id) => {
+        showConfirm("Delete this camera?", () => {
+            deleteCamera(id);
+        });
+    };
+
     // Import/Export handlers
     let fileInput;
     let importError = "";
@@ -90,7 +122,13 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `retro-cnc-config-${new Date().toISOString().split("T")[0]}.json`;
+        // Sanitize machine title for filename: lowercase, replace spaces with hyphens, remove special chars
+        const sanitizedTitle = $configStore.title
+            .toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9-]/g, '');
+        const date = new Date().toISOString().split("T")[0];
+        a.download = `${sanitizedTitle}-${date}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -217,6 +255,76 @@
                             />
                         </div>
                     </div>
+                    <div class="checkbox-group" style="margin-top: 15px;">
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={$configStore.printControl?.confirmPause ?? false}
+                                on:change={(e) =>
+                                    updatePrintControlConfig({
+                                        confirmPause: e.target.checked,
+                                    })}
+                            />
+                            CONFIRM BEFORE PAUSING
+                        </label>
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={$configStore.printControl?.confirmCancel ?? true}
+                                on:change={(e) =>
+                                    updatePrintControlConfig({
+                                        confirmCancel: e.target.checked,
+                                    })}
+                            />
+                            CONFIRM BEFORE CANCELLING
+                        </label>
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={$configStore.printControl?.confirmStartPrint ?? true}
+                                on:change={(e) =>
+                                    updatePrintControlConfig({
+                                        confirmStartPrint: e.target.checked,
+                                    })}
+                            />
+                            CONFIRM BEFORE STARTING PRINT
+                        </label>
+                    </div>
+                </div>
+
+                <div class="section-title">POWER DEVICE</div>
+                <div class="presets-container" style="margin-bottom: 25px;">
+                    <div class="macro-row">
+                        <div class="input-col main">
+                            <label>SELECTED DEVICE</label>
+                            <select
+                                value={$configStore.power?.selectedDevice || 'OFF'}
+                                on:change={(e) =>
+                                    updatePowerConfig({
+                                        selectedDevice: e.target.value,
+                                    })}
+                            >
+                                <option value="OFF">OFF (Hidden)</option>
+                                <option value="AUTO">AUTO (Recommended)</option>
+                                {#each $availablePowerDevices as deviceName}
+                                    <option value={deviceName}>{deviceName}</option>
+                                {/each}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="checkbox-group" style="margin-top: 15px;">
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={$configStore.power?.confirmToggle ?? true}
+                                on:change={(e) =>
+                                    updatePowerConfig({
+                                        confirmToggle: e.target.checked,
+                                    })}
+                            />
+                            CONFIRM POWER TOGGLE
+                        </label>
+                    </div>
                 </div>
 
                 <div class="section-title">FILAMENT MACROS</div>
@@ -283,6 +391,91 @@
                                         tempParam: e.target.value,
                                     })}
                             />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-title">GAUGE SETTINGS</div>
+                <div class="presets-container" style="margin-bottom: 25px;">
+                    <div class="macro-row">
+                        <div class="input-col">
+                            <label>MAX FLOW RATE (mm³/s)</label>
+                            <input
+                                type="number"
+                                min="1"
+                                max="100"
+                                step="1"
+                                value={$configStore.gauges?.maxFlowRate ?? 30}
+                                on:input={(e) =>
+                                    updateGaugeConfig({
+                                        maxFlowRate: parseFloat(e.target.value) || 30,
+                                    })}
+                            />
+                            <div class="help-text">Maximum value for flow gauge scale</div>
+                        </div>
+                        <div class="input-col">
+                            <label>FLOW REDLINE (mm³/s)</label>
+                            <input
+                                type="number"
+                                min="1"
+                                max="100"
+                                step="1"
+                                value={$configStore.gauges?.flowRedline ?? 20}
+                                on:input={(e) =>
+                                    updateGaugeConfig({
+                                        flowRedline: parseFloat(e.target.value) || 20,
+                                    })}
+                            />
+                            <div class="help-text">Warning threshold for flow gauge</div>
+                        </div>
+                    </div>
+                    <div class="macro-row" style="margin-top: 15px;">
+                        <div class="input-col">
+                            <label>MAX SPEED OVERRIDE (mm/s)</label>
+                            <input
+                                type="number"
+                                min="1"
+                                max="1000"
+                                step="10"
+                                placeholder="Auto (from machine limits)"
+                                value={$configStore.gauges?.maxSpeedOverride ?? ''}
+                                on:input={(e) =>
+                                    updateGaugeConfig({
+                                        maxSpeedOverride: e.target.value ? parseFloat(e.target.value) : null,
+                                    })}
+                            />
+                            <div class="help-text">Leave empty to use machine max velocity</div>
+                        </div>
+                        <div class="input-col">
+                            <label>SPEED REDLINE (%)</label>
+                            <input
+                                type="number"
+                                min="50"
+                                max="100"
+                                step="5"
+                                value={$configStore.gauges?.speedRedlinePercent ?? 90}
+                                on:input={(e) =>
+                                    updateGaugeConfig({
+                                        speedRedlinePercent: parseFloat(e.target.value) || 90,
+                                    })}
+                            />
+                            <div class="help-text">Redline as % of max speed</div>
+                        </div>
+                    </div>
+                    <div class="checkbox-group" style="margin-top: 15px;">
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={$configStore.gauges?.showGaugeGraphics ?? true}
+                                on:change={(e) =>
+                                    updateGaugeConfig({
+                                        showGaugeGraphics: e.target.checked,
+                                    })}
+                            />
+                            SHOW GAUGE GRAPHICS
+                        </label>
+                        <div class="help-text" style="margin-left: 24px; margin-top: 4px;">
+                            When disabled, only numeric values are displayed
                         </div>
                     </div>
                 </div>
@@ -486,6 +679,189 @@
                 <button class="create-panel-btn" on:click={handleCreatePanel}>
                     + CREATE NEW PANEL
                 </button>
+
+                <div class="section-title">CAMERA SETTINGS</div>
+
+                <div class="cameras-container">
+                    {#each $configStore.cameras || [] as camera (camera.id)}
+                        <div class="camera-section">
+                            <div class="camera-header-row">
+                                <input
+                                    type="text"
+                                    class="camera-name-input"
+                                    value={camera.name}
+                                    on:input={(e) =>
+                                        updateCamera(camera.id, { name: e.target.value })}
+                                    placeholder="Camera Name"
+                                />
+                                <label class="checkbox-inline">
+                                    <input
+                                        type="checkbox"
+                                        checked={camera.enabled}
+                                        on:change={(e) =>
+                                            updateCamera(camera.id, {
+                                                enabled: e.target.checked,
+                                            })}
+                                    />
+                                    ENABLED
+                                </label>
+                                <button
+                                    type="button"
+                                    class="delete-panel-btn"
+                                    on:click|preventDefault|stopPropagation={() =>
+                                        handleDeleteCamera(camera.id)}
+                                    title="Delete Camera"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <div class="camera-config">
+                                <div class="input-group">
+                                    <label>STREAM URL</label>
+                                    <input
+                                        type="text"
+                                        value={camera.streamUrl}
+                                        on:input={(e) =>
+                                            updateCamera(camera.id, {
+                                                streamUrl: e.target.value,
+                                            })}
+                                        placeholder="http://192.168.1.100/webcam/?action=stream"
+                                    />
+                                </div>
+
+                                <div class="input-group">
+                                    <label>SNAPSHOT URL</label>
+                                    <input
+                                        type="text"
+                                        value={camera.snapshotUrl}
+                                        on:input={(e) =>
+                                            updateCamera(camera.id, {
+                                                snapshotUrl: e.target.value,
+                                            })}
+                                        placeholder="http://192.168.1.100/webcam/?action=snapshot"
+                                    />
+                                </div>
+
+                                <div class="camera-row">
+                                    <div class="input-col">
+                                        <label>ASPECT RATIO</label>
+                                        <select
+                                            value={camera.aspectRatio}
+                                            on:change={(e) =>
+                                                updateCamera(camera.id, {
+                                                    aspectRatio: e.target.value,
+                                                })}
+                                        >
+                                            <option value="16:9">16:9</option>
+                                            <option value="4:3">4:3</option>
+                                            <option value="1:1">1:1</option>
+                                            <option value="21:9">21:9</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="input-col">
+                                        <label>ROTATION</label>
+                                        <select
+                                            value={camera.rotation}
+                                            on:change={(e) =>
+                                                updateCamera(camera.id, {
+                                                    rotation: parseInt(e.target.value),
+                                                })}
+                                        >
+                                            <option value="0">0°</option>
+                                            <option value="90">90°</option>
+                                            <option value="180">180°</option>
+                                            <option value="270">270°</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="camera-row">
+                                    <div class="input-col">
+                                        <label>TARGET REFRESH RATE (FPS)</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="30"
+                                            value={camera.targetRefreshRate || 5}
+                                            on:input={(e) =>
+                                                updateCamera(camera.id, {
+                                                    targetRefreshRate: parseInt(e.target.value) || 5,
+                                                })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div class="checkbox-group">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked={camera.flipH}
+                                            on:change={(e) =>
+                                                updateCamera(camera.id, {
+                                                    flipH: e.target.checked,
+                                                })}
+                                        />
+                                        FLIP HORIZONTAL
+                                    </label>
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked={camera.flipV}
+                                            on:change={(e) =>
+                                                updateCamera(camera.id, {
+                                                    flipV: e.target.checked,
+                                                })}
+                                        />
+                                        FLIP VERTICAL
+                                    </label>
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked={camera.showFps}
+                                            on:change={(e) =>
+                                                updateCamera(camera.id, {
+                                                    showFps: e.target.checked,
+                                                })}
+                                        />
+                                        SHOW FPS
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    {/each}
+                </div>
+
+                <button class="create-panel-btn" on:click={handleCreateCamera}>
+                    + ADD CAMERA
+                </button>
+
+                <div class="about-section">
+                    <div class="section-title">ABOUT</div>
+                    <div class="about-content">
+                        <div class="about-item">
+                            <span class="about-label">VERSION:</span>
+                            <a href={versionUrl} target="_blank" rel="noopener noreferrer" class="version-link">
+                                {displayVersion}
+                            </a>
+                        </div>
+                        {#if gitCommit !== displayVersion && gitCommit !== 'dev'}
+                            <div class="about-item">
+                                <span class="about-label">COMMIT:</span>
+                                <a href="{repoUrl}/commit/{gitCommit}" target="_blank" rel="noopener noreferrer" class="version-link">
+                                    {gitCommit}
+                                </a>
+                            </div>
+                        {/if}
+                        <div class="about-item">
+                            <span class="about-label">REPOSITORY:</span>
+                            <a href={repoUrl} target="_blank" rel="noopener noreferrer" class="version-link">
+                                GitHub
+                            </a>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="actions">
                     <CncButton variant="action" on:click={save}>
@@ -813,5 +1189,133 @@
         color: #ff4444;
         font-size: 12px;
         margin-top: 5px;
+    }
+
+    /* Camera Settings Styles */
+    .camera-actions {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .camera-count {
+        color: var(--retro-green);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 12px;
+    }
+
+    .cameras-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .camera-section {
+        background: #0a0a0a;
+        border: 2px solid #333;
+        padding: 15px;
+    }
+
+    .camera-header-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        align-items: center;
+    }
+
+    .camera-name-input {
+        flex: 1;
+        background: #000;
+        border: 2px solid var(--retro-orange);
+        color: var(--retro-orange);
+        padding: 10px;
+        font-family: "Orbitron", monospace;
+        font-size: 14px;
+        font-weight: bold;
+    }
+
+    .camera-name-input:focus {
+        border-color: var(--retro-green);
+        outline: none;
+    }
+
+    .checkbox-inline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--retro-green);
+        font-family: 'Orbitron', monospace;
+        white-space: nowrap;
+    }
+
+    .checkbox-inline input[type="checkbox"] {
+        width: auto;
+    }
+
+    .camera-config {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .camera-row {
+        display: flex;
+        gap: 15px;
+    }
+
+    select {
+        background: #000;
+        border: 1px solid #333;
+        color: var(--retro-green);
+        padding: 8px;
+        font-family: "Share Tech Mono", monospace;
+        width: 100%;
+    }
+
+    select:focus {
+        border-color: var(--retro-green);
+        outline: none;
+    }
+
+    /* About Section Styles */
+    .about-section {
+        background: #0a0a0a;
+        border: 2px solid #333;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .about-content {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .about-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 12px;
+    }
+
+    .about-label {
+        color: var(--retro-orange);
+        min-width: 100px;
+    }
+
+    .version-link {
+        color: var(--retro-green);
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition: all 0.2s ease;
+    }
+
+    .version-link:hover {
+        color: #fff;
+        border-bottom-color: var(--retro-green);
     }
 </style>

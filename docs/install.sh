@@ -116,12 +116,12 @@ setup_serving() {
     if command -v nginx &> /dev/null && [ -d "$NGINX_AVAILABLE" ]; then
         echo ""
         print_info "nginx detected - would you like to use nginx? [Y/n]"
-        read -p "> " -r
+        read -p "> " -r < /dev/tty
         echo ""
 
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
             use_nginx=true
-            read -p "Enter port number for Retro CNC Panel [8080]: " port
+            read -p "Enter port number for Retro CNC Panel [8080]: " port < /dev/tty
             port=${port:-8080}
 
             print_info "Creating nginx configuration..."

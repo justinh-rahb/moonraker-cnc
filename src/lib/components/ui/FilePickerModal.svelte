@@ -1,6 +1,7 @@
 <script>
     import { createEventDispatcher, onMount, onDestroy } from "svelte";
     import CncButton from "./CncButton.svelte";
+    import ConfirmDialog from "./ConfirmDialog.svelte";
     import { send, connectionState } from "../../../stores/websocket.js";
     import { machineState } from "../../../stores/machineStore.js";
     import { configStore } from "../../../stores/configStore.js";
@@ -24,6 +25,11 @@
     let uploadProgress = 0;
     let dragOver = false;
     let fileInput;
+
+    // Confirm dialog state
+    let confirmOpen = false;
+    let confirmMessage = '';
+    let confirmCallback = () => {};
 
     // Reactive state from stores
     $: isPrinting = $machineState.status === 'PRINTING';
@@ -115,6 +121,12 @@
         selectedFile = selectedFile === file ? null : file;
     };
 
+    const showConfirm = (message, callback) => {
+        confirmMessage = message;
+        confirmCallback = callback;
+        confirmOpen = true;
+    };
+
     // Start print immediately
     const startPrint = async () => {
         if (!selectedFile || !canStartPrint) return;
@@ -123,13 +135,21 @@
             ? `${currentPath}/${selectedFile.filename}` 
             : selectedFile.filename;
         
-        try {
-            await send("printer.print.start", { filename: filePath });
-            dispatch("printStarted", { path: filePath, file: selectedFile });
-            handleClose();
-        } catch (e) {
-            console.error("Failed to start print:", e);
-            error = e.message || "Failed to start print";
+        const doPrint = async () => {
+            try {
+                await send("printer.print.start", { filename: filePath });
+                dispatch("printStarted", { path: filePath, file: selectedFile });
+                handleClose();
+            } catch (e) {
+                console.error("Failed to start print:", e);
+                error = e.message || "Failed to start print";
+            }
+        };
+
+        if ($configStore.printControl?.confirmStartPrint ?? true) {
+            showConfirm('Are you sure?', doPrint);
+        } else {
+            await doPrint();
         }
     };
 
@@ -733,3 +753,11 @@
         background: #444;
     }
 </style>
+
+<!-- Confirm Dialog -->
+<ConfirmDialog
+    bind:isOpen={confirmOpen}
+    message={confirmMessage}
+    onConfirm={confirmCallback}
+    onCancel={() => {}}
+/>

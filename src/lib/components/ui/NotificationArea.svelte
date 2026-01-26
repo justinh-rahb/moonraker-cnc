@@ -65,9 +65,8 @@
     }
 
     .notification.system-error {
-        border-left-color: #ff0000;
-        background: rgba(60, 0, 0, 0.95);
-        border: 1px solid #ff0000;
+        border-left-color: #ff3e3e;
+        background: rgba(40, 10, 10, 0.95);
         animation: pulse-border 2s infinite;
     }
 
@@ -90,7 +89,7 @@
     }
 
     .notification.system-error .title {
-        color: #ff0000;
+        color: #ff3e3e;
     }
 
     .message {

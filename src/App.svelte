@@ -9,12 +9,18 @@
   import PrintStatusPanel from "./lib/components/modules/PrintStatusPanel.svelte";
   import MachineLimitsPanel from "./lib/components/modules/MachineLimitsPanel.svelte";
   import ConsolePanel from "./lib/components/modules/ConsolePanel.svelte";
+  import CameraPanel from "./lib/components/modules/CameraPanel.svelte";
   import ConnectionModal from "./lib/components/ui/ConnectionModal.svelte";
   import NotificationArea from "./lib/components/ui/NotificationArea.svelte";
   import { configStore } from "./stores/configStore.js";
 
   // Sort panels by order
   $: sortedPanels = [...$configStore.panels].sort((a, b) => a.order - b.order);
+
+  // Update page title dynamically based on user's configured machine title
+  $: if (typeof document !== 'undefined') {
+    document.title = $configStore.title || 'Retro CNC Panel';
+  }
 </script>
 
 <Scanline />
@@ -35,6 +41,9 @@
 
     <!-- Right Column -->
     <div class="column">
+      {#if $configStore.cameras?.some(c => c.enabled)}
+        <CameraPanel />
+      {/if}
       <TemperaturePanel />
       <MachineLimitsPanel />
       <MiscPanel />

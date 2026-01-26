@@ -5,6 +5,88 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-01-25
+
+### Added
+- Power Device Control integration with Moonraker's device_power plugin
+  - Icon button in header (middle position) for toggling power device on/off
+  - Settings dropdown to select device: OFF (hidden), AUTO (recommended), or specific device
+  - AUTO mode automatically selects device named "printer" or first available device
+  - Real-time status updates via websocket notifications with 5-second polling fallback
+  - Visual states: green glow when on, grey when off, disabled when locked during print
+  - Orange hover effect with fill-up circle animation
+  - Configurable confirmation dialog for power toggle (enabled by default)
+  - Tooltip displays device name and current status
+  - Graceful error recovery with automatic status re-fetch on API failures
+  - Respects `locked_while_printing` flag to prevent power-off during active prints
+  - Default setting is OFF (button hidden) until user enables in settings
+- Confirmation dialogs for critical print actions (configurable in Settings)
+  - Pause, Cancel, and Start Print actions can each require user confirmation
+  - Generic "Are you sure?" confirmation modal with configurable button text
+  - Cancel confirmation enabled by default, others optional
+  - Start Print confirmation applies to both new prints and reprints
+  - Settings in Print Control Macros section to enable/disable each confirmation type
+- Retro-styled dial gauges for speed and flow monitoring
+  - Semi-circular SVG gauges with smooth spring-physics animated needles and green/orange/red color zones
+  - EMA filtering and Motion One spring animations for buttery-smooth needle movement with natural acceleration/deceleration
+  - Speed gauge displays live toolhead velocity, flow gauge shows volumetric flow rate (mm³/s)
+  - Exact digital readouts with smooth visual indicators
+  - Configurable max rates, redline thresholds, and zone percentages in Settings Modal
+  - Optional graphics-only mode: hide gauge graphics and show only numeric values with larger font size (36px vs 24px)
+  - Side-by-side layout in Print Status Panel
+- Layer progress display in Print Status Panel
+  - Shows current layer and total layers during printing (e.g., "LAYER: 45/120")
+  - Fetches layer count from file metadata on print start
+  - Estimates current layer from print progress percentage
+  - Automatically resets when print completes
+- Build version information injection and display
+  - Git commit hash and tag information injected during build process
+  - About section in Settings Modal displaying version/commit with GitHub links
+  - Automatic fallback to "dev" when git information unavailable
+  - TypeScript declarations for build-time variables
+  - Repository field added to package.json for proper GitHub linking
+- Camera Panel for MJPEG stream display
+  - Support for multiple cameras with compact switching buttons
+  - Configurable stream URL and snapshot URL per camera
+  - Aspect ratio options (16:9, 4:3, 1:1, 21:9) with proper container sizing
+  - Flip horizontal/vertical and rotation controls (0°, 90°, 180°, 270°)
+  - Live FPS counter overlay (optional per camera)
+  - CSS transform support for camera orientation adjustments
+  - Camera settings section in Settings Modal with enable/disable toggles
+  - Auto-refresh MJPEG stream support for adaptive MJPEG from ustreamer/camera-streamer
+  - Panel positioned in right column above Temperature Panel
+  - Camera selector buttons integrated into bottom info bar for space efficiency
+
+### Changed
+- Print Status Panel filename display now uses flexible width to show more of the filename
+- File picker is now accessible whenever machine is not actively printing (previously only when no file loaded)
+
+### Fixed
+- Camera switching reliability issues in Camera Panel
+  - Camera selection now persists to localStorage, surviving page reloads and component re-mounts
+  - Eliminated race condition between user selection and reactive fallback logic
+  - Decoupled stream URL updates from camera selection reactive chain to prevent unintended resets
+  - Added per-camera configurable target refresh rate (default 5 FPS) with dynamic interval adjustment
+  - Refresh interval now updates automatically when switching between cameras with different refresh rates
+  - Camera selection now only falls back to first camera when saved camera is deleted/disabled, not on every reactive update
+  - Switching cameras now works reliably on first click without requiring multiple toggles
+- Flow rate display now clamps negative values to zero during retraction moves (prevents confusing negative flow rates)
+- Export settings filename now uses format `<machine title>-<date>.json` instead of hardcoded prefix
+- Page title now dynamically reflects the user's configured machine title from settings
+- Unified notification styling: persistent and dismissable errors now use the same visual style (persistent errors still have pulsing animation)
+- Default connection IP now auto-detects from the page hostname (falls back to `localhost` if unavailable) instead of hardcoded `192.168.2.241`
+- Clear and Reprint buttons now also appear when print is CANCELLED (not just COMPLETE)
+  - Preserves filename for reprint functionality on both COMPLETE and CANCELLED statuses
+  - Allows users to clear cancelled prints or immediately restart them
+
+### Fixed
+- Current layer count now updates in real-time during active prints
+  - Layer estimate now recalculates continuously based on progress percentage
+  - Previously only calculated once when layer was 0, causing stale display
+- RetroGauge infinite loop causing "maximum update depth exceeded" error
+  - Fixed `$effect` to track previous value and only update when value actually changes
+  - Prevents infinite loop from reading and writing the same state
+
 ## [1.0.0] - 2026-01-25
 
 ### Added

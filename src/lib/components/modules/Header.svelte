@@ -1,9 +1,48 @@
 <script>
     import SettingsModal from "../ui/SettingsModal.svelte";
+    import ConfirmDialog from "../ui/ConfirmDialog.svelte";
     import { emergencyStop } from "../../../stores/machineStore.js";
     import { configStore } from "../../../stores/configStore.js";
+    import { currentPowerDevice, togglePower } from "../../../stores/powerStore.js";
 
     let isSettingsOpen = false;
+    let confirmPowerOpen = false;
+    let powerAction = "";
+
+    const handlePowerClick = () => {
+        if (!$currentPowerDevice.isAvailable || $currentPowerDevice.locked) {
+            return;
+        }
+
+        powerAction = $currentPowerDevice.isOn ? "OFF" : "ON";
+        
+        if ($configStore.power?.confirmToggle) {
+            confirmPowerOpen = true;
+        } else {
+            executePowerToggle();
+        }
+    };
+
+    const executePowerToggle = async () => {
+        await togglePower();
+        confirmPowerOpen = false;
+    };
+
+    // Compute tooltip message
+    $: powerTooltip = $currentPowerDevice.locked
+        ? `${$currentPowerDevice.displayName} (Locked during print)`
+        : $currentPowerDevice.error
+        ? `${$currentPowerDevice.displayName} (${$currentPowerDevice.error})`
+        : $currentPowerDevice.isAvailable
+        ? `${$currentPowerDevice.displayName}: ${$currentPowerDevice.isOn ? 'ON' : 'OFF'}`
+        : $currentPowerDevice.displayName;
+
+    // Compute button CSS class
+    $: powerButtonClass = $currentPowerDevice.locked || !$currentPowerDevice.isAvailable
+        ? 'power-btn power-locked'
+        : $currentPowerDevice.isOn
+        ? 'power-btn power-on'
+        : 'power-btn power-off';
 </script>
 
 <div class="panel-header">
@@ -19,6 +58,20 @@
                 <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
             </svg>
         </button>
+        {#if $configStore.power?.selectedDevice !== 'OFF'}
+            <button
+                class={powerButtonClass}
+                on:click={handlePowerClick}
+                disabled={$currentPowerDevice.locked || !$currentPowerDevice.isAvailable}
+                title={powerTooltip}
+            >
+                <svg class="icon-power" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path class="power-line" d="M12 2v10"/>
+                    <path class="power-arc" d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+                    <circle class="power-fill" cx="12" cy="12" r="9" fill="currentColor" opacity="0"/>
+                </svg>
+            </button>
+        {/if}
         <button class="emergency-stop" on:click={emergencyStop}>
             <svg class="icon-stop" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z"/>
@@ -31,6 +84,13 @@
 <SettingsModal
     isOpen={isSettingsOpen}
     onClose={() => (isSettingsOpen = false)}
+/>
+
+<ConfirmDialog
+    isOpen={confirmPowerOpen}
+    message="Turn {powerAction} power device '{$currentPowerDevice.displayName}'?"
+    onConfirm={executePowerToggle}
+    onCancel={() => (confirmPowerOpen = false)}
 />
 
 <style>
@@ -58,6 +118,102 @@
         display: flex;
         gap: 15px;
         align-items: center;
+    }
+
+    .power-btn {
+        background: #2a2a2a;
+        color: #888;
+        border: 2px solid #444;
+        padding: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .power-btn:hover:not(:disabled) {
+        color: var(--retro-orange);
+        border-color: var(--retro-orange);
+        background: #3a3a3a;
+    }
+
+    .power-btn.power-on {
+        color: var(--retro-green);
+        border-color: var(--retro-green);
+        background: #1a3a1a;
+    }
+
+    .power-btn.power-on:hover:not(:disabled) {
+        color: var(--retro-orange);
+        border-color: var(--retro-orange);
+        background: #3a2a1a;
+        box-shadow: 0 0 15px rgba(255, 102, 0, 0.3);
+    }
+
+    .power-btn.power-on .icon-power {
+        filter: drop-shadow(0 0 3px var(--retro-green));
+    }
+
+    .power-btn.power-on:hover:not(:disabled) .icon-power {
+        filter: drop-shadow(0 0 3px var(--retro-orange));
+    }
+
+    .power-btn.power-off {
+        color: #888;
+        border-color: #444;
+        background: #2a2a2a;
+    }
+
+    .power-btn.power-off:hover:not(:disabled) {
+        color: var(--retro-orange);
+        border-color: var(--retro-orange);
+        background: #3a3a3a;
+    }
+
+    .power-btn.power-locked {
+        color: #555;
+        border-color: #333;
+        background: #1a1a1a;
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    .power-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    .icon-power {
+        width: 24px;
+        height: 24px;
+        stroke-linecap: round;
+        transition: all 0.3s;
+    }
+
+    .power-fill {
+        transition: opacity 0.4s ease-out;
+    }
+
+    .power-btn:hover:not(:disabled) .power-fill {
+        opacity: 0.15;
+        animation: fill-up 0.4s ease-out forwards;
+    }
+
+    @keyframes fill-up {
+        from {
+            opacity: 0;
+            transform: scale(0.5);
+        }
+        to {
+            opacity: 0.15;
+            transform: scale(1);
+        }
+    }
+
+    @keyframes pulse-power {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.05); }
     }
 
     .settings-btn {
