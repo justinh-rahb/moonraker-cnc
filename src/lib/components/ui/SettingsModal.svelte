@@ -1017,8 +1017,12 @@
     }
 
     .save-icon-btn {
-        background: var(--retro-orange);
-        border: none;
+        background: linear-gradient(
+            180deg,
+            var(--retro-orange) 0%,
+            var(--retro-orange-dim) 100%
+        );
+        border: 1px solid #ff8833;
         color: #000;
         padding: 5px 15px;
         font-family: "Orbitron", monospace;
@@ -1029,18 +1033,22 @@
     }
 
     .save-icon-btn:hover {
-        background: #fff;
+        background: linear-gradient(180deg, #ff7722 0%, #dd6611 100%);
+        color: var(--green);
     }
 
     .close-btn {
         background: none;
         border: none;
-        color: #666;
+        color: var(--retro-green);
         font-size: 24px;
         cursor: pointer;
+        padding: 0 5px;
+        line-height: 1;
     }
+
     .close-btn:hover {
-        color: #fff;
+        color: var(--retro-red);
     }
 
     .modal-content {
