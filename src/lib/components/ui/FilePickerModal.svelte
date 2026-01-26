@@ -2,6 +2,7 @@
     import { createEventDispatcher, onMount, onDestroy } from "svelte";
     import CncButton from "./CncButton.svelte";
     import ConfirmDialog from "./ConfirmDialog.svelte";
+    import InputDialog from "./InputDialog.svelte";
     import { send, connectionState } from "../../../stores/websocket.js";
     import { machineState } from "../../../stores/machineStore.js";
     import { configStore } from "../../../stores/configStore.js";
@@ -26,7 +27,7 @@
     let directories = [];
     let loading = false;
     let error = null;
-    let selectedFile = null;
+    let selectedItem = null;
     let sortBy = "name"; // name, date, size
     let sortAsc = true;
 
@@ -40,6 +41,14 @@
     let confirmOpen = false;
     let confirmMessage = '';
     let confirmCallback = () => {};
+
+    // Input dialog state
+    let inputOpen = false;
+    let inputTitle = "";
+    let inputMessage = "";
+    let inputValue = "";
+    let inputPlaceholder = "";
+    let inputCallback = () => {};
 
     // Reactive state from stores
     $: isPrinting = $machineState.status === 'PRINTING';
@@ -72,7 +81,7 @@
         
         loading = true;
         error = null;
-        selectedFile = null;
+        selectedItem = null;
 
         try {
             // Moonraker expects path to include the root prefix (e.g., "gcodes/subdir")
@@ -126,9 +135,111 @@
         }
     };
 
-    // Select a file
-    const selectFile = (file) => {
-        selectedFile = selectedFile === file ? null : file;
+    // Select a file or directory
+    const selectItem = (item) => {
+        selectedItem = selectedItem === item ? null : item;
+    };
+
+    const showInput = (title, message, value, placeholder, callback) => {
+        inputTitle = title;
+        inputMessage = message;
+        inputValue = value;
+        inputPlaceholder = placeholder;
+        inputCallback = callback;
+        inputOpen = true;
+    };
+
+    const handleDelete = () => {
+        if (!selectedItem) return;
+        
+        const isDir = !!selectedItem.dirname;
+        const name = isDir ? selectedItem.dirname : selectedItem.filename;
+        const itemPath = currentPath ? `${currentPath}/${name}` : name;
+        const fullRootPath = `gcodes/${itemPath}`; 
+
+        confirmMessage = `Permanently delete "${name}"?`;
+        confirmCallback = async () => {
+            try {
+                if (isDir) {
+                    await send("server.files.delete_directory", { path: fullRootPath, force: true });
+                } else {
+                    await send("server.files.delete_file", { path: fullRootPath });
+                }
+                fetchDirectory(currentPath);
+            } catch (e) {
+                error = `Delete failed: ${e.message}`;
+            }
+        };
+        confirmOpen = true;
+    };
+
+    const handleRename = () => {
+        if (!selectedItem) return;
+        const isDir = !!selectedItem.dirname;
+        const oldName = isDir ? selectedItem.dirname : selectedItem.filename;
+        
+        showInput(
+            "RENAME",
+            `Rename "${oldName}" to:`,
+            oldName,
+            "New name",
+            async (newName) => {
+                if (!newName || newName === oldName) return;
+                try {
+                    const oldPath = currentPath ? `${currentPath}/${oldName}` : oldName;
+                    const source = `gcodes/${oldPath}`;
+                    const dest = currentPath ? `gcodes/${currentPath}/${newName}` : `gcodes/${newName}`;
+                    await send("server.files.move", { source, dest });
+                    fetchDirectory(currentPath);
+                } catch (e) {
+                    error = `Rename failed: ${e.message}`;
+                }
+            }
+        );
+    };
+
+    const handleMove = () => {
+        if (!selectedItem) return;
+        const isDir = !!selectedItem.dirname;
+        const name = isDir ? selectedItem.dirname : selectedItem.filename;
+        const oldPath = currentPath ? `${currentPath}/${name}` : name;
+        
+        showInput(
+            "MOVE",
+            "Enter new path (relative to gcodes root):",
+            oldPath,
+            "path/to/destination",
+            async (newPath) => {
+                 if (!newPath || newPath === oldPath) return;
+                 try {
+                     const source = `gcodes/${oldPath}`;
+                     const dest = `gcodes/${newPath}`;
+                     await send("server.files.move", { source, dest });
+                     fetchDirectory(currentPath);
+                 } catch (e) {
+                     error = `Move failed: ${e.message}`;
+                 }
+            }
+        );
+    };
+    
+    const handleNewFolder = () => {
+        showInput(
+            "NEW FOLDER",
+            "Enter folder name:",
+            "",
+            "New Folder",
+            async (name) => {
+                if (!name) return;
+                try {
+                    const newPath = currentPath ? `gcodes/${currentPath}/${name}` : `gcodes/${name}`;
+                    await send("server.files.post_directory", { path: newPath });
+                    fetchDirectory(currentPath);
+                } catch (e) {
+                     error = `Create folder failed: ${e.message}`;
+                }
+            }
+        );
     };
 
     const showConfirm = (message, callback) => {
@@ -139,16 +250,17 @@
 
     // Start print immediately
     const startPrint = async () => {
-        if (!selectedFile || !canStartPrint) return;
+        // Can only print files
+        if (!selectedItem || selectedItem.dirname || !canStartPrint) return;
         
         const filePath = currentPath 
-            ? `${currentPath}/${selectedFile.filename}` 
-            : selectedFile.filename;
+            ? `${currentPath}/${selectedItem.filename}` 
+            : selectedItem.filename;
         
         const doPrint = async () => {
             try {
                 await send("printer.print.start", { filename: filePath });
-                dispatch("printStarted", { path: filePath, file: selectedFile });
+                dispatch("printStarted", { path: filePath, file: selectedItem });
                 handleClose();
             } catch (e) {
                 console.error("Failed to start print:", e);
@@ -339,7 +451,12 @@
         <div class="modal-window">
             <div class="modal-header">
                 <span>▸ FILE BROWSER</span>
-                <button class="close-btn" on:click={handleClose}>×</button>
+                <div class="header-actions">
+                    <button class="upload-btn" on:click={triggerUpload} disabled={uploading}>
+                        {uploading ? 'UPLOADING...' : 'UPLOAD'}
+                    </button>
+                    <button class="close-btn" on:click={handleClose}>×</button>
+                </div>
             </div>
 
             <div class="modal-content">
@@ -415,7 +532,12 @@
 
                         <!-- Directories -->
                         {#each sortedDirs as dir}
-                            <button class="file-item directory" on:click={() => navigateToDir(dir.dirname)}>
+                            <button 
+                                class="file-item directory" 
+                                class:selected={selectedItem === dir}
+                                on:click={() => selectItem(dir)}
+                                on:dblclick={() => navigateToDir(dir.dirname)}
+                            >
                                 <span class="file-icon">📁</span>
                                 <span class="file-name">{dir.dirname}</span>
                                 <span class="file-size">—</span>
@@ -427,8 +549,8 @@
                         {#each sortedFiles as file}
                             <button 
                                 class="file-item" 
-                                class:selected={selectedFile === file}
-                                on:click={() => selectFile(file)}
+                                class:selected={selectedItem === file}
+                                on:click={() => selectItem(file)}
                                 on:dblclick={startPrint}
                             >
                                 <span class="file-icon">📄</span>
@@ -454,15 +576,25 @@
                         on:change={onFileInputChange}
                         style="display: none;"
                     />
-                    <CncButton variant="home" on:click={triggerUpload} disabled={uploading}>
-                        UPLOAD
+                    <CncButton variant="standard" on:click={handleNewFolder}>
+                        NEW FOLDER
                     </CncButton>
                     <CncButton 
                         variant="action" 
                         on:click={startPrint} 
-                        disabled={!selectedFile || !canStartPrint}
+                        disabled={!selectedItem || !!selectedItem.dirname || !canStartPrint}
                     >
                         {isPrinting || isPaused ? "BUSY" : "PRINT"}
+                    </CncButton>
+                    
+                    <CncButton variant="standard" disabled={!selectedItem} on:click={handleRename}>
+                        RENAME
+                    </CncButton>
+                    <CncButton variant="standard" disabled={!selectedItem} on:click={handleMove}>
+                        MOVE
+                    </CncButton>
+                    <CncButton variant="danger" disabled={!selectedItem} on:click={handleDelete}>
+                        DELETE
                     </CncButton>
                 </div>
             </div>
@@ -515,6 +647,34 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .upload-btn {
+        background: linear-gradient(180deg, var(--retro-orange) 0%, var(--retro-orange-dim) 100%);
+        border: 1px solid #ff8833;
+        color: #000;
+        padding: 5px 15px;
+        font-family: "Orbitron", monospace;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+        letter-spacing: 1px;
+    }
+
+    .upload-btn:hover {
+        background: linear-gradient(180deg, #ff7722 0%, #dd6611 100%);
+        color: var(--green);
+    }
+    
+    .upload-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
 
     .close-btn {
@@ -770,5 +930,16 @@
     bind:isOpen={confirmOpen}
     message={confirmMessage}
     onConfirm={confirmCallback}
+    onCancel={() => {}}
+/>
+
+<!-- Input Dialog -->
+<InputDialog
+    bind:isOpen={inputOpen}
+    title={inputTitle}
+    message={inputMessage}
+    value={inputValue}
+    placeholder={inputPlaceholder}
+    onConfirm={inputCallback}
     onCancel={() => {}}
 />

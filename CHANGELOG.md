@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.1] - TBD
 
 ### Added
+- **File Management**:
+  - Full file capabilities in File Browser: Delete (files & directories), Rename, Move, and Create New Folder.
+  - Double-click to enter directories, single-click to select for actions.
 - **UI Improvements**:
   - **Tabbed Settings**: Settings Modal now organized into 5 logical tabs (General, Interface, Macros, Panels, Cameras) to reduce scrolling and improve navigability.
   - **Modal Scroll Lock**: Background page scrolling is now locked when any modal is open (Settings, Connection, File Picker, Confirmation dialogs).
@@ -23,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Relocated "Save" button in Settings Modal to the header bar for quicker access.
   - Updated "Save" button style to match other action buttons (orange gradient).
   - Standardized "Close" button style across Settings and File Picker modals.
+- **File Browser UX**: 
+  - Relocated "Upload" button to the header for consistency.
+  - Reorganized footer actions to accommodate new file management tools in a clearer layout.
 - **Visuals**:
   - Improved modal positioning: Settings and File Picker modals now have a fixed top offset to prevent vertical jumping during content resizing.
   - Consistent modal width for Settings and File Picker.
