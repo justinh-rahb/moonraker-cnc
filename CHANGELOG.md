@@ -5,9 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.1] - TBD
 
 ### Fixed
+- Speed Factor and Extrusion Factor sliders now properly sync with the printer
+  - Sliders now send M220 (speed) and M221 (extrusion) G-code commands when changed
+  - Previously, slider changes only updated local UI state and were immediately overwritten by subscription updates from Moonraker
+  - RetroSlider component updated to use local value + change event pattern instead of direct store binding
+  - Added `setSpeedFactor()` and `setExtrusionFactor()` functions to machineStore
 - MiscPanel fan speed control for named fans
   - Correctly extracts fan name from Moonraker key (removes "fan_generic "prefix)
   - Sends proper SET_FAN_SPEED command with extracted fan name
