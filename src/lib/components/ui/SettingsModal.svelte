@@ -958,15 +958,15 @@
             </div>
         </div>
     </div>
-
-    <ConfirmDialog
-        bind:isOpen={confirmOpen}
-        title="CONFIRM DELETE"
-        message={confirmMessage}
-        onConfirm={confirmCallback}
-        onCancel={() => (confirmOpen = false)}
-    />
 {/if}
+
+<ConfirmDialog
+    bind:isOpen={confirmOpen}
+    title="CONFIRM DELETE"
+    message={confirmMessage}
+    onConfirm={confirmCallback}
+    onCancel={() => (confirmOpen = false)}
+/>
 
 <style>
     .modal-overlay {
