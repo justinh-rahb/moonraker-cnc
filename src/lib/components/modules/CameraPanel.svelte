@@ -12,6 +12,12 @@
   let frameCount = 0;
   let lastFpsUpdate = Date.now();
   let currentFps = 0;
+  
+  let containerElement;
+  let isIntersecting = false;
+  let isPageVisible = typeof document !== 'undefined' ? document.visibilityState === 'visible' : true;
+
+  $: isVisible = isIntersecting && isPageVisible;
 
   // Get enabled cameras
   $: enabledCameras = ($configStore.cameras || []).filter(c => c.enabled);
@@ -38,9 +44,16 @@
   // Update stream URL with timestamp for refresh
   // Decoupled to prevent reactive chain re-evaluation every interval
   $: baseStreamUrl = selectedCamera?.streamUrl || '';
-  $: streamUrl = baseStreamUrl 
-    ? `${baseStreamUrl}${baseStreamUrl.includes('?') ? '&' : '?'}t=${imageTimestamp}`
-    : '';
+  $: streamUrl = (() => {
+    // If hidden and snapshot URL available, show static snapshot to close connection
+    if (!isVisible && selectedCamera?.snapshotUrl) {
+      return selectedCamera.snapshotUrl;
+    }
+    // Otherwise show stream (updating or stale based on timestamp updates)
+    return baseStreamUrl 
+      ? `${baseStreamUrl}${baseStreamUrl.includes('?') ? '&' : '?'}t=${imageTimestamp}`
+      : '';
+  })();
 
   // Update refresh interval when selected camera or its refresh rate changes
   $: if (selectedCamera && refreshInterval) {
@@ -48,7 +61,9 @@
     const intervalMs = Math.round(1000 / fps);
     clearInterval(refreshInterval);
     refreshInterval = setInterval(() => {
-      imageTimestamp = Date.now();
+      if (isVisible) {
+        imageTimestamp = Date.now();
+      }
     }, intervalMs);
   }
 
@@ -68,6 +83,20 @@
 
   // Start refresh interval for MJPEG streams
   onMount(() => {
+    // Setup visibility tracking
+    const observer = new IntersectionObserver((entries) => {
+      isIntersecting = entries[0].isIntersecting;
+    }, { threshold: 0.01 }); // Trigger as soon as 1% is visible
+
+    if (containerElement) {
+      observer.observe(containerElement);
+    }
+
+    const handleVisibilityChange = () => {
+      isPageVisible = document.visibilityState === 'visible';
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     // Load saved camera selection from localStorage
     try {
       const savedCameraId = localStorage.getItem(CAMERA_SELECTION_KEY);
@@ -88,11 +117,18 @@
       }
       
       refreshInterval = setInterval(() => {
-        imageTimestamp = Date.now();
+        if (isVisible) {
+          imageTimestamp = Date.now();
+        }
       }, intervalMs);
     };
     
     updateInterval();
+
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   });
 
   onDestroy(() => {
@@ -126,7 +162,7 @@
     </div>
   {:else}
     {#if selectedCamera}
-      <div class="camera-container">
+      <div class="camera-container" bind:this={containerElement}>
         <div class="aspect-ratio-box" style="padding-bottom: {aspectRatioPadding};">
           {#if streamUrl}
             <img
