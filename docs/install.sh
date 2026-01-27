@@ -5,7 +5,20 @@
 set -e
 
 REPO="justinh-rahb/moonraker-cnc"
-INSTALL_DIR="${HOME}/retro-cnc-panel"
+
+# Determine installation directory (handle sudo execution)
+if [ -n "$SUDO_USER" ]; then
+    if command -v getent >/dev/null 2>&1; then
+        USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+    else
+        USER_HOME=$(eval echo "~$SUDO_USER")
+    fi
+    DEFAULT_DIR="${USER_HOME}/retro-cnc-panel"
+else
+    DEFAULT_DIR="${HOME}/retro-cnc-panel"
+fi
+
+INSTALL_DIR="${INSTALL_PATH:-$DEFAULT_DIR}"
 NGINX_AVAILABLE="/etc/nginx/sites-available"
 NGINX_ENABLED="/etc/nginx/sites-enabled"
 NGINX_CONF="retro-cnc-panel"
