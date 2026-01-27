@@ -7,11 +7,15 @@
   const CAMERA_SELECTION_KEY = 'retro_cnc_camera_selection';
 
   let selectedCameraId = null;
-  let refreshInterval = null;
+  let refreshTimer = null;
   let imageTimestamp = Date.now();
-  let frameCount = 0;
-  let lastFpsUpdate = Date.now();
+  
+  // FPS calculation
+  let lastFrameTime = 0;
   let currentFps = 0;
+  let rawFps = 0;
+  let lastDisplayUpdate = 0;
+  let startLoadTime = 0;
   
   let containerElement;
   let isIntersecting = false;
@@ -55,30 +59,85 @@
       : '';
   })();
 
-  // Update refresh interval when selected camera or its refresh rate changes
-  $: if (selectedCamera && refreshInterval) {
-    const fps = selectedCamera.targetRefreshRate || 5;
-    const intervalMs = Math.round(1000 / fps);
-    clearInterval(refreshInterval);
-    refreshInterval = setInterval(() => {
-      if (isVisible) {
-        imageTimestamp = Date.now();
-      }
-    }, intervalMs);
+  // Trigger next frame load
+  function triggerLoad() {
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = null;
+
+    if (isVisible) {
+      startLoadTime = performance.now();
+      imageTimestamp = Date.now();
+    }
   }
 
-  // Handle frame load for FPS calculation
-  function handleFrameLoad() {
-    frameCount++;
-    const now = Date.now();
-    const elapsed = now - lastFpsUpdate;
-    
-    // Update FPS every second
-    if (elapsed >= 1000) {
-      currentFps = Math.round((frameCount / elapsed) * 1000);
-      frameCount = 0;
-      lastFpsUpdate = now;
+  // Handle visibility changes to start/stop loop
+  $: if (isVisible) {
+    // If we became visible and no timer/load is pending, kickstart
+    if (!refreshTimer) {
+       triggerLoad();
     }
+  } else {
+    // If hidden, stop the loop
+    if (refreshTimer) {
+      clearTimeout(refreshTimer);
+      refreshTimer = null;
+    }
+  }
+  
+  // Reset when camera changes
+  $: if (selectedCameraId) {
+     currentFps = 0;
+     rawFps = 0;
+     lastFrameTime = 0;
+     refreshTimer = null;
+     if (isVisible) triggerLoad();
+  }
+
+  // Handle frame load for FPS calculation and scheduling next frame
+  function handleFrameLoad() {
+    const now = performance.now();
+    
+    // Calculate FPS if we have a previous frame time
+    if (lastFrameTime > 0) {
+      const delta = now - lastFrameTime;
+      const instantFps = 1000 / delta;
+      
+      // Simple EMA (Exponential Moving Average) for smoothing: 0.05 weight for new value
+      // Use rawFps for calculation to keep high precision
+      rawFps = rawFps === 0 
+        ? instantFps 
+        : (rawFps * 0.95 + instantFps * 0.05);
+
+      // Only update display every 500ms to prevent rapid flickering
+      if (now - lastDisplayUpdate > 500) {
+        currentFps = rawFps;
+        lastDisplayUpdate = now;
+      }
+    }
+    
+    lastFrameTime = now;
+    
+    // Schedule next frame
+    scheduleNextFrame(now);
+  }
+
+  function handleFrameError() {
+    // On error, just schedule next attempt with default delay
+    scheduleNextFrame(performance.now());
+  }
+
+  function scheduleNextFrame(nowCallback) {
+    if (!isVisible) return;
+
+    const targetFps = selectedCamera?.targetRefreshRate || 5;
+    const targetInterval = 1000 / targetFps;
+    const loadTime = nowCallback - startLoadTime;
+    
+    // Calculate how long to wait to maintain target interval
+    // If load took longer than interval, wait 0 (or small breath)
+    const delay = Math.max(0, targetInterval - loadTime);
+    
+    refreshTimer = setTimeout(triggerLoad, delay);
   }
 
   // Start refresh interval for MJPEG streams
@@ -106,34 +165,22 @@
     } catch (e) {
       console.error('Failed to load camera selection', e);
     }
-
-    // Set up refresh interval based on camera refresh rate
-    const updateInterval = () => {
-      const fps = selectedCamera?.targetRefreshRate || 5;
-      const intervalMs = Math.round(1000 / fps);
-      
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-      }
-      
-      refreshInterval = setInterval(() => {
-        if (isVisible) {
-          imageTimestamp = Date.now();
-        }
-      }, intervalMs);
-    };
     
-    updateInterval();
+    // Initial trigger if already visible
+    if (isVisible) {
+        triggerLoad();
+    }
 
     return () => {
       observer.disconnect();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (refreshTimer) clearTimeout(refreshTimer);
     };
   });
 
   onDestroy(() => {
-    if (refreshInterval) {
-      clearInterval(refreshInterval);
+    if (refreshTimer) {
+      clearTimeout(refreshTimer);
     }
   });
 
@@ -148,10 +195,14 @@
     }
     
     // Reset FPS counter when switching cameras
-    frameCount = 0;
     currentFps = 0;
-    lastFpsUpdate = Date.now();
+    rawFps = 0;
+    lastFrameTime = 0;
+    
+    // Trigger immediate reload
+    triggerLoad();
   }
+
 </script>
 
 <PanelModule title="CAMERA FEED">
@@ -171,9 +222,7 @@
               class="camera-feed"
               style="transform: {transformStyle};"
               on:load={handleFrameLoad}
-              on:error={() => {
-                // Handle error silently, maybe add error state later
-              }}
+              on:error={handleFrameError}
             />
           {:else}
             <div class="no-stream">
@@ -183,7 +232,7 @@
 
           {#if selectedCamera.showFps && currentFps > 0}
             <div class="fps-overlay">
-              {currentFps} FPS
+              {Math.round(currentFps)} FPS
             </div>
           {/if}
         </div>
