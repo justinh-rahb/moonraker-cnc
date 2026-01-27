@@ -1,6 +1,7 @@
 <script>
   import PanelModule from "../ui/PanelModule.svelte";
   import CncButton from "../ui/CncButton.svelte";
+  import WebRTCPlayer from "../ui/WebRTCPlayer.svelte";
   import { configStore } from "../../../stores/configStore.js";
   import { onDestroy, onMount } from "svelte";
 
@@ -48,19 +49,32 @@
   // Update stream URL with timestamp for refresh
   // Decoupled to prevent reactive chain re-evaluation every interval
   $: baseStreamUrl = selectedCamera?.streamUrl || '';
+  $: streamType = selectedCamera?.streamType || 'mjpeg';
   $: streamUrl = (() => {
     // If hidden and snapshot URL available, show static snapshot to close connection
     if (!isVisible && selectedCamera?.snapshotUrl) {
       return selectedCamera.snapshotUrl;
     }
+    
+    // For WebRTC, just return base URL, don't append timestamp
+    if (streamType === 'go2rtc' || streamType === 'camera-streamer') {
+        return baseStreamUrl;
+    }
+
     // Otherwise show stream (updating or stale based on timestamp updates)
     return baseStreamUrl 
       ? `${baseStreamUrl}${baseStreamUrl.includes('?') ? '&' : '?'}t=${imageTimestamp}`
       : '';
   })();
+  
+  // Track refresh timer for MJPEG
+  // For WebRTC, the player component handles its own connection lifecycle
+  $: isMjpeg = !streamType || streamType === 'mjpeg';
 
   // Trigger next frame load
   function triggerLoad() {
+    if (!isMjpeg) return; // Only MJPEG needs manual refresh loop
+
     if (refreshTimer) clearTimeout(refreshTimer);
     refreshTimer = null;
 
@@ -73,7 +87,7 @@
   // Handle visibility changes to start/stop loop
   $: if (isVisible) {
     // If we became visible and no timer/load is pending, kickstart
-    if (!refreshTimer) {
+    if (!refreshTimer && isMjpeg) {
        triggerLoad();
     }
   } else {
@@ -90,11 +104,14 @@
      rawFps = 0;
      lastFrameTime = 0;
      refreshTimer = null;
-     if (isVisible) triggerLoad();
+     if (isVisible && isMjpeg) triggerLoad();
   }
 
   // Handle frame load for FPS calculation and scheduling next frame
   function handleFrameLoad() {
+    // Only calculate FPS for MJPEG
+    if (!isMjpeg) return;
+
     const now = performance.now();
     
     // Calculate FPS if we have a previous frame time
@@ -127,7 +144,7 @@
   }
 
   function scheduleNextFrame(nowCallback) {
-    if (!isVisible) return;
+    if (!isVisible || !isMjpeg) return;
 
     const targetFps = selectedCamera?.targetRefreshRate || 5;
     const targetInterval = 1000 / targetFps;
@@ -167,7 +184,7 @@
     }
     
     // Initial trigger if already visible
-    if (isVisible) {
+    if (isVisible && isMjpeg) {
         triggerLoad();
     }
 
@@ -197,10 +214,7 @@
     // Reset FPS counter when switching cameras
     currentFps = 0;
     rawFps = 0;
-    lastFrameTime = 0;
-    
-    // Trigger immediate reload
-    triggerLoad();
+    if (isMjpeg) triggerLoad();
   }
 
 </script>
@@ -216,21 +230,31 @@
       <div class="camera-container" bind:this={containerElement}>
         <div class="aspect-ratio-box" style="padding-bottom: {aspectRatioPadding};">
           {#if streamUrl}
-            <img
-              src={streamUrl}
-              alt={selectedCamera.name}
-              class="camera-feed"
-              style="transform: {transformStyle};"
-              on:load={handleFrameLoad}
-              on:error={handleFrameError}
-            />
+            {#if isMjpeg}
+                <img
+                    src={streamUrl}
+                    alt={selectedCamera.name}
+                    class="camera-feed"
+                    style="transform: {transformStyle};"
+                    on:load={handleFrameLoad}
+                    on:error={handleFrameError}
+                />
+            {:else if (streamType === 'go2rtc' || streamType === 'camera-streamer') && isVisible}
+                <div class="camera-feed">
+                    <WebRTCPlayer
+                        url={streamUrl}
+                        type={streamType}
+                        transformStyle={transformStyle}
+                    />
+                </div>
+            {/if}
           {:else}
             <div class="no-stream">
               <p>NO STREAM URL</p>
             </div>
           {/if}
 
-          {#if selectedCamera.showFps && currentFps > 0}
+          {#if isMjpeg && selectedCamera.showFps && currentFps > 0}
             <div class="fps-overlay">
               {Math.round(currentFps)} FPS
             </div>

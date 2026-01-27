@@ -807,6 +807,23 @@
                             </div>
 
                             <div class="camera-config">
+                                <div class="camera-row">
+                                    <div class="input-col main">
+                                        <label>STREAM TYPE</label>
+                                        <select
+                                            value={camera.streamType || 'mjpeg'}
+                                            on:change={(e) =>
+                                                updateCamera(camera.id, {
+                                                    streamType: e.target.value,
+                                                })}
+                                        >
+                                            <option value="mjpeg">MJPEG (Default)</option>
+                                            <option value="go2rtc">WebRTC (go2rtc)</option>
+                                            <option value="camera-streamer">WebRTC (camera-streamer)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
                                 <div class="input-group">
                                     <label>STREAM URL</label>
                                     <input
@@ -816,7 +833,11 @@
                                             updateCamera(camera.id, {
                                                 streamUrl: e.target.value,
                                             })}
-                                        placeholder="http://192.168.1.100/webcam/?action=stream"
+                                        placeholder={camera.streamType === 'go2rtc'
+                                            ? "http://192.168.1.100:1984/api/webrtc?src=camera1"
+                                            : camera.streamType === 'camera-streamer'
+                                            ? "http://192.168.1.100:8080/webrtc"
+                                            : "http://192.168.1.100/webcam/?action=stream"}
                                     />
                                 </div>
 
@@ -868,19 +889,21 @@
                                 </div>
 
                                 <div class="camera-row">
-                                    <div class="input-col">
-                                        <label>TARGET REFRESH RATE (FPS)</label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max="30"
-                                            value={camera.targetRefreshRate || 5}
-                                            on:input={(e) =>
-                                                updateCamera(camera.id, {
-                                                    targetRefreshRate: parseInt(e.target.value) || 5,
-                                                })}
-                                        />
-                                    </div>
+                                    {#if !camera.streamType || camera.streamType === 'mjpeg'}
+                                        <div class="input-col">
+                                            <label>TARGET REFRESH RATE (FPS)</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="30"
+                                                value={camera.targetRefreshRate || 5}
+                                                on:input={(e) =>
+                                                    updateCamera(camera.id, {
+                                                        targetRefreshRate: parseInt(e.target.value) || 5,
+                                                    })}
+                                            />
+                                        </div>
+                                    {/if}
                                 </div>
 
                                 <div class="checkbox-group">
@@ -906,17 +929,19 @@
                                         />
                                         FLIP VERTICAL
                                     </label>
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            checked={camera.showFps}
-                                            on:change={(e) =>
-                                                updateCamera(camera.id, {
-                                                    showFps: e.target.checked,
-                                                })}
-                                        />
-                                        SHOW FPS
-                                    </label>
+                                    {#if !camera.streamType || camera.streamType === 'mjpeg'}
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                checked={camera.showFps}
+                                                on:change={(e) =>
+                                                    updateCamera(camera.id, {
+                                                        showFps: e.target.checked,
+                                                    })}
+                                            />
+                                            SHOW FPS
+                                        </label>
+                                    {/if}
                                 </div>
                             </div>
                         </div>

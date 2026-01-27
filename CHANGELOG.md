@@ -9,9 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Camera System**:
+  - **WebRTC Support**: Added native support for low-latency WebRTC streams via `go2rtc` and `camera-streamer` protocols.
+  - **Stream Type**: New configuration option to toggle between MJPEG (default), WebRTC (go2rtc), and WebRTC (camera-streamer).
   - **Smart Streaming**: Automatically pauses active streams or switches to snapshots when tab is hidden or panel is out of view to save bandwidth.
-  - **Optimized Loading**: Switched from polling to recursive request-chaining (congestion control) to prevent network flooding.
-  - **FPS Counter**: Improved stability and readability using exponential smoothing and throttled display updates.
+  - **Optimized Loading**: Switched from polling to recursive request-chaining (congestion control) to prevent network flooding for MJPEG streams.
+  - **FPS Counter**: Improved stability and readability using exponential smoothing and throttled display updates. (MJPEG only)
 
 ## [1.2.1] - 2026-01-26
 
