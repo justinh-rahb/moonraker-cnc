@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Print Status Panel**:
-  - Changed current layer calculation to use total layer count from file metadata divided by layer height (accounting for first layer height if specified) for improved accuracy. Known limitations with variable layer height prints.
+  - Layer tracking now prioritizes slicer-provided layer information from `SET_PRINT_STATS_INFO` command when available, falling back to Z position-based calculation when not provided. This ensures accurate layer counts when slicers properly send layer data while maintaining compatibility with slicers that don't.
 
 ## [1.2.1] - 2026-01-26
 
