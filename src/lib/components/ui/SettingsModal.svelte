@@ -955,28 +955,34 @@
                 {/if}
 
                 {#if currentTab === "Sysinfo"}
-                <div class="about-section">
+                <div class="info-section">
                     <div class="section-title">APPLICATION INFO</div>
-                    <div class="about-content">
-                        <div class="about-item">
-                            <span class="about-label">VERSION:</span>
-                            <a href={versionUrl} target="_blank" rel="noopener noreferrer" class="version-link">
-                                {displayVersion}
-                            </a>
+                    <div class="info-grid">
+                        <div class="info-row">
+                            <span class="info-label">VERSION:</span>
+                            <span class="info-value">
+                                <a href={versionUrl} target="_blank" rel="noopener noreferrer" class="version-link">
+                                    {displayVersion}
+                                </a>
+                            </span>
                         </div>
                         {#if gitCommit !== displayVersion && gitCommit !== 'dev'}
-                            <div class="about-item">
-                                <span class="about-label">COMMIT:</span>
-                                <a href="{repoUrl}/commit/{gitCommit}" target="_blank" rel="noopener noreferrer" class="version-link">
-                                    {gitCommit}
-                                </a>
+                            <div class="info-row">
+                                <span class="info-label">COMMIT:</span>
+                                <span class="info-value">
+                                    <a href="{repoUrl}/commit/{gitCommit}" target="_blank" rel="noopener noreferrer" class="version-link">
+                                        {gitCommit}
+                                    </a>
+                                </span>
                             </div>
                         {/if}
-                        <div class="about-item">
-                            <span class="about-label">REPOSITORY:</span>
-                            <a href={repoUrl} target="_blank" rel="noopener noreferrer" class="version-link">
-                                GitHub
-                            </a>
+                        <div class="info-row">
+                            <span class="info-label">REPOSITORY:</span>
+                            <span class="info-value">
+                                <a href={repoUrl} target="_blank" rel="noopener noreferrer" class="version-link">
+                                    GitHub
+                                </a>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -1427,31 +1433,40 @@
         outline: none;
     }
 
-    /* About Section Styles */
-    .about-section {
+    /* System Info Section Styles */
+    .info-section {
         background: #0a0a0a;
         border: 2px solid #333;
         padding: 15px;
         margin-bottom: 20px;
     }
 
-    .about-content {
+    .info-grid {
         display: flex;
         flex-direction: column;
         gap: 10px;
     }
 
-    .about-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-family: 'Share Tech Mono', monospace;
+    .info-row {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 15px;
+        align-items: start;
         font-size: 12px;
     }
 
-    .about-label {
-        color: var(--retro-orange);
-        min-width: 100px;
+    .info-label {
+        color: #666;
+        font-family: 'Orbitron', monospace;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    .info-value {
+        color: var(--retro-green);
+        font-family: 'Share Tech Mono', monospace;
+        word-break: break-word;
+        line-height: 1.4;
     }
 
     .version-link {
