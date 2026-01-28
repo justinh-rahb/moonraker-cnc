@@ -390,18 +390,8 @@ const updateStateFromStatus = (status) => {
                     e: pos[3]
                 };
 
-                // Calculate current layer from Z position when we have metadata
-                if (newState.layerHeight && newState.printStatsState === 'printing') {
-                    const calculatedLayer = calculateCurrentLayer(
-                        pos[2], // Current Z position
-                        newState.layerHeight,
-                        newState.firstLayerHeight
-                    );
-                    if (calculatedLayer !== null) {
-                        newState.currentLayer = calculatedLayer;
-                        if (DEBUG) console.log('[DEBUG] Calculated current layer from Z:', calculatedLayer, 'at Z:', pos[2].toFixed(2));
-                    }
-                }
+                // Store Z position for later fallback layer calculation
+                newState._currentZ = pos[2];
             }
 
             // Track motion limits
@@ -529,7 +519,20 @@ const updateStateFromStatus = (status) => {
             if (status.print_stats.filament_used !== undefined) {
                 newState.filamentUsed = status.print_stats.filament_used;
             }
-            // Layer info now calculated from Z position and metadata instead of print_stats.info
+
+            // Prefer slicer-provided layer info from print_stats.info (via SET_PRINT_STATS_INFO)
+            // Fall back to Z position calculation if not available
+            if (status.print_stats.info) {
+                if (DEBUG) console.log('[DEBUG] print_stats.info found:', JSON.stringify(status.print_stats.info));
+                if (status.print_stats.info.current_layer !== undefined) {
+                    newState.currentLayer = status.print_stats.info.current_layer;
+                    if (DEBUG) console.log('[DEBUG] Using slicer-provided current_layer:', newState.currentLayer);
+                }
+                if (status.print_stats.info.total_layer !== undefined) {
+                    newState.totalLayers = status.print_stats.info.total_layer;
+                    if (DEBUG) console.log('[DEBUG] Using slicer-provided total_layer:', newState.totalLayers);
+                }
+            }
         }
 
         if (status.idle_timeout) {
@@ -589,7 +592,7 @@ const updateStateFromStatus = (status) => {
             }
         }
 
-        // Layer information now calculated from Z position and metadata instead of display_status
+        // Layer information prioritizes slicer data, falls back to Z position calculation
 
         // Reset live speed/flow when not printing
         // Only reset layers when transitioning OUT of printing state
@@ -606,7 +609,25 @@ const updateStateFromStatus = (status) => {
                 newState.objectHeight = null;
                 if (DEBUG) console.log('[DEBUG] Print ended, resetting layers and metadata');
             }
+        } else if (newState.status === 'PRINTING') {
+            // Fallback: Calculate current layer from Z position if slicer didn't provide it
+            // Only calculate if we don't already have a current layer from slicer
+            const hasSlicerLayer = status.print_stats?.info?.current_layer !== undefined;
+            if (!hasSlicerLayer && newState._currentZ && newState.layerHeight) {
+                const calculatedLayer = calculateCurrentLayer(
+                    newState._currentZ,
+                    newState.layerHeight,
+                    newState.firstLayerHeight
+                );
+                if (calculatedLayer !== null) {
+                    newState.currentLayer = calculatedLayer;
+                    if (DEBUG) console.log('[DEBUG] Calculated current layer from Z (fallback):', calculatedLayer, 'at Z:', newState._currentZ.toFixed(2));
+                }
+            }
         }
+
+        // Clean up temporary Z tracking variable
+        delete newState._currentZ;
 
         if (DEBUG && (newState.currentLayer > 0 || newState.totalLayers > 0)) {
             console.log('[DEBUG] Layer state at end of update:', newState.currentLayer, '/', newState.totalLayers, 'Status:', newState.status);
