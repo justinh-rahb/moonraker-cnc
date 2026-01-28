@@ -14,12 +14,12 @@
         ...value
     }));
 
-    // Format version string (truncate git hash if too long)
+    // Format version string
     const formatVersion = (version) => {
         if (!version) return 'N/A';
-        // Truncate long git hashes for display
-        if (version.length > 35) {
-            return version.substring(0, 32) + '...';
+        // Only truncate if extremely long (over 50 chars)
+        if (version.length > 50) {
+            return version.substring(0, 47) + '...';
         }
         return version;
     };
@@ -85,10 +85,13 @@
             </div>
         </div>
 
-        <!-- Firmware Information -->
+        <!-- Firmware Information (Service running on host) -->
         {#if firmware.name || firmware.version}
             <div class="info-section">
-                <div class="section-title">FIRMWARE</div>
+                <div class="section-title">FIRMWARE SERVICE</div>
+                <div class="help-text-header">
+                    {firmware.name || 'Firmware'} instance running on the host system
+                </div>
                 <div class="info-grid">
                     {#if firmware.name}
                         <div class="info-row">
@@ -120,11 +123,20 @@
         {#if mcuList.length > 0}
             <div class="info-section">
                 <div class="section-title">MICROCONTROLLER{mcuList.length > 1 ? 'S' : ''}</div>
+                <div class="help-text-header">
+                    Firmware flashed to connected MCU boards
+                </div>
                 <div class="mcu-list">
                     {#each mcuList as mcu}
                         <div class="mcu-item">
                             <div class="mcu-header">{mcu.name}</div>
                             <div class="info-grid">
+                                {#if mcu.firmwareName}
+                                    <div class="info-row">
+                                        <span class="info-label">FIRMWARE:</span>
+                                        <span class="info-value firmware-name">{mcu.firmwareName}</span>
+                                    </div>
+                                {/if}
                                 <div class="info-row">
                                     <span class="info-label">VERSION:</span>
                                     <span class="info-value version-text">
@@ -133,7 +145,7 @@
                                 </div>
                                 {#if mcu.type}
                                     <div class="info-row">
-                                        <span class="info-label">TYPE:</span>
+                                        <span class="info-label">MCU:</span>
                                         <span class="info-value">{mcu.type}</span>
                                     </div>
                                 {/if}
@@ -188,12 +200,20 @@
     .section-title {
         color: var(--retro-orange);
         font-weight: bold;
-        margin-bottom: 15px;
+        margin-bottom: 8px;
         border-bottom: 1px solid #333;
         padding-bottom: 8px;
         font-size: 14px;
         font-family: 'Orbitron', monospace;
         letter-spacing: 1px;
+    }
+
+    .help-text-header {
+        font-size: 11px;
+        color: #888;
+        font-style: italic;
+        margin-bottom: 12px;
+        line-height: 1.4;
     }
 
     .info-grid {

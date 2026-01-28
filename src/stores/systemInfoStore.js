@@ -197,9 +197,23 @@ const fetchMCUInfo = async () => {
         mcuObjects.forEach(mcuName => {
             const mcuInfo = status[mcuName];
             if (mcuInfo) {
+                const version = mcuInfo.mcu_version || 'Unknown';
+
+                // Detect firmware name from MCU version string
+                // Kalico: "v0.12.0-272-kalico" or similar with "kalico" in it
+                // Klipper: "v0.12.0-272-g13c75ea87" (git hash style)
+                let firmwareName = 'Klipper'; // Default
+
+                if (version.toLowerCase().includes('kalico')) {
+                    firmwareName = 'Kalico';
+                } else if (version.toLowerCase().includes('danger-klipper')) {
+                    firmwareName = 'Danger Klipper';
+                }
+
                 mcuData[mcuName] = {
                     name: formatMCUName(mcuName),
-                    version: mcuInfo.mcu_version || 'Unknown',
+                    firmwareName: firmwareName,
+                    version: version,
                     buildVersions: mcuInfo.mcu_build_versions || null,
                     type: mcuInfo.mcu_constants?.MCU || 'Unknown'
                 };
