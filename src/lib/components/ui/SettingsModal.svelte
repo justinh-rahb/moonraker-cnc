@@ -36,6 +36,7 @@
     import CncButton from "./CncButton.svelte";
     import ColorPicker from "./ColorPicker.svelte";
     import ConfirmDialog from "./ConfirmDialog.svelte";
+    import SystemInfo from "./SystemInfo.svelte";
 
     export let isOpen = false;
     export let onClose;
@@ -172,7 +173,7 @@
     };
 
     // Tabs
-    const tabs = ["General", "Interface", "Macros", "Panels", "Cameras"];
+    const tabs = ["General", "Interface", "Macros", "Panels", "Cameras", "Config"];
     let currentTab = "General";
 </script>
 
@@ -953,9 +954,9 @@
                 </button>
                 {/if}
 
-                {#if currentTab === "General"}
+                {#if currentTab === "Config"}
                 <div class="about-section">
-                    <div class="section-title">ABOUT</div>
+                    <div class="section-title">APPLICATION INFO</div>
                     <div class="about-content">
                         <div class="about-item">
                             <span class="about-label">VERSION:</span>
@@ -979,6 +980,9 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- System Info Section -->
+                <SystemInfo />
                 {/if}
             </div>
         </div>

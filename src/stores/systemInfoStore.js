@@ -22,7 +22,8 @@ export const systemInfo = writable({
         },
         hostname: null
     },
-    klipper: {
+    firmware: {
+        name: null,  // e.g., "Klipper" or "Kalico"
         version: null,
         state: null
     },
@@ -66,9 +67,9 @@ const initializeSystemInfo = async () => {
                 newState.host = hostData.value;
             }
 
-            // Process Klipper info
+            // Process firmware info
             if (printerData.status === 'fulfilled' && printerData.value) {
-                newState.klipper = printerData.value;
+                newState.firmware = printerData.value;
             }
 
             // Process MCU info
@@ -128,14 +129,29 @@ const fetchHostInfo = async () => {
     }
 };
 
-// Fetch Klipper information
+// Fetch firmware information (Klipper/Kalico)
 const fetchKlipperInfo = async () => {
     try {
         const response = await send('printer.info');
 
         if (response) {
+            const version = response.software_version || 'Unknown';
+
+            // Detect firmware name from version string
+            // Kalico typically has "kalico" in the version string
+            // Example Kalico version: "v0.12.0-123-kalico"
+            // Example Klipper version: "v0.12.0-123-g13c75ea87"
+            let firmwareName = 'Klipper'; // Default assumption
+
+            if (version.toLowerCase().includes('kalico')) {
+                firmwareName = 'Kalico';
+            } else if (version.toLowerCase().includes('danger-klipper')) {
+                firmwareName = 'Danger Klipper';
+            }
+
             return {
-                version: response.software_version || 'Unknown',
+                name: firmwareName,
+                version: version,
                 state: response.state || 'unknown',
                 hostname: response.hostname || null
             };
@@ -143,7 +159,7 @@ const fetchKlipperInfo = async () => {
 
         return null;
     } catch (e) {
-        if (DEBUG) console.warn('[SystemInfo] Could not fetch Klipper info:', e);
+        if (DEBUG) console.warn('[SystemInfo] Could not fetch firmware info:', e);
         throw e;
     }
 };

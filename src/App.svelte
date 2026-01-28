@@ -8,7 +8,6 @@
   import MacroPanel from "./lib/components/modules/MacroPanel.svelte";
   import PrintStatusPanel from "./lib/components/modules/PrintStatusPanel.svelte";
   import MachineLimitsPanel from "./lib/components/modules/MachineLimitsPanel.svelte";
-  import SystemInfoPanel from "./lib/components/modules/SystemInfoPanel.svelte";
   import ConsolePanel from "./lib/components/modules/ConsolePanel.svelte";
   import CameraPanel from "./lib/components/modules/CameraPanel.svelte";
   import ConnectionModal from "./lib/components/ui/ConnectionModal.svelte";
@@ -50,7 +49,6 @@
       {/if}
       <TemperaturePanel />
       <MachineLimitsPanel />
-      <SystemInfoPanel />
       <MiscPanel />
       {#each sortedPanels as panel (panel.id)}
         <MacroPanel {panel} />
