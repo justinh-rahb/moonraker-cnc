@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Moved "About" details (build version, git tag/commit links, repository link) and the embedded `SystemInfo` component into this tab.
   - The `SystemInfo` section now displays runtime and diagnostics data, including host OS, CPU, memory, Klipper host software, and MCU firmware versions.
 
+### Changed
+- **Print Status Panel**:
+  - Changed current layer calculation to use total layer count from file metadata divided by layer height (accounting for first layer height if specified) for improved accuracy. Known limitations with variable layer height prints.
+
 ## [1.2.1] - 2026-01-26
 
 ### Fixed
