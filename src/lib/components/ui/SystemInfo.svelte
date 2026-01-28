@@ -89,9 +89,6 @@
         {#if firmware.name || firmware.version}
             <div class="info-section">
                 <div class="section-title">FIRMWARE SERVICE</div>
-                <div class="help-text-header">
-                    {firmware.name || 'Firmware'} instance running on the host system
-                </div>
                 <div class="info-grid">
                     {#if firmware.name}
                         <div class="info-row">
@@ -123,9 +120,6 @@
         {#if mcuList.length > 0}
             <div class="info-section">
                 <div class="section-title">MICROCONTROLLER{mcuList.length > 1 ? 'S' : ''}</div>
-                <div class="help-text-header">
-                    Firmware flashed to connected MCU boards
-                </div>
                 <div class="mcu-list">
                     {#each mcuList as mcu}
                         <div class="mcu-item">
