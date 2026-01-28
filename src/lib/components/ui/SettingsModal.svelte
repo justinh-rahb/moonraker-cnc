@@ -173,7 +173,7 @@
     };
 
     // Tabs
-    const tabs = ["General", "Interface", "Macros", "Panels", "Cameras", "Config"];
+    const tabs = ["General", "Interface", "Macros", "Panels", "Cameras", "Sysinfo"];
     let currentTab = "General";
 </script>
 
@@ -954,7 +954,7 @@
                 </button>
                 {/if}
 
-                {#if currentTab === "Config"}
+                {#if currentTab === "Sysinfo"}
                 <div class="about-section">
                     <div class="section-title">APPLICATION INFO</div>
                     <div class="about-content">

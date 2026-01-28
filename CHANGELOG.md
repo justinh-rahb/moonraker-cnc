@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Smart Streaming**: Automatically pauses active streams or switches to snapshots when tab is hidden or panel is out of view to save bandwidth.
   - **Optimized Loading**: Switched from polling to recursive request-chaining (congestion control) to prevent network flooding for MJPEG streams.
   - **FPS Counter**: Improved stability and readability using exponential smoothing and throttled display updates. (MJPEG only)
+- **Settings Modal / Sysinfo tab**:
+  - Moved "About" details (build version, git tag/commit links, repository link) and the embedded `SystemInfo` component into this tab.
+  - The `SystemInfo` section now displays runtime and diagnostics data, including host OS, CPU, memory, Klipper host software, and MCU firmware versions.
 
 ## [1.2.1] - 2026-01-26
 
