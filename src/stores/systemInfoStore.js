@@ -143,18 +143,15 @@ const fetchKlipperInfo = async () => {
             const firmwareName = response.app || 'Klipper';
             const shortVersion = response.software_version || 'Unknown';
 
-            // Combine firmware name with version for display
-            // Example: "Kalico cdc17931"
-            const fullVersion = `${firmwareName} ${shortVersion}`;
-
+            // Store the short version only; UI composes name+version when needed
+            // Example shortVersion: "cdc17931" or "v0.12.0-123-g13c75ea87"
             console.log('[SystemInfo DEBUG] printer.info response:', response);
             console.log('[SystemInfo DEBUG] app field:', response.app);
-            console.log('[SystemInfo DEBUG] software_version:', shortVersion);
-            console.log('[SystemInfo DEBUG] Full version:', fullVersion);
+            console.log('[SystemInfo DEBUG] software_version (short):', shortVersion);
 
             return {
                 name: firmwareName,
-                version: fullVersion,
+                version: shortVersion,
                 state: response.state || 'unknown',
                 hostname: response.hostname || null
             };
@@ -203,18 +200,14 @@ const fetchMCUInfo = async (firmwareName = 'Klipper') => {
                 const shortVersion = mcuInfo.mcu_version || 'Unknown';
 
                 // MCUs inherit the firmware name from the host
-                // Combine firmware name with MCU version for display
-                // Example: "Kalico cdc17931"
-                const fullVersion = `${firmwareName} ${shortVersion}`;
-
-                console.log(`[SystemInfo DEBUG] ${mcuName} mcu_version:`, shortVersion);
-                console.log(`[SystemInfo DEBUG] ${mcuName} firmware:`, firmwareName);
-                console.log(`[SystemInfo DEBUG] ${mcuName} full version:`, fullVersion);
+                // Store only the MCU short version; UI composes name+version when needed
+                console.log(`[SystemInfo DEBUG] ${mcuName} mcu_version (short):`, shortVersion);
+                console.log(`[SystemInfo DEBUG] ${mcuName} firmwareName:`, firmwareName);
 
                 mcuData[mcuName] = {
                     name: formatMCUName(mcuName),
                     firmwareName: firmwareName,
-                    version: fullVersion,
+                    version: shortVersion,
                     buildVersions: mcuInfo.mcu_build_versions || null,
                     type: mcuInfo.mcu_constants?.MCU || 'Unknown'
                 };
