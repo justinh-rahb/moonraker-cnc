@@ -52,11 +52,14 @@ const initializeSystemInfo = async () => {
     systemInfo.update(s => ({ ...s, isLoading: true, error: null }));
 
     try {
-        // Fetch all data in parallel for better performance
-        const [hostData, printerData, mcuData] = await Promise.allSettled([
+        // Fetch printer info first to get firmware name
+        const printerData = await fetchKlipperInfo();
+        const firmwareName = printerData?.name || 'Klipper';
+
+        // Fetch remaining data in parallel, passing firmware name to MCU fetcher
+        const [hostData, mcuData] = await Promise.allSettled([
             fetchHostInfo(),
-            fetchKlipperInfo(),
-            fetchMCUInfo()
+            fetchMCUInfo(firmwareName)
         ]);
 
         systemInfo.update(s => {
@@ -68,8 +71,8 @@ const initializeSystemInfo = async () => {
             }
 
             // Process firmware info
-            if (printerData.status === 'fulfilled' && printerData.value) {
-                newState.firmware = printerData.value;
+            if (printerData) {
+                newState.firmware = printerData;
             }
 
             // Process MCU info
@@ -78,7 +81,7 @@ const initializeSystemInfo = async () => {
             }
 
             // Set error only if all requests failed
-            if (hostData.status === 'rejected' && printerData.status === 'rejected' && mcuData.status === 'rejected') {
+            if (hostData.status === 'rejected' && !printerData && mcuData.status === 'rejected') {
                 newState.error = 'Failed to fetch system information';
             }
 
@@ -135,29 +138,23 @@ const fetchKlipperInfo = async () => {
         const response = await send('printer.info');
 
         if (response) {
-            const version = response.software_version || 'Unknown';
+            // The firmware name is in the 'app' field
+            // Example: app: "Kalico" or app: "Klipper"
+            const firmwareName = response.app || 'Klipper';
+            const shortVersion = response.software_version || 'Unknown';
 
-            // Debug: Log the actual version string
+            // Combine firmware name with version for display
+            // Example: "Kalico cdc17931"
+            const fullVersion = `${firmwareName} ${shortVersion}`;
+
             console.log('[SystemInfo DEBUG] printer.info response:', response);
-            console.log('[SystemInfo DEBUG] software_version:', version);
-
-            // Detect firmware name from version string
-            // Kalico typically has "kalico" in the version string
-            // Example Kalico version: "v0.12.0-123-kalico"
-            // Example Klipper version: "v0.12.0-123-g13c75ea87"
-            let firmwareName = 'Klipper'; // Default assumption
-
-            if (version.toLowerCase().includes('kalico')) {
-                firmwareName = 'Kalico';
-            } else if (version.toLowerCase().includes('danger-klipper')) {
-                firmwareName = 'Danger Klipper';
-            }
-
-            console.log('[SystemInfo DEBUG] Detected firmware name:', firmwareName);
+            console.log('[SystemInfo DEBUG] app field:', response.app);
+            console.log('[SystemInfo DEBUG] software_version:', shortVersion);
+            console.log('[SystemInfo DEBUG] Full version:', fullVersion);
 
             return {
                 name: firmwareName,
-                version: version,
+                version: fullVersion,
                 state: response.state || 'unknown',
                 hostname: response.hostname || null
             };
@@ -171,7 +168,7 @@ const fetchKlipperInfo = async () => {
 };
 
 // Fetch MCU information
-const fetchMCUInfo = async () => {
+const fetchMCUInfo = async (firmwareName = 'Klipper') => {
     try {
         // First, list all available objects to find MCUs
         const listResponse = await send('printer.objects.list');
@@ -203,28 +200,21 @@ const fetchMCUInfo = async () => {
         mcuObjects.forEach(mcuName => {
             const mcuInfo = status[mcuName];
             if (mcuInfo) {
-                const version = mcuInfo.mcu_version || 'Unknown';
+                const shortVersion = mcuInfo.mcu_version || 'Unknown';
 
-                // Debug: Log MCU version strings
-                console.log(`[SystemInfo DEBUG] ${mcuName} mcu_version:`, version);
+                // MCUs inherit the firmware name from the host
+                // Combine firmware name with MCU version for display
+                // Example: "Kalico cdc17931"
+                const fullVersion = `${firmwareName} ${shortVersion}`;
 
-                // Detect firmware name from MCU version string
-                // Kalico: "v0.12.0-272-kalico" or similar with "kalico" in it
-                // Klipper: "v0.12.0-272-g13c75ea87" (git hash style)
-                let firmwareName = 'Klipper'; // Default
-
-                if (version.toLowerCase().includes('kalico')) {
-                    firmwareName = 'Kalico';
-                } else if (version.toLowerCase().includes('danger-klipper')) {
-                    firmwareName = 'Danger Klipper';
-                }
-
-                console.log(`[SystemInfo DEBUG] ${mcuName} detected firmware:`, firmwareName);
+                console.log(`[SystemInfo DEBUG] ${mcuName} mcu_version:`, shortVersion);
+                console.log(`[SystemInfo DEBUG] ${mcuName} firmware:`, firmwareName);
+                console.log(`[SystemInfo DEBUG] ${mcuName} full version:`, fullVersion);
 
                 mcuData[mcuName] = {
                     name: formatMCUName(mcuName),
                     firmwareName: firmwareName,
-                    version: version,
+                    version: fullVersion,
                     buildVersions: mcuInfo.mcu_build_versions || null,
                     type: mcuInfo.mcu_constants?.MCU || 'Unknown'
                 };
