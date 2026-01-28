@@ -137,6 +137,10 @@ const fetchKlipperInfo = async () => {
         if (response) {
             const version = response.software_version || 'Unknown';
 
+            // Debug: Log the actual version string
+            console.log('[SystemInfo DEBUG] printer.info response:', response);
+            console.log('[SystemInfo DEBUG] software_version:', version);
+
             // Detect firmware name from version string
             // Kalico typically has "kalico" in the version string
             // Example Kalico version: "v0.12.0-123-kalico"
@@ -148,6 +152,8 @@ const fetchKlipperInfo = async () => {
             } else if (version.toLowerCase().includes('danger-klipper')) {
                 firmwareName = 'Danger Klipper';
             }
+
+            console.log('[SystemInfo DEBUG] Detected firmware name:', firmwareName);
 
             return {
                 name: firmwareName,
@@ -199,6 +205,9 @@ const fetchMCUInfo = async () => {
             if (mcuInfo) {
                 const version = mcuInfo.mcu_version || 'Unknown';
 
+                // Debug: Log MCU version strings
+                console.log(`[SystemInfo DEBUG] ${mcuName} mcu_version:`, version);
+
                 // Detect firmware name from MCU version string
                 // Kalico: "v0.12.0-272-kalico" or similar with "kalico" in it
                 // Klipper: "v0.12.0-272-g13c75ea87" (git hash style)
@@ -209,6 +218,8 @@ const fetchMCUInfo = async () => {
                 } else if (version.toLowerCase().includes('danger-klipper')) {
                     firmwareName = 'Danger Klipper';
                 }
+
+                console.log(`[SystemInfo DEBUG] ${mcuName} detected firmware:`, firmwareName);
 
                 mcuData[mcuName] = {
                     name: formatMCUName(mcuName),
