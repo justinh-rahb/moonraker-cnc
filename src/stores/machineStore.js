@@ -97,6 +97,11 @@ export const machineState = writable({
     currentLayer: 0,
     totalLayers: 0,
 
+    // Layer metadata for calculation (extracted from file metadata)
+    layerHeight: null,
+    firstLayerHeight: null,
+    objectHeight: null,
+
     // Idle timeout state (for detecting busy during commands)
     idleState: 'Idle',         // Idle, Printing, Ready
 
@@ -357,6 +362,20 @@ const formatSensorName = (rawName) => {
     return name.toUpperCase().replace(/_/g, ' ');
 };
 
+// Calculate current layer from Z position and layer metadata (matching Mainsail's method)
+const calculateCurrentLayer = (currentZ, layerHeight, firstLayerHeight) => {
+    if (!currentZ || !layerHeight) return null;
+
+    // Use layer height as default for first layer if not specified
+    const firstLayer = firstLayerHeight || layerHeight;
+
+    // Match Mainsail's calculation exactly (1-indexed, not 0-indexed)
+    const calculatedLayer = Math.round((currentZ - firstLayer) / layerHeight) + 1;
+
+    // Clamp to minimum of 1 (first layer)
+    return Math.max(1, calculatedLayer);
+};
+
 const updateStateFromStatus = (status) => {
     machineState.update(s => {
         const newState = { ...s };
@@ -370,6 +389,19 @@ const updateStateFromStatus = (status) => {
                     z: pos[2],
                     e: pos[3]
                 };
+
+                // Calculate current layer from Z position when we have metadata
+                if (newState.layerHeight && newState.printStatsState === 'printing') {
+                    const calculatedLayer = calculateCurrentLayer(
+                        pos[2], // Current Z position
+                        newState.layerHeight,
+                        newState.firstLayerHeight
+                    );
+                    if (calculatedLayer !== null) {
+                        newState.currentLayer = calculatedLayer;
+                        if (DEBUG) console.log('[DEBUG] Calculated current layer from Z:', calculatedLayer, 'at Z:', pos[2].toFixed(2));
+                    }
+                }
             }
 
             // Track motion limits
@@ -497,18 +529,7 @@ const updateStateFromStatus = (status) => {
             if (status.print_stats.filament_used !== undefined) {
                 newState.filamentUsed = status.print_stats.filament_used;
             }
-            // Check for layer info in print_stats.info
-            if (status.print_stats.info) {
-                if (DEBUG) console.log('[DEBUG] print_stats.info found:', JSON.stringify(status.print_stats.info));
-                if (status.print_stats.info.current_layer !== undefined) {
-                    newState.currentLayer = status.print_stats.info.current_layer;
-                    if (DEBUG) console.log('[DEBUG] Updated current_layer to:', newState.currentLayer);
-                }
-                if (status.print_stats.info.total_layer !== undefined) {
-                    newState.totalLayers = status.print_stats.info.total_layer;
-                    if (DEBUG) console.log('[DEBUG] Updated total_layer to:', newState.totalLayers);
-                }
-            }
+            // Layer info now calculated from Z position and metadata instead of print_stats.info
         }
 
         if (status.idle_timeout) {
@@ -568,33 +589,7 @@ const updateStateFromStatus = (status) => {
             }
         }
 
-        // Parse layer information from display_status
-        if (status.display_status) {
-            if (DEBUG) console.log('[DEBUG] display_status received:', JSON.stringify(status.display_status));
-
-            // Try direct fields first (some Moonraker versions may provide these)
-            if (status.display_status.current_layer !== undefined) {
-                newState.currentLayer = status.display_status.current_layer;
-                if (DEBUG) console.log('[DEBUG] Using current_layer from field:', newState.currentLayer);
-            }
-            if (status.display_status.total_layers !== undefined) {
-                newState.totalLayers = status.display_status.total_layers;
-                if (DEBUG) console.log('[DEBUG] Using total_layers from field:', newState.totalLayers);
-            }
-
-            // Fallback: parse from message string if direct fields not available
-            // Format often looks like: "M73 P50 L25/100" or similar
-            if (status.display_status.message && !status.display_status.current_layer) {
-                const msg = status.display_status.message;
-                if (DEBUG) console.log('[DEBUG] Parsing message:', msg);
-                const layerMatch = msg.match(/L(\d+)\/(\d+)/);
-                if (layerMatch) {
-                    newState.currentLayer = parseInt(layerMatch[1], 10);
-                    newState.totalLayers = parseInt(layerMatch[2], 10);
-                    if (DEBUG) console.log('[DEBUG] Parsed layers from message:', newState.currentLayer, '/', newState.totalLayers);
-                }
-            }
-        }
+        // Layer information now calculated from Z position and metadata instead of display_status
 
         // Reset live speed/flow when not printing
         // Only reset layers when transitioning OUT of printing state
@@ -606,15 +601,10 @@ const updateStateFromStatus = (status) => {
             if (oldStatus === 'PRINTING' && (newState.status === 'COMPLETE' || newState.status === 'CANCELLED' || newState.status === 'STANDBY')) {
                 newState.currentLayer = 0;
                 newState.totalLayers = 0;
-                if (DEBUG) console.log('[DEBUG] Print ended, resetting layers');
-            }
-        } else if (newState.totalLayers > 0 && newState.printProgress > 0) {
-            // Always estimate current layer from progress when we have total layers
-            // This updates continuously as progress changes
-            const estimatedLayer = Math.max(1, Math.round(newState.printProgress * newState.totalLayers));
-            if (estimatedLayer !== newState.currentLayer) {
-                newState.currentLayer = estimatedLayer;
-                if (DEBUG) console.log('[DEBUG] Estimated current layer from progress:', newState.currentLayer, '/', newState.totalLayers, 'at', Math.round(newState.printProgress * 100) + '%');
+                newState.layerHeight = null;
+                newState.firstLayerHeight = null;
+                newState.objectHeight = null;
+                if (DEBUG) console.log('[DEBUG] Print ended, resetting layers and metadata');
             }
         }
 
@@ -675,19 +665,39 @@ const fetchFileMetadata = async (filename) => {
         if (DEBUG) console.log('[DEBUG] File metadata received:', JSON.stringify(response));
 
         if (response) {
-            // Check various possible locations for layer count
-            const layerCount = response.layer_count ||
-                response.object_height ||
-                (response.thumbnails && response.thumbnails.length > 0 ? response.layer_count : null);
+            // Extract layer calculation parameters
+            let layerHeight = response.layer_height;
+            let firstLayerHeight = response.first_layer_height;
+            const objectHeight = response.object_height;
 
-            if (layerCount !== null && layerCount !== undefined) {
-                if (DEBUG) console.log('[DEBUG] Found layer count in metadata:', layerCount);
-                machineState.update(s => ({
-                    ...s,
-                    totalLayers: layerCount,
-                    currentLayer: s.currentLayer || 0
-                }));
+            // If first layer height not available, use layer height as default
+            if (!firstLayerHeight && layerHeight) {
+                firstLayerHeight = layerHeight;
             }
+
+            // Calculate total layers if we have the necessary data
+            let totalLayers = null;
+            if (objectHeight && layerHeight && firstLayerHeight) {
+                totalLayers = Math.round((objectHeight - firstLayerHeight) / layerHeight) + 1;
+                if (DEBUG) console.log('[DEBUG] Calculated total layers:', totalLayers, 'from object_height:', objectHeight, 'layer_height:', layerHeight, 'first_layer_height:', firstLayerHeight);
+            }
+
+            // Fallback to layer_count if calculation not possible
+            if (!totalLayers && response.layer_count) {
+                totalLayers = response.layer_count;
+                if (DEBUG) console.log('[DEBUG] Using layer_count from metadata:', totalLayers);
+            }
+
+            machineState.update(s => ({
+                ...s,
+                layerHeight,
+                firstLayerHeight,
+                objectHeight,
+                totalLayers: totalLayers || s.totalLayers,
+                currentLayer: 0 // Reset to 0 when starting new print
+            }));
+
+            if (DEBUG) console.log('[DEBUG] Layer metadata stored - layerHeight:', layerHeight, 'firstLayerHeight:', firstLayerHeight, 'objectHeight:', objectHeight, 'totalLayers:', totalLayers);
         }
     } catch (e) {
         if (DEBUG) console.warn('[DEBUG] Could not fetch file metadata:', e);
