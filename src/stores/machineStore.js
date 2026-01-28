@@ -369,11 +369,11 @@ const calculateCurrentLayer = (currentZ, layerHeight, firstLayerHeight) => {
     // Use layer height as default for first layer if not specified
     const firstLayer = firstLayerHeight || layerHeight;
 
-    // Match Mainsail's calculation exactly
-    const calculatedLayer = Math.round((currentZ - firstLayer) / layerHeight);
+    // Match Mainsail's calculation exactly (1-indexed, not 0-indexed)
+    const calculatedLayer = Math.round((currentZ - firstLayer) / layerHeight) + 1;
 
-    // Clamp to minimum of 0
-    return Math.max(0, calculatedLayer);
+    // Clamp to minimum of 1 (first layer)
+    return Math.max(1, calculatedLayer);
 };
 
 const updateStateFromStatus = (status) => {
