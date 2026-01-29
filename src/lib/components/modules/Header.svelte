@@ -4,9 +4,7 @@
     import { emergencyStop } from "../../../stores/machineStore.js";
     import { configStore } from "../../../stores/configStore.js";
     import { currentPowerDevice, togglePower } from "../../../stores/powerStore.js";
-    import { filePickerOpen } from "../../../stores/uiStore.js";
-
-    let isSettingsOpen = false;
+    import { filePickerOpen, settingsOpen } from "../../../stores/uiStore.js";
     let confirmPowerOpen = false;
     let powerAction = "";
 
@@ -60,7 +58,7 @@
         </button>
         <button
             class="settings-btn"
-            on:click={() => (isSettingsOpen = true)}
+            on:click={() => ($settingsOpen = true)}
             title="Settings"
         >
             <svg class="icon-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -92,8 +90,8 @@
 </div>
 
 <SettingsModal
-    isOpen={isSettingsOpen}
-    onClose={() => (isSettingsOpen = false)}
+    isOpen={$settingsOpen}
+    onClose={() => ($settingsOpen = false)}
 />
 
 <ConfirmDialog

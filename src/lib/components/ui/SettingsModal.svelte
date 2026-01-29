@@ -32,6 +32,7 @@
         exportConfig,
         importConfig,
     } from "../../../stores/configStore.js";
+    import { settingsTab } from "../../../stores/uiStore.js";
     import { availablePowerDevices } from "../../../stores/powerStore.js";
     import CncButton from "./CncButton.svelte";
     import ColorPicker from "./ColorPicker.svelte";
@@ -52,14 +53,16 @@
     });
 
     // Build information injected at build time
-    const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
-    const gitCommit = typeof __GIT_COMMIT__ !== 'undefined' ? __GIT_COMMIT__ : 'dev';
-    const gitTag = typeof __GIT_TAG__ !== 'undefined' ? __GIT_TAG__ : '';
-    
+    const appVersion =
+        typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";
+    const gitCommit =
+        typeof __GIT_COMMIT__ !== "undefined" ? __GIT_COMMIT__ : "dev";
+    const gitTag = typeof __GIT_TAG__ !== "undefined" ? __GIT_TAG__ : "";
+
     // Determine display version (priority: tag > version > commit)
     const displayVersion = gitTag || appVersion || gitCommit;
-    const repoUrl = 'https://github.com/justinh-rahb/moonraker-cnc';
-    const versionUrl = gitTag 
+    const repoUrl = "https://github.com/justinh-rahb/moonraker-cnc";
+    const versionUrl = gitTag
         ? `${repoUrl}/releases/tag/${gitTag}`
         : `${repoUrl}/commit/${gitCommit}`;
 
@@ -137,8 +140,8 @@
         // Sanitize machine title for filename: lowercase, replace spaces with hyphens, remove special chars
         const sanitizedTitle = $configStore.title
             .toLowerCase()
-            .replace(/\s+/g, '-')
-            .replace(/[^a-z0-9-]/g, '');
+            .replace(/\s+/g, "-")
+            .replace(/[^a-z0-9-]/g, "");
         const date = new Date().toISOString().split("T")[0];
         a.download = `${sanitizedTitle}-${date}.json`;
         document.body.appendChild(a);
@@ -173,8 +176,20 @@
     };
 
     // Tabs
-    const tabs = ["General", "Interface", "Macros", "Panels", "Cameras", "Sysinfo"];
-    let currentTab = "General";
+    const tabs = [
+        "General",
+        "Interface",
+        "Macros",
+        "Panels",
+        "Cameras",
+        "Sysinfo",
+    ];
+
+    // Sync currentTab with store
+    $: currentTab = $settingsTab;
+    const setTab = (tab) => {
+        $settingsTab = tab;
+    };
 </script>
 
 {#if isOpen}
@@ -183,7 +198,11 @@
             <div class="modal-header">
                 <span>▸ CONFIGURATION</span>
                 <div class="header-actions">
-                    <button class="save-icon-btn" on:click={save} title="Save & Close">
+                    <button
+                        class="save-icon-btn"
+                        on:click={save}
+                        title="Save & Close"
+                    >
                         SAVE
                     </button>
                     <button class="close-btn" on:click={onClose}>x</button>
@@ -195,7 +214,7 @@
                     <button
                         class="tab-btn"
                         class:active={currentTab === tab}
-                        on:click={() => (currentTab = tab)}
+                        on:click={() => setTab(tab)}
                     >
                         {tab.toUpperCase()}
                     </button>
@@ -206,789 +225,895 @@
                 {#if currentTab === "General"}
                     <div class="section-title">GENERAL</div>
                     <div class="input-group" style="margin-bottom: 25px;">
-                    <label>MACHINE TITLE</label>
-                    <input
-                        type="text"
-                        value={$configStore.title}
-                        on:input={(e) => updateTitle(e.target.value)}
-                    />
-                </div>
-
-                <div class="checkbox-group" style="margin-bottom: 25px;">
-                    <label>
+                        <label>MACHINE TITLE</label>
                         <input
-                            type="checkbox"
-                            checked={$configStore.server.autoConnect}
-                            on:change={(e) =>
-                                updateServerConfig(
-                                    $configStore.server.ip,
-                                    $configStore.server.port,
-                                    e.target.checked,
-                                )}
+                            type="text"
+                            value={$configStore.title}
+                            on:input={(e) => updateTitle(e.target.value)}
                         />
-                        AUTOCONNECT ON STARTUP
-                    </label>
-                </div>
-
-                <div class="import-export-group" style="margin-bottom: 25px;">
-                    <input
-                        type="file"
-                        accept=".json"
-                        bind:this={fileInput}
-                        on:change={handleFileSelect}
-                        style="display: none;"
-                    />
-                    <button class="import-btn" on:click={handleImportClick}>
-                        IMPORT CONFIG
-                    </button>
-                    <button class="export-btn" on:click={handleExport}>
-                        EXPORT CONFIG
-                    </button>
-                    {#if importError}
-                        <div class="import-error">{importError}</div>
-                    {/if}
-                </div>
-                {/if}
-
-                {#if currentTab === "Macros"}
-                <div class="section-title">PRINT CONTROL MACROS</div>
-                <div class="presets-container" style="margin-bottom: 25px;">
-                    <div class="macro-row">
-                        <div class="input-col main">
-                            <label>PAUSE MACRO</label>
-                            <input
-                                type="text"
-                                value={$configStore.printControl?.pauseMacro ||
-                                    "PAUSE"}
-                                on:input={(e) =>
-                                    updatePrintControlConfig({
-                                        pauseMacro: e.target.value,
-                                    })}
-                            />
-                        </div>
-                        <div class="input-col main">
-                            <label>RESUME MACRO</label>
-                            <input
-                                type="text"
-                                value={$configStore.printControl?.resumeMacro ||
-                                    "RESUME"}
-                                on:input={(e) =>
-                                    updatePrintControlConfig({
-                                        resumeMacro: e.target.value,
-                                    })}
-                            />
-                        </div>
-                        <div class="input-col main">
-                            <label>CANCEL MACRO</label>
-                            <input
-                                type="text"
-                                value={$configStore.printControl?.cancelMacro ||
-                                    "CANCEL_PRINT"}
-                                on:input={(e) =>
-                                    updatePrintControlConfig({
-                                        cancelMacro: e.target.value,
-                                    })}
-                            />
-                        </div>
                     </div>
-                    <div class="checkbox-group" style="margin-top: 15px;">
+
+                    <div class="checkbox-group" style="margin-bottom: 25px;">
                         <label>
                             <input
                                 type="checkbox"
-                                checked={$configStore.printControl?.confirmPause ?? false}
+                                checked={$configStore.server.autoConnect}
                                 on:change={(e) =>
-                                    updatePrintControlConfig({
-                                        confirmPause: e.target.checked,
-                                    })}
+                                    updateServerConfig(
+                                        $configStore.server.ip,
+                                        $configStore.server.port,
+                                        e.target.checked,
+                                    )}
                             />
-                            CONFIRM BEFORE PAUSING
-                        </label>
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={$configStore.printControl?.confirmCancel ?? true}
-                                on:change={(e) =>
-                                    updatePrintControlConfig({
-                                        confirmCancel: e.target.checked,
-                                    })}
-                            />
-                            CONFIRM BEFORE CANCELLING
-                        </label>
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={$configStore.printControl?.confirmStartPrint ?? true}
-                                on:change={(e) =>
-                                    updatePrintControlConfig({
-                                        confirmStartPrint: e.target.checked,
-                                    })}
-                            />
-                            CONFIRM BEFORE STARTING PRINT
+                            AUTOCONNECT ON STARTUP
                         </label>
                     </div>
-                </div>
-                {/if}
 
-                {#if currentTab === "General"}
-                <div class="section-title">POWER DEVICE</div>
-                <div class="presets-container" style="margin-bottom: 25px;">
-                    <div class="macro-row">
-                        <div class="input-col main">
-                            <label>SELECTED DEVICE</label>
-                            <select
-                                value={$configStore.power?.selectedDevice || 'OFF'}
-                                on:change={(e) =>
-                                    updatePowerConfig({
-                                        selectedDevice: e.target.value,
-                                    })}
-                            >
-                                <option value="OFF">OFF (Hidden)</option>
-                                <option value="AUTO">AUTO (Recommended)</option>
-                                {#each $availablePowerDevices as deviceName}
-                                    <option value={deviceName}>{deviceName}</option>
-                                {/each}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="checkbox-group" style="margin-top: 15px;">
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={$configStore.power?.confirmToggle ?? true}
-                                on:change={(e) =>
-                                    updatePowerConfig({
-                                        confirmToggle: e.target.checked,
-                                    })}
-                            />
-                            CONFIRM POWER TOGGLE
-                        </label>
-                    </div>
-                </div>
-                {/if}
-
-                {#if currentTab === "Macros"}
-                <div class="section-title">FILAMENT MACROS</div>
-                <div class="presets-container" style="margin-bottom: 25px;">
-                    <div class="macro-row">
-                        <div class="input-col main">
-                            <label>LOAD MACRO</label>
-                            <input
-                                type="text"
-                                value={$configStore.filament?.loadMacro ||
-                                    "LOAD_FILAMENT"}
-                                on:input={(e) =>
-                                    updateFilamentConfig({
-                                        loadMacro: e.target.value,
-                                    })}
-                            />
-                        </div>
-                        <div class="input-col main">
-                            <label>UNLOAD MACRO</label>
-                            <input
-                                type="text"
-                                value={$configStore.filament?.unloadMacro ||
-                                    "UNLOAD_FILAMENT"}
-                                on:input={(e) =>
-                                    updateFilamentConfig({
-                                        unloadMacro: e.target.value,
-                                    })}
-                            />
-                        </div>
-                    </div>
-                    <div class="macro-row">
-                        <div class="input-col">
-                            <label>DISTANCE PARAM</label>
-                            <input
-                                type="text"
-                                value={$configStore.filament?.distanceParam ||
-                                    "DISTANCE"}
-                                on:input={(e) =>
-                                    updateFilamentConfig({
-                                        distanceParam: e.target.value,
-                                    })}
-                            />
-                        </div>
-                        <div class="input-col">
-                            <label>SPEED PARAM</label>
-                            <input
-                                type="text"
-                                value={$configStore.filament?.speedParam ||
-                                    "SPEED"}
-                                on:input={(e) =>
-                                    updateFilamentConfig({
-                                        speedParam: e.target.value,
-                                    })}
-                            />
-                        </div>
-                        <div class="input-col">
-                            <label>TEMP PARAM</label>
-                            <input
-                                type="text"
-                                value={$configStore.filament?.tempParam ||
-                                    "TEMP"}
-                                on:input={(e) =>
-                                    updateFilamentConfig({
-                                        tempParam: e.target.value,
-                                    })}
-                            />
-                        </div>
-                    </div>
-                </div>
-                {/if}
-
-                {#if currentTab === "Interface"}
-                <div class="section-title">GAUGE SETTINGS</div>
-                <div class="presets-container" style="margin-bottom: 25px;">
-                    <div class="macro-row">
-                        <div class="input-col">
-                            <label>MAX FLOW RATE (mm³/s)</label>
-                            <input
-                                type="number"
-                                min="1"
-                                max="100"
-                                step="1"
-                                value={$configStore.gauges?.maxFlowRate ?? 30}
-                                on:input={(e) =>
-                                    updateGaugeConfig({
-                                        maxFlowRate: parseFloat(e.target.value) || 30,
-                                    })}
-                            />
-                            <div class="help-text">Maximum value for flow gauge scale</div>
-                        </div>
-                        <div class="input-col">
-                            <label>FLOW REDLINE (mm³/s)</label>
-                            <input
-                                type="number"
-                                min="1"
-                                max="100"
-                                step="1"
-                                value={$configStore.gauges?.flowRedline ?? 20}
-                                on:input={(e) =>
-                                    updateGaugeConfig({
-                                        flowRedline: parseFloat(e.target.value) || 20,
-                                    })}
-                            />
-                            <div class="help-text">Warning threshold for flow gauge</div>
-                        </div>
-                    </div>
-                    <div class="macro-row" style="margin-top: 15px;">
-                        <div class="input-col">
-                            <label>MAX SPEED OVERRIDE (mm/s)</label>
-                            <input
-                                type="number"
-                                min="1"
-                                max="1000"
-                                step="10"
-                                placeholder="Auto (from machine limits)"
-                                value={$configStore.gauges?.maxSpeedOverride ?? ''}
-                                on:input={(e) =>
-                                    updateGaugeConfig({
-                                        maxSpeedOverride: e.target.value ? parseFloat(e.target.value) : null,
-                                    })}
-                            />
-                            <div class="help-text">Leave empty to use machine max velocity</div>
-                        </div>
-                        <div class="input-col">
-                            <label>SPEED REDLINE (%)</label>
-                            <input
-                                type="number"
-                                min="50"
-                                max="100"
-                                step="5"
-                                value={$configStore.gauges?.speedRedlinePercent ?? 90}
-                                on:input={(e) =>
-                                    updateGaugeConfig({
-                                        speedRedlinePercent: parseFloat(e.target.value) || 90,
-                                    })}
-                            />
-                            <div class="help-text">Redline as % of max speed</div>
-                        </div>
-                    </div>
-                    <div class="checkbox-group" style="margin-top: 15px;">
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={$configStore.gauges?.showGaugeGraphics ?? true}
-                                on:change={(e) =>
-                                    updateGaugeConfig({
-                                        showGaugeGraphics: e.target.checked,
-                                    })}
-                            />
-                            SHOW GAUGE GRAPHICS
-                        </label>
-                        <div class="help-text" style="margin-left: 24px; margin-top: 4px;">
-                            When disabled, only numeric values are displayed
-                        </div>
-                    </div>
-                </div>
-                {/if}
-
-                {#if currentTab === "General"}
-                <div class="section-title">CONSOLE SETTINGS</div>
-                <div class="presets-container" style="margin-bottom: 25px;">
-                    <div class="checkbox-group">
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked={$configStore.console?.newestFirst ?? true}
-                                on:change={(e) =>
-                                    updateConsoleConfig({
-                                        newestFirst: e.target.checked,
-                                    })}
-                            />
-                            NEWEST MESSAGES FIRST (CHAT STYLE)
-                        </label>
-                        <div class="help-text">
-                            When enabled: Input on top, newest messages appear first.<br />
-                            When disabled: Traditional terminal (input on bottom, oldest first).
-                        </div>
-                    </div>
-                    <div class="input-group" style="margin-top: 15px;">
-                        <label>MAX CONSOLE HISTORY</label>
-                        <input
-                            type="number"
-                            min="100"
-                            max="1000"
-                            value={$configStore.console?.maxHistory ?? 500}
-                            on:input={(e) =>
-                                updateConsoleConfig({
-                                    maxHistory: parseInt(e.target.value) || 500,
-                                })}
-                        />
-                        <div class="help-text">Number of messages to keep (100-1000)</div>
-                    </div>
-                </div>
-                {/if}
-
-                {#if currentTab === "Interface"}
-                <div class="section-title">TEMPERATURE DISPLAY</div>
-
-                <div class="checkbox-group" style="margin-bottom: 25px;">
-                    <label style="margin-bottom: 15px;">
-                        <input
-                            type="checkbox"
-                            checked={$configStore.temperature?.showGraph}
-                            on:change={(e) =>
-                                ($configStore.temperature = {
-                                    ...$configStore.temperature,
-                                    showGraph: e.target.checked,
-                                })}
-                        />
-                        SHOW GRAPH
-                    </label>
-                    <label style="margin-bottom: 15px;">
-                        <input
-                            type="checkbox"
-                            checked={$configStore.temperature?.autoscale}
-                            on:change={(e) =>
-                                ($configStore.temperature = {
-                                    ...$configStore.temperature,
-                                    autoscale: e.target.checked,
-                                })}
-                        />
-                        AUTOSCALE GRAPH
-                    </label>
-                    <label>
-                        <input
-                            type="checkbox"
-                            checked={$configStore.temperature?.hideMonitors}
-                            on:change={(e) =>
-                                ($configStore.temperature = {
-                                    ...$configStore.temperature,
-                                    hideMonitors: e.target.checked,
-                                })}
-                        />
-                        HIDE MONITORS (HOST/MCU)
-                    </label>
-                </div>
-
-                <div class="section-title">TEMPERATURE PRESETS</div>
-
-                <div class="presets-container">
-                    {#each $configStore.tempPresets || [] as preset (preset.id)}
-                        <div class="preset-row">
-                            <div class="input-col main">
-                                <label>PRESET NAME</label>
-                                <input
-                                    type="text"
-                                    value={preset.name}
-                                    on:input={(e) =>
-                                        updatePreset(preset.id, {
-                                            name: e.target.value,
-                                        })}
-                                />
-                            </div>
-                            <div class="input-col small">
-                                <label>BED °C</label>
-                                <input
-                                    type="number"
-                                    value={preset.bed}
-                                    on:input={(e) =>
-                                        updatePreset(preset.id, {
-                                            bed: parseInt(e.target.value) || 0,
-                                        })}
-                                />
-                            </div>
-                            <div class="input-col small">
-                                <label>EXT. °C</label>
-                                <input
-                                    type="number"
-                                    value={preset.extruder}
-                                    on:input={(e) =>
-                                        updatePreset(preset.id, {
-                                            extruder:
-                                                parseInt(e.target.value) || 0,
-                                        })}
-                                />
-                            </div>
-                            <button
-                                type="button"
-                                class="delete-macro-btn"
-                                on:click|preventDefault|stopPropagation={() =>
-                                    handleDeletePreset(preset.id)}
-                                title="Delete Preset"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    {/each}
-
-                    <button
-                        class="add-preset-btn"
-                        on:click={handleCreatePreset}
+                    <div
+                        class="import-export-group"
+                        style="margin-bottom: 25px;"
                     >
-                        + ADD PRESET
-                    </button>
-                </div>
+                        <input
+                            type="file"
+                            accept=".json"
+                            bind:this={fileInput}
+                            on:change={handleFileSelect}
+                            style="display: none;"
+                        />
+                        <button class="import-btn" on:click={handleImportClick}>
+                            IMPORT CONFIG
+                        </button>
+                        <button class="export-btn" on:click={handleExport}>
+                            EXPORT CONFIG
+                        </button>
+                        {#if importError}
+                            <div class="import-error">{importError}</div>
+                        {/if}
+                    </div>
                 {/if}
 
-                {#if currentTab === "Panels"}
-                <div class="section-title">MACRO PANELS</div>
-
-                <div class="panels-container">
-                    {#each panels as panel (panel.id)}
-                        <div class="panel-section">
-                            <div class="panel-header-row">
+                {#if currentTab === "Macros"}
+                    <div class="section-title">PRINT CONTROL MACROS</div>
+                    <div class="presets-container" style="margin-bottom: 25px;">
+                        <div class="macro-row">
+                            <div class="input-col main">
+                                <label>PAUSE MACRO</label>
                                 <input
                                     type="text"
-                                    class="panel-title-input"
-                                    value={panel.title}
+                                    value={$configStore.printControl
+                                        ?.pauseMacro || "PAUSE"}
                                     on:input={(e) =>
-                                        renamePanel(panel.id, e.target.value)}
-                                    on:keydown={(e) =>
-                                        e.key === "Enter" && e.preventDefault()}
-                                    placeholder="Panel Title"
+                                        updatePrintControlConfig({
+                                            pauseMacro: e.target.value,
+                                        })}
                                 />
-                                <button
-                                    type="button"
-                                    class:delete-panel-btn={true}
-                                    on:click|preventDefault|stopPropagation={() =>
-                                        handleDeletePanel(panel.id)}
-                                    title="Delete Panel"
-                                >
-                                    🗑️
-                                </button>
                             </div>
-
-                            <div class="macro-list">
-                                {#each panel.macros as macro (macro.id)}
-                                    <div class="macro-row">
-                                        <div class="input-col">
-                                            <label>LABEL</label>
-                                            <input
-                                                type="text"
-                                                value={macro.label}
-                                                on:input={(e) =>
-                                                    updateMacro(
-                                                        panel.id,
-                                                        macro.id,
-                                                        {
-                                                            label: e.target
-                                                                .value,
-                                                        },
-                                                    )}
-                                            />
-                                        </div>
-                                        <div class="input-col main">
-                                            <label>G-CODE COMMAND</label>
-                                            <input
-                                                type="text"
-                                                value={macro.gcode}
-                                                on:input={(e) =>
-                                                    updateMacro(
-                                                        panel.id,
-                                                        macro.id,
-                                                        {
-                                                            gcode: e.target
-                                                                .value,
-                                                        },
-                                                    )}
-                                            />
-                                        </div>
-                                        <div class="input-col">
-                                            <label>COLOR</label>
-                                            <ColorPicker
-                                                selectedColor={macro.color}
-                                                onChange={(color) =>
-                                                    updateMacro(
-                                                        panel.id,
-                                                        macro.id,
-                                                        {
-                                                            color,
-                                                        },
-                                                    )}
-                                            />
-                                        </div>
-                                        <button
-                                            type="button"
-                                            class="delete-macro-btn"
-                                            on:click|preventDefault|stopPropagation={() =>
-                                                handleDeleteMacro(
-                                                    panel.id,
-                                                    macro.id,
-                                                )}
-                                            title="Delete Macro"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-                                {/each}
+                            <div class="input-col main">
+                                <label>RESUME MACRO</label>
+                                <input
+                                    type="text"
+                                    value={$configStore.printControl
+                                        ?.resumeMacro || "RESUME"}
+                                    on:input={(e) =>
+                                        updatePrintControlConfig({
+                                            resumeMacro: e.target.value,
+                                        })}
+                                />
                             </div>
-
-                            <button
-                                class="add-macro-btn"
-                                on:click={() => handleAddMacro(panel.id)}
-                            >
-                                + ADD MACRO
-                            </button>
+                            <div class="input-col main">
+                                <label>CANCEL MACRO</label>
+                                <input
+                                    type="text"
+                                    value={$configStore.printControl
+                                        ?.cancelMacro || "CANCEL_PRINT"}
+                                    on:input={(e) =>
+                                        updatePrintControlConfig({
+                                            cancelMacro: e.target.value,
+                                        })}
+                                />
+                            </div>
                         </div>
-                    {/each}
-                </div>
-
-                <button class="create-panel-btn" on:click={handleCreatePanel}>
-                    + CREATE NEW PANEL
-                </button>
+                        <div class="checkbox-group" style="margin-top: 15px;">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={$configStore.printControl
+                                        ?.confirmPause ?? false}
+                                    on:change={(e) =>
+                                        updatePrintControlConfig({
+                                            confirmPause: e.target.checked,
+                                        })}
+                                />
+                                CONFIRM BEFORE PAUSING
+                            </label>
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={$configStore.printControl
+                                        ?.confirmCancel ?? true}
+                                    on:change={(e) =>
+                                        updatePrintControlConfig({
+                                            confirmCancel: e.target.checked,
+                                        })}
+                                />
+                                CONFIRM BEFORE CANCELLING
+                            </label>
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={$configStore.printControl
+                                        ?.confirmStartPrint ?? true}
+                                    on:change={(e) =>
+                                        updatePrintControlConfig({
+                                            confirmStartPrint: e.target.checked,
+                                        })}
+                                />
+                                CONFIRM BEFORE STARTING PRINT
+                            </label>
+                        </div>
+                    </div>
                 {/if}
 
-                {#if currentTab === "Cameras"}
-                <div class="section-title">CAMERA SETTINGS</div>
+                {#if currentTab === "General"}
+                    <div class="section-title">POWER DEVICE</div>
+                    <div class="presets-container" style="margin-bottom: 25px;">
+                        <div class="macro-row">
+                            <div class="input-col main">
+                                <label>SELECTED DEVICE</label>
+                                <select
+                                    value={$configStore.power?.selectedDevice ||
+                                        "OFF"}
+                                    on:change={(e) =>
+                                        updatePowerConfig({
+                                            selectedDevice: e.target.value,
+                                        })}
+                                >
+                                    <option value="OFF">OFF (Hidden)</option>
+                                    <option value="AUTO"
+                                        >AUTO (Recommended)</option
+                                    >
+                                    {#each $availablePowerDevices as deviceName}
+                                        <option value={deviceName}
+                                            >{deviceName}</option
+                                        >
+                                    {/each}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="checkbox-group" style="margin-top: 15px;">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={$configStore.power
+                                        ?.confirmToggle ?? true}
+                                    on:change={(e) =>
+                                        updatePowerConfig({
+                                            confirmToggle: e.target.checked,
+                                        })}
+                                />
+                                CONFIRM POWER TOGGLE
+                            </label>
+                        </div>
+                    </div>
+                {/if}
 
-                <div class="cameras-container">
-                    {#each $configStore.cameras || [] as camera (camera.id)}
-                        <div class="camera-section">
-                            <div class="camera-header-row">
+                {#if currentTab === "Macros"}
+                    <div class="section-title">FILAMENT MACROS</div>
+                    <div class="presets-container" style="margin-bottom: 25px;">
+                        <div class="macro-row">
+                            <div class="input-col main">
+                                <label>LOAD MACRO</label>
                                 <input
                                     type="text"
-                                    class="camera-name-input"
-                                    value={camera.name}
+                                    value={$configStore.filament?.loadMacro ||
+                                        "LOAD_FILAMENT"}
                                     on:input={(e) =>
-                                        updateCamera(camera.id, { name: e.target.value })}
-                                    placeholder="Camera Name"
+                                        updateFilamentConfig({
+                                            loadMacro: e.target.value,
+                                        })}
                                 />
-                                <label class="checkbox-inline">
+                            </div>
+                            <div class="input-col main">
+                                <label>UNLOAD MACRO</label>
+                                <input
+                                    type="text"
+                                    value={$configStore.filament?.unloadMacro ||
+                                        "UNLOAD_FILAMENT"}
+                                    on:input={(e) =>
+                                        updateFilamentConfig({
+                                            unloadMacro: e.target.value,
+                                        })}
+                                />
+                            </div>
+                        </div>
+                        <div class="macro-row">
+                            <div class="input-col">
+                                <label>DISTANCE PARAM</label>
+                                <input
+                                    type="text"
+                                    value={$configStore.filament
+                                        ?.distanceParam || "DISTANCE"}
+                                    on:input={(e) =>
+                                        updateFilamentConfig({
+                                            distanceParam: e.target.value,
+                                        })}
+                                />
+                            </div>
+                            <div class="input-col">
+                                <label>SPEED PARAM</label>
+                                <input
+                                    type="text"
+                                    value={$configStore.filament?.speedParam ||
+                                        "SPEED"}
+                                    on:input={(e) =>
+                                        updateFilamentConfig({
+                                            speedParam: e.target.value,
+                                        })}
+                                />
+                            </div>
+                            <div class="input-col">
+                                <label>TEMP PARAM</label>
+                                <input
+                                    type="text"
+                                    value={$configStore.filament?.tempParam ||
+                                        "TEMP"}
+                                    on:input={(e) =>
+                                        updateFilamentConfig({
+                                            tempParam: e.target.value,
+                                        })}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                {/if}
+
+                {#if currentTab === "Interface"}
+                    <div class="section-title">GAUGE SETTINGS</div>
+                    <div class="presets-container" style="margin-bottom: 25px;">
+                        <div class="macro-row">
+                            <div class="input-col">
+                                <label>MAX FLOW RATE (mm³/s)</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="100"
+                                    step="1"
+                                    value={$configStore.gauges?.maxFlowRate ??
+                                        30}
+                                    on:input={(e) =>
+                                        updateGaugeConfig({
+                                            maxFlowRate:
+                                                parseFloat(e.target.value) ||
+                                                30,
+                                        })}
+                                />
+                                <div class="help-text">
+                                    Maximum value for flow gauge scale
+                                </div>
+                            </div>
+                            <div class="input-col">
+                                <label>FLOW REDLINE (mm³/s)</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="100"
+                                    step="1"
+                                    value={$configStore.gauges?.flowRedline ??
+                                        20}
+                                    on:input={(e) =>
+                                        updateGaugeConfig({
+                                            flowRedline:
+                                                parseFloat(e.target.value) ||
+                                                20,
+                                        })}
+                                />
+                                <div class="help-text">
+                                    Warning threshold for flow gauge
+                                </div>
+                            </div>
+                        </div>
+                        <div class="macro-row" style="margin-top: 15px;">
+                            <div class="input-col">
+                                <label>MAX SPEED OVERRIDE (mm/s)</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="1000"
+                                    step="10"
+                                    placeholder="Auto (from machine limits)"
+                                    value={$configStore.gauges
+                                        ?.maxSpeedOverride ?? ""}
+                                    on:input={(e) =>
+                                        updateGaugeConfig({
+                                            maxSpeedOverride: e.target.value
+                                                ? parseFloat(e.target.value)
+                                                : null,
+                                        })}
+                                />
+                                <div class="help-text">
+                                    Leave empty to use machine max velocity
+                                </div>
+                            </div>
+                            <div class="input-col">
+                                <label>SPEED REDLINE (%)</label>
+                                <input
+                                    type="number"
+                                    min="50"
+                                    max="100"
+                                    step="5"
+                                    value={$configStore.gauges
+                                        ?.speedRedlinePercent ?? 90}
+                                    on:input={(e) =>
+                                        updateGaugeConfig({
+                                            speedRedlinePercent:
+                                                parseFloat(e.target.value) ||
+                                                90,
+                                        })}
+                                />
+                                <div class="help-text">
+                                    Redline as % of max speed
+                                </div>
+                            </div>
+                        </div>
+                        <div class="checkbox-group" style="margin-top: 15px;">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={$configStore.gauges
+                                        ?.showGaugeGraphics ?? true}
+                                    on:change={(e) =>
+                                        updateGaugeConfig({
+                                            showGaugeGraphics: e.target.checked,
+                                        })}
+                                />
+                                SHOW GAUGE GRAPHICS
+                            </label>
+                            <div
+                                class="help-text"
+                                style="margin-left: 24px; margin-top: 4px;"
+                            >
+                                When disabled, only numeric values are displayed
+                            </div>
+                        </div>
+                    </div>
+                {/if}
+
+                {#if currentTab === "General"}
+                    <div class="section-title">CONSOLE SETTINGS</div>
+                    <div class="presets-container" style="margin-bottom: 25px;">
+                        <div class="checkbox-group">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={$configStore.console
+                                        ?.newestFirst ?? true}
+                                    on:change={(e) =>
+                                        updateConsoleConfig({
+                                            newestFirst: e.target.checked,
+                                        })}
+                                />
+                                NEWEST MESSAGES FIRST (CHAT STYLE)
+                            </label>
+                            <div class="help-text">
+                                When enabled: Input on top, newest messages
+                                appear first.<br />
+                                When disabled: Traditional terminal (input on bottom,
+                                oldest first).
+                            </div>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label>MAX CONSOLE HISTORY</label>
+                            <input
+                                type="number"
+                                min="100"
+                                max="1000"
+                                value={$configStore.console?.maxHistory ?? 500}
+                                on:input={(e) =>
+                                    updateConsoleConfig({
+                                        maxHistory:
+                                            parseInt(e.target.value) || 500,
+                                    })}
+                            />
+                            <div class="help-text">
+                                Number of messages to keep (100-1000)
+                            </div>
+                        </div>
+                    </div>
+                {/if}
+
+                {#if currentTab === "Interface"}
+                    <div class="section-title">TEMPERATURE DISPLAY</div>
+
+                    <div class="checkbox-group" style="margin-bottom: 25px;">
+                        <label style="margin-bottom: 15px;">
+                            <input
+                                type="checkbox"
+                                checked={$configStore.temperature?.showGraph}
+                                on:change={(e) =>
+                                    ($configStore.temperature = {
+                                        ...$configStore.temperature,
+                                        showGraph: e.target.checked,
+                                    })}
+                            />
+                            SHOW GRAPH
+                        </label>
+                        <label style="margin-bottom: 15px;">
+                            <input
+                                type="checkbox"
+                                checked={$configStore.temperature?.autoscale}
+                                on:change={(e) =>
+                                    ($configStore.temperature = {
+                                        ...$configStore.temperature,
+                                        autoscale: e.target.checked,
+                                    })}
+                            />
+                            AUTOSCALE GRAPH
+                        </label>
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked={$configStore.temperature?.hideMonitors}
+                                on:change={(e) =>
+                                    ($configStore.temperature = {
+                                        ...$configStore.temperature,
+                                        hideMonitors: e.target.checked,
+                                    })}
+                            />
+                            HIDE MONITORS (HOST/MCU)
+                        </label>
+                    </div>
+
+                    <div class="section-title">TEMPERATURE PRESETS</div>
+
+                    <div class="presets-container">
+                        {#each $configStore.tempPresets || [] as preset (preset.id)}
+                            <div class="preset-row">
+                                <div class="input-col main">
+                                    <label>PRESET NAME</label>
                                     <input
-                                        type="checkbox"
-                                        checked={camera.enabled}
-                                        on:change={(e) =>
-                                            updateCamera(camera.id, {
-                                                enabled: e.target.checked,
+                                        type="text"
+                                        value={preset.name}
+                                        on:input={(e) =>
+                                            updatePreset(preset.id, {
+                                                name: e.target.value,
                                             })}
                                     />
-                                    ENABLED
-                                </label>
+                                </div>
+                                <div class="input-col small">
+                                    <label>BED °C</label>
+                                    <input
+                                        type="number"
+                                        value={preset.bed}
+                                        on:input={(e) =>
+                                            updatePreset(preset.id, {
+                                                bed:
+                                                    parseInt(e.target.value) ||
+                                                    0,
+                                            })}
+                                    />
+                                </div>
+                                <div class="input-col small">
+                                    <label>EXT. °C</label>
+                                    <input
+                                        type="number"
+                                        value={preset.extruder}
+                                        on:input={(e) =>
+                                            updatePreset(preset.id, {
+                                                extruder:
+                                                    parseInt(e.target.value) ||
+                                                    0,
+                                            })}
+                                    />
+                                </div>
                                 <button
                                     type="button"
-                                    class="delete-panel-btn"
+                                    class="delete-macro-btn"
                                     on:click|preventDefault|stopPropagation={() =>
-                                        handleDeleteCamera(camera.id)}
-                                    title="Delete Camera"
+                                        handleDeletePreset(preset.id)}
+                                    title="Delete Preset"
                                 >
                                     ✕
                                 </button>
                             </div>
+                        {/each}
 
-                            <div class="camera-config">
-                                <div class="camera-row">
-                                    <div class="input-col main">
-                                        <label>STREAM TYPE</label>
-                                        <select
-                                            value={camera.streamType || 'mjpeg'}
-                                            on:change={(e) =>
-                                                updateCamera(camera.id, {
-                                                    streamType: e.target.value,
-                                                })}
-                                        >
-                                            <option value="mjpeg">MJPEG (Default)</option>
-                                            <option value="go2rtc">WebRTC (go2rtc)</option>
-                                            <option value="camera-streamer">WebRTC (camera-streamer)</option>
-                                        </select>
-                                    </div>
-                                </div>
+                        <button
+                            class="add-preset-btn"
+                            on:click={handleCreatePreset}
+                        >
+                            + ADD PRESET
+                        </button>
+                    </div>
+                {/if}
 
-                                <div class="input-group">
-                                    <label>STREAM URL</label>
+                {#if currentTab === "Panels"}
+                    <div class="section-title">MACRO PANELS</div>
+
+                    <div class="panels-container">
+                        {#each panels as panel (panel.id)}
+                            <div class="panel-section">
+                                <div class="panel-header-row">
                                     <input
                                         type="text"
-                                        value={camera.streamUrl}
+                                        class="panel-title-input"
+                                        value={panel.title}
                                         on:input={(e) =>
-                                            updateCamera(camera.id, {
-                                                streamUrl: e.target.value,
-                                            })}
-                                        placeholder={camera.streamType === 'go2rtc'
-                                            ? "http://192.168.1.100:1984/api/webrtc?src=camera1"
-                                            : camera.streamType === 'camera-streamer'
-                                            ? "http://192.168.1.100:8080/webrtc"
-                                            : "http://192.168.1.100/webcam/?action=stream"}
+                                            renamePanel(
+                                                panel.id,
+                                                e.target.value,
+                                            )}
+                                        on:keydown={(e) =>
+                                            e.key === "Enter" &&
+                                            e.preventDefault()}
+                                        placeholder="Panel Title"
                                     />
+                                    <button
+                                        type="button"
+                                        class:delete-panel-btn={true}
+                                        on:click|preventDefault|stopPropagation={() =>
+                                            handleDeletePanel(panel.id)}
+                                        title="Delete Panel"
+                                    >
+                                        🗑️
+                                    </button>
                                 </div>
 
-                                <div class="input-group">
-                                    <label>SNAPSHOT URL</label>
-                                    <input
-                                        type="text"
-                                        value={camera.snapshotUrl}
-                                        on:input={(e) =>
-                                            updateCamera(camera.id, {
-                                                snapshotUrl: e.target.value,
-                                            })}
-                                        placeholder="http://192.168.1.100/webcam/?action=snapshot"
-                                    />
-                                </div>
-
-                                <div class="camera-row">
-                                    <div class="input-col">
-                                        <label>ASPECT RATIO</label>
-                                        <select
-                                            value={camera.aspectRatio}
-                                            on:change={(e) =>
-                                                updateCamera(camera.id, {
-                                                    aspectRatio: e.target.value,
-                                                })}
-                                        >
-                                            <option value="16:9">16:9</option>
-                                            <option value="4:3">4:3</option>
-                                            <option value="1:1">1:1</option>
-                                            <option value="21:9">21:9</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="input-col">
-                                        <label>ROTATION</label>
-                                        <select
-                                            value={camera.rotation}
-                                            on:change={(e) =>
-                                                updateCamera(camera.id, {
-                                                    rotation: parseInt(e.target.value),
-                                                })}
-                                        >
-                                            <option value="0">0°</option>
-                                            <option value="90">90°</option>
-                                            <option value="180">180°</option>
-                                            <option value="270">270°</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="camera-row">
-                                    {#if !camera.streamType || camera.streamType === 'mjpeg'}
-                                        <div class="input-col">
-                                            <label>TARGET REFRESH RATE (FPS)</label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                max="30"
-                                                value={camera.targetRefreshRate || 5}
-                                                on:input={(e) =>
-                                                    updateCamera(camera.id, {
-                                                        targetRefreshRate: parseInt(e.target.value) || 5,
-                                                    })}
-                                            />
+                                <div class="macro-list">
+                                    {#each panel.macros as macro (macro.id)}
+                                        <div class="macro-row">
+                                            <div class="input-col">
+                                                <label>LABEL</label>
+                                                <input
+                                                    type="text"
+                                                    value={macro.label}
+                                                    on:input={(e) =>
+                                                        updateMacro(
+                                                            panel.id,
+                                                            macro.id,
+                                                            {
+                                                                label: e.target
+                                                                    .value,
+                                                            },
+                                                        )}
+                                                />
+                                            </div>
+                                            <div class="input-col main">
+                                                <label>G-CODE COMMAND</label>
+                                                <input
+                                                    type="text"
+                                                    value={macro.gcode}
+                                                    on:input={(e) =>
+                                                        updateMacro(
+                                                            panel.id,
+                                                            macro.id,
+                                                            {
+                                                                gcode: e.target
+                                                                    .value,
+                                                            },
+                                                        )}
+                                                />
+                                            </div>
+                                            <div class="input-col">
+                                                <label>COLOR</label>
+                                                <ColorPicker
+                                                    selectedColor={macro.color}
+                                                    onChange={(color) =>
+                                                        updateMacro(
+                                                            panel.id,
+                                                            macro.id,
+                                                            {
+                                                                color,
+                                                            },
+                                                        )}
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                class="delete-macro-btn"
+                                                on:click|preventDefault|stopPropagation={() =>
+                                                    handleDeleteMacro(
+                                                        panel.id,
+                                                        macro.id,
+                                                    )}
+                                                title="Delete Macro"
+                                            >
+                                                ✕
+                                            </button>
                                         </div>
-                                    {/if}
+                                    {/each}
                                 </div>
 
-                                <div class="checkbox-group">
-                                    <label>
+                                <button
+                                    class="add-macro-btn"
+                                    on:click={() => handleAddMacro(panel.id)}
+                                >
+                                    + ADD MACRO
+                                </button>
+                            </div>
+                        {/each}
+                    </div>
+
+                    <button
+                        class="create-panel-btn"
+                        on:click={handleCreatePanel}
+                    >
+                        + CREATE NEW PANEL
+                    </button>
+                {/if}
+
+                {#if currentTab === "Cameras"}
+                    <div class="section-title">CAMERA SETTINGS</div>
+
+                    <div class="cameras-container">
+                        {#each $configStore.cameras || [] as camera (camera.id)}
+                            <div class="camera-section">
+                                <div class="camera-header-row">
+                                    <input
+                                        type="text"
+                                        class="camera-name-input"
+                                        value={camera.name}
+                                        on:input={(e) =>
+                                            updateCamera(camera.id, {
+                                                name: e.target.value,
+                                            })}
+                                        placeholder="Camera Name"
+                                    />
+                                    <label class="checkbox-inline">
                                         <input
                                             type="checkbox"
-                                            checked={camera.flipH}
+                                            checked={camera.enabled}
                                             on:change={(e) =>
                                                 updateCamera(camera.id, {
-                                                    flipH: e.target.checked,
+                                                    enabled: e.target.checked,
                                                 })}
                                         />
-                                        FLIP HORIZONTAL
+                                        ENABLED
                                     </label>
-                                    <label>
+                                    <button
+                                        type="button"
+                                        class="delete-panel-btn"
+                                        on:click|preventDefault|stopPropagation={() =>
+                                            handleDeleteCamera(camera.id)}
+                                        title="Delete Camera"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <div class="camera-config">
+                                    <div class="camera-row">
+                                        <div class="input-col main">
+                                            <label>STREAM TYPE</label>
+                                            <select
+                                                value={camera.streamType ||
+                                                    "mjpeg"}
+                                                on:change={(e) =>
+                                                    updateCamera(camera.id, {
+                                                        streamType:
+                                                            e.target.value,
+                                                    })}
+                                            >
+                                                <option value="mjpeg"
+                                                    >MJPEG (Default)</option
+                                                >
+                                                <option value="go2rtc"
+                                                    >WebRTC (go2rtc)</option
+                                                >
+                                                <option value="camera-streamer"
+                                                    >WebRTC (camera-streamer)</option
+                                                >
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="input-group">
+                                        <label>STREAM URL</label>
                                         <input
-                                            type="checkbox"
-                                            checked={camera.flipV}
-                                            on:change={(e) =>
+                                            type="text"
+                                            value={camera.streamUrl}
+                                            on:input={(e) =>
                                                 updateCamera(camera.id, {
-                                                    flipV: e.target.checked,
+                                                    streamUrl: e.target.value,
                                                 })}
+                                            placeholder={camera.streamType ===
+                                            "go2rtc"
+                                                ? "http://192.168.1.100:1984/api/webrtc?src=camera1"
+                                                : camera.streamType ===
+                                                    "camera-streamer"
+                                                  ? "http://192.168.1.100:8080/webrtc"
+                                                  : "http://192.168.1.100/webcam/?action=stream"}
                                         />
-                                        FLIP VERTICAL
-                                    </label>
-                                    {#if !camera.streamType || camera.streamType === 'mjpeg'}
+                                    </div>
+
+                                    <div class="input-group">
+                                        <label>SNAPSHOT URL</label>
+                                        <input
+                                            type="text"
+                                            value={camera.snapshotUrl}
+                                            on:input={(e) =>
+                                                updateCamera(camera.id, {
+                                                    snapshotUrl: e.target.value,
+                                                })}
+                                            placeholder="http://192.168.1.100/webcam/?action=snapshot"
+                                        />
+                                    </div>
+
+                                    <div class="camera-row">
+                                        <div class="input-col">
+                                            <label>ASPECT RATIO</label>
+                                            <select
+                                                value={camera.aspectRatio}
+                                                on:change={(e) =>
+                                                    updateCamera(camera.id, {
+                                                        aspectRatio:
+                                                            e.target.value,
+                                                    })}
+                                            >
+                                                <option value="16:9"
+                                                    >16:9</option
+                                                >
+                                                <option value="4:3">4:3</option>
+                                                <option value="1:1">1:1</option>
+                                                <option value="21:9"
+                                                    >21:9</option
+                                                >
+                                            </select>
+                                        </div>
+
+                                        <div class="input-col">
+                                            <label>ROTATION</label>
+                                            <select
+                                                value={camera.rotation}
+                                                on:change={(e) =>
+                                                    updateCamera(camera.id, {
+                                                        rotation: parseInt(
+                                                            e.target.value,
+                                                        ),
+                                                    })}
+                                            >
+                                                <option value="0">0°</option>
+                                                <option value="90">90°</option>
+                                                <option value="180">180°</option
+                                                >
+                                                <option value="270">270°</option
+                                                >
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="camera-row">
+                                        {#if !camera.streamType || camera.streamType === "mjpeg"}
+                                            <div class="input-col">
+                                                <label
+                                                    >TARGET REFRESH RATE (FPS)</label
+                                                >
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="30"
+                                                    value={camera.targetRefreshRate ||
+                                                        5}
+                                                    on:input={(e) =>
+                                                        updateCamera(
+                                                            camera.id,
+                                                            {
+                                                                targetRefreshRate:
+                                                                    parseInt(
+                                                                        e.target
+                                                                            .value,
+                                                                    ) || 5,
+                                                            },
+                                                        )}
+                                                />
+                                            </div>
+                                        {/if}
+                                    </div>
+
+                                    <div class="checkbox-group">
                                         <label>
                                             <input
                                                 type="checkbox"
-                                                checked={camera.showFps}
+                                                checked={camera.flipH}
                                                 on:change={(e) =>
                                                     updateCamera(camera.id, {
-                                                        showFps: e.target.checked,
+                                                        flipH: e.target.checked,
                                                     })}
                                             />
-                                            SHOW FPS
+                                            FLIP HORIZONTAL
                                         </label>
-                                    {/if}
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                checked={camera.flipV}
+                                                on:change={(e) =>
+                                                    updateCamera(camera.id, {
+                                                        flipV: e.target.checked,
+                                                    })}
+                                            />
+                                            FLIP VERTICAL
+                                        </label>
+                                        {#if !camera.streamType || camera.streamType === "mjpeg"}
+                                            <label>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={camera.showFps}
+                                                    on:change={(e) =>
+                                                        updateCamera(
+                                                            camera.id,
+                                                            {
+                                                                showFps:
+                                                                    e.target
+                                                                        .checked,
+                                                            },
+                                                        )}
+                                                />
+                                                SHOW FPS
+                                            </label>
+                                        {/if}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    {/each}
-                </div>
+                        {/each}
+                    </div>
 
-                <button class="create-panel-btn" on:click={handleCreateCamera}>
-                    + ADD CAMERA
-                </button>
+                    <button
+                        class="create-panel-btn"
+                        on:click={handleCreateCamera}
+                    >
+                        + ADD CAMERA
+                    </button>
                 {/if}
 
                 {#if currentTab === "Sysinfo"}
-                <div class="info-section">
-                    <div class="section-title">APPLICATION INFO</div>
-                    <div class="info-grid">
-                        <div class="info-row">
-                            <span class="info-label">VERSION:</span>
-                            <span class="info-value">
-                                <a href={versionUrl} target="_blank" rel="noopener noreferrer" class="version-link">
-                                    {displayVersion}
-                                </a>
-                            </span>
-                        </div>
-                        {#if gitCommit !== displayVersion && gitCommit !== 'dev'}
+                    <div class="info-section">
+                        <div class="section-title">APPLICATION INFO</div>
+                        <div class="info-grid">
                             <div class="info-row">
-                                <span class="info-label">COMMIT:</span>
+                                <span class="info-label">VERSION:</span>
                                 <span class="info-value">
-                                    <a href="{repoUrl}/commit/{gitCommit}" target="_blank" rel="noopener noreferrer" class="version-link">
-                                        {gitCommit}
+                                    <a
+                                        href={versionUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="version-link"
+                                    >
+                                        {displayVersion}
                                     </a>
                                 </span>
                             </div>
-                        {/if}
-                        <div class="info-row">
-                            <span class="info-label">REPOSITORY:</span>
-                            <span class="info-value">
-                                <a href={repoUrl} target="_blank" rel="noopener noreferrer" class="version-link">
-                                    GitHub
-                                </a>
-                            </span>
+                            {#if gitCommit !== displayVersion && gitCommit !== "dev"}
+                                <div class="info-row">
+                                    <span class="info-label">COMMIT:</span>
+                                    <span class="info-value">
+                                        <a
+                                            href="{repoUrl}/commit/{gitCommit}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="version-link"
+                                        >
+                                            {gitCommit}
+                                        </a>
+                                    </span>
+                                </div>
+                            {/if}
+                            <div class="info-row">
+                                <span class="info-label">REPOSITORY:</span>
+                                <span class="info-value">
+                                    <a
+                                        href={repoUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="version-link"
+                                    >
+                                        GitHub
+                                    </a>
+                                </span>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- System Info Section -->
-                <SystemInfo />
+                    <!-- System Info Section -->
+                    <SystemInfo />
                 {/if}
             </div>
         </div>
@@ -1354,7 +1479,7 @@
 
     .camera-count {
         color: var(--retro-green);
-        font-family: 'Share Tech Mono', monospace;
+        font-family: "Share Tech Mono", monospace;
         font-size: 12px;
     }
 
@@ -1400,7 +1525,7 @@
         gap: 8px;
         font-size: 12px;
         color: var(--retro-green);
-        font-family: 'Orbitron', monospace;
+        font-family: "Orbitron", monospace;
         white-space: nowrap;
     }
 
@@ -1457,14 +1582,14 @@
 
     .info-label {
         color: #666;
-        font-family: 'Orbitron', monospace;
+        font-family: "Orbitron", monospace;
         font-weight: 600;
         letter-spacing: 0.5px;
     }
 
     .info-value {
         color: var(--retro-green);
-        font-family: 'Share Tech Mono', monospace;
+        font-family: "Share Tech Mono", monospace;
         word-break: break-word;
         line-height: 1.4;
     }
