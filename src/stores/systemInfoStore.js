@@ -145,9 +145,9 @@ const fetchKlipperInfo = async () => {
 
             // Store the short version only; UI composes name+version when needed
             // Example shortVersion: "cdc17931" or "v0.12.0-123-g13c75ea87"
-            console.log('[SystemInfo DEBUG] printer.info response:', response);
-            console.log('[SystemInfo DEBUG] app field:', response.app);
-            console.log('[SystemInfo DEBUG] software_version (short):', shortVersion);
+            if (DEBUG) console.log('[SystemInfo DEBUG] printer.info response:', response);
+            if (DEBUG) console.log('[SystemInfo DEBUG] app field:', response.app);
+            if (DEBUG) console.log('[SystemInfo DEBUG] software_version (short):', shortVersion);
 
             return {
                 name: firmwareName,
@@ -201,8 +201,8 @@ const fetchMCUInfo = async (firmwareName = 'Klipper') => {
 
                 // MCUs inherit the firmware name from the host
                 // Store only the MCU short version; UI composes name+version when needed
-                console.log(`[SystemInfo DEBUG] ${mcuName} mcu_version (short):`, shortVersion);
-                console.log(`[SystemInfo DEBUG] ${mcuName} firmwareName:`, firmwareName);
+                if (DEBUG) console.log(`[SystemInfo DEBUG] ${mcuName} mcu_version (short):`, shortVersion);
+                if (DEBUG) console.log(`[SystemInfo DEBUG] ${mcuName} firmwareName:`, firmwareName);
 
                 mcuData[mcuName] = {
                     name: formatMCUName(mcuName),

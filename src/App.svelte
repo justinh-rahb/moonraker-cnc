@@ -136,13 +136,22 @@
     }
   };
 
+  // Listen for popstate events (browser back/forward navigation)
+  const onPopState = () => {
+    if (typeof window === "undefined") return;
+    // When user navigates with back/forward, re-parse the current hash
+    onHashChange();
+  };
+
   if (typeof window !== "undefined") {
     window.addEventListener("hashchange", onHashChange);
+    window.addEventListener("popstate", onPopState);
   }
 
   onDestroy(() => {
     if (typeof window !== "undefined") {
       window.removeEventListener("hashchange", onHashChange);
+      window.removeEventListener("popstate", onPopState);
     }
   });
 
