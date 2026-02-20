@@ -213,6 +213,7 @@ export const addCamera = () => {
                 enabled: false,
                 streamUrl: '',
                 snapshotUrl: '',
+                streamType: 'mjpeg',
                 aspectRatio: '16:9',
                 flipH: false,
                 flipV: false,

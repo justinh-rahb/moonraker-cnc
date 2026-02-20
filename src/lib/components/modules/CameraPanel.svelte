@@ -1,17 +1,28 @@
 <script>
   import PanelModule from "../ui/PanelModule.svelte";
   import CncButton from "../ui/CncButton.svelte";
+  import WebRTCPlayer from "../ui/WebRTCPlayer.svelte";
   import { configStore } from "../../../stores/configStore.js";
   import { onDestroy, onMount } from "svelte";
 
   const CAMERA_SELECTION_KEY = 'retro_cnc_camera_selection';
 
   let selectedCameraId = null;
-  let refreshInterval = null;
+  let refreshTimer = null;
   let imageTimestamp = Date.now();
-  let frameCount = 0;
-  let lastFpsUpdate = Date.now();
+  
+  // FPS calculation
+  let lastFrameTime = 0;
   let currentFps = 0;
+  let rawFps = 0;
+  let lastDisplayUpdate = 0;
+  let startLoadTime = 0;
+  
+  let containerElement;
+  let isIntersecting = false;
+  let isPageVisible = typeof document !== 'undefined' ? document.visibilityState === 'visible' : true;
+
+  $: isVisible = isIntersecting && isPageVisible;
 
   // Get enabled cameras
   $: enabledCameras = ($configStore.cameras || []).filter(c => c.enabled);
@@ -38,36 +49,130 @@
   // Update stream URL with timestamp for refresh
   // Decoupled to prevent reactive chain re-evaluation every interval
   $: baseStreamUrl = selectedCamera?.streamUrl || '';
-  $: streamUrl = baseStreamUrl 
-    ? `${baseStreamUrl}${baseStreamUrl.includes('?') ? '&' : '?'}t=${imageTimestamp}`
-    : '';
+  $: streamType = selectedCamera?.streamType || 'mjpeg';
+  $: streamUrl = (() => {
+    // If hidden and snapshot URL available, show static snapshot to close connection
+    if (!isVisible && selectedCamera?.snapshotUrl) {
+      return selectedCamera.snapshotUrl;
+    }
+    
+    // For WebRTC, just return base URL, don't append timestamp
+    if (streamType === 'go2rtc' || streamType === 'camera-streamer') {
+        return baseStreamUrl;
+    }
 
-  // Update refresh interval when selected camera or its refresh rate changes
-  $: if (selectedCamera && refreshInterval) {
-    const fps = selectedCamera.targetRefreshRate || 5;
-    const intervalMs = Math.round(1000 / fps);
-    clearInterval(refreshInterval);
-    refreshInterval = setInterval(() => {
+    // Otherwise show stream (updating or stale based on timestamp updates)
+    return baseStreamUrl 
+      ? `${baseStreamUrl}${baseStreamUrl.includes('?') ? '&' : '?'}t=${imageTimestamp}`
+      : '';
+  })();
+  
+  // Track refresh timer for MJPEG
+  // For WebRTC, the player component handles its own connection lifecycle
+  $: isMjpeg = !streamType || streamType === 'mjpeg';
+
+  // Trigger next frame load
+  function triggerLoad() {
+    if (!isMjpeg) return; // Only MJPEG needs manual refresh loop
+
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = null;
+
+    if (isVisible) {
+      startLoadTime = performance.now();
       imageTimestamp = Date.now();
-    }, intervalMs);
+    }
   }
 
-  // Handle frame load for FPS calculation
-  function handleFrameLoad() {
-    frameCount++;
-    const now = Date.now();
-    const elapsed = now - lastFpsUpdate;
-    
-    // Update FPS every second
-    if (elapsed >= 1000) {
-      currentFps = Math.round((frameCount / elapsed) * 1000);
-      frameCount = 0;
-      lastFpsUpdate = now;
+  // Handle visibility changes to start/stop loop
+  $: if (isVisible) {
+    // If we became visible and no timer/load is pending, kickstart
+    if (!refreshTimer && isMjpeg) {
+       triggerLoad();
     }
+  } else {
+    // If hidden, stop the loop
+    if (refreshTimer) {
+      clearTimeout(refreshTimer);
+      refreshTimer = null;
+    }
+  }
+  
+  // Reset when camera changes
+  $: if (selectedCameraId) {
+     currentFps = 0;
+     rawFps = 0;
+     lastFrameTime = 0;
+     refreshTimer = null;
+     if (isVisible && isMjpeg) triggerLoad();
+  }
+
+  // Handle frame load for FPS calculation and scheduling next frame
+  function handleFrameLoad() {
+    // Only calculate FPS for MJPEG
+    if (!isMjpeg) return;
+
+    const now = performance.now();
+    
+    // Calculate FPS if we have a previous frame time
+    if (lastFrameTime > 0) {
+      const delta = now - lastFrameTime;
+      const instantFps = 1000 / delta;
+      
+      // Simple EMA (Exponential Moving Average) for smoothing: 0.05 weight for new value
+      // Use rawFps for calculation to keep high precision
+      rawFps = rawFps === 0 
+        ? instantFps 
+        : (rawFps * 0.95 + instantFps * 0.05);
+
+      // Only update display every 500ms to prevent rapid flickering
+      if (now - lastDisplayUpdate > 500) {
+        currentFps = rawFps;
+        lastDisplayUpdate = now;
+      }
+    }
+    
+    lastFrameTime = now;
+    
+    // Schedule next frame
+    scheduleNextFrame(now);
+  }
+
+  function handleFrameError() {
+    // On error, just schedule next attempt with default delay
+    scheduleNextFrame(performance.now());
+  }
+
+  function scheduleNextFrame(nowCallback) {
+    if (!isVisible || !isMjpeg) return;
+
+    const targetFps = selectedCamera?.targetRefreshRate || 5;
+    const targetInterval = 1000 / targetFps;
+    const loadTime = nowCallback - startLoadTime;
+    
+    // Calculate how long to wait to maintain target interval
+    // If load took longer than interval, wait 0 (or small breath)
+    const delay = Math.max(0, targetInterval - loadTime);
+    
+    refreshTimer = setTimeout(triggerLoad, delay);
   }
 
   // Start refresh interval for MJPEG streams
   onMount(() => {
+    // Setup visibility tracking
+    const observer = new IntersectionObserver((entries) => {
+      isIntersecting = entries[0].isIntersecting;
+    }, { threshold: 0.01 }); // Trigger as soon as 1% is visible
+
+    if (containerElement) {
+      observer.observe(containerElement);
+    }
+
+    const handleVisibilityChange = () => {
+      isPageVisible = document.visibilityState === 'visible';
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     // Load saved camera selection from localStorage
     try {
       const savedCameraId = localStorage.getItem(CAMERA_SELECTION_KEY);
@@ -77,27 +182,22 @@
     } catch (e) {
       console.error('Failed to load camera selection', e);
     }
-
-    // Set up refresh interval based on camera refresh rate
-    const updateInterval = () => {
-      const fps = selectedCamera?.targetRefreshRate || 5;
-      const intervalMs = Math.round(1000 / fps);
-      
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-      }
-      
-      refreshInterval = setInterval(() => {
-        imageTimestamp = Date.now();
-      }, intervalMs);
-    };
     
-    updateInterval();
+    // Initial trigger if already visible
+    if (isVisible && isMjpeg) {
+        triggerLoad();
+    }
+
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (refreshTimer) clearTimeout(refreshTimer);
+    };
   });
 
   onDestroy(() => {
-    if (refreshInterval) {
-      clearInterval(refreshInterval);
+    if (refreshTimer) {
+      clearTimeout(refreshTimer);
     }
   });
 
@@ -112,10 +212,11 @@
     }
     
     // Reset FPS counter when switching cameras
-    frameCount = 0;
     currentFps = 0;
-    lastFpsUpdate = Date.now();
+    rawFps = 0;
+    if (isMjpeg) triggerLoad();
   }
+
 </script>
 
 <PanelModule title="CAMERA FEED">
@@ -126,28 +227,36 @@
     </div>
   {:else}
     {#if selectedCamera}
-      <div class="camera-container">
+      <div class="camera-container" bind:this={containerElement}>
         <div class="aspect-ratio-box" style="padding-bottom: {aspectRatioPadding};">
           {#if streamUrl}
-            <img
-              src={streamUrl}
-              alt={selectedCamera.name}
-              class="camera-feed"
-              style="transform: {transformStyle};"
-              on:load={handleFrameLoad}
-              on:error={() => {
-                // Handle error silently, maybe add error state later
-              }}
-            />
+            {#if isMjpeg}
+                <img
+                    src={streamUrl}
+                    alt={selectedCamera.name}
+                    class="camera-feed"
+                    style="transform: {transformStyle};"
+                    on:load={handleFrameLoad}
+                    on:error={handleFrameError}
+                />
+            {:else if (streamType === 'go2rtc' || streamType === 'camera-streamer') && isVisible}
+                <div class="camera-feed">
+                    <WebRTCPlayer
+                        url={streamUrl}
+                        type={streamType}
+                        transformStyle={transformStyle}
+                    />
+                </div>
+            {/if}
           {:else}
             <div class="no-stream">
               <p>NO STREAM URL</p>
             </div>
           {/if}
 
-          {#if selectedCamera.showFps && currentFps > 0}
+          {#if isMjpeg && selectedCamera.showFps && currentFps > 0}
             <div class="fps-overlay">
-              {currentFps} FPS
+              {Math.round(currentFps)} FPS
             </div>
           {/if}
         </div>

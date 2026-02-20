@@ -6,6 +6,7 @@
     import { send, connectionState } from "../../../stores/websocket.js";
     import { machineState } from "../../../stores/machineStore.js";
     import { configStore } from "../../../stores/configStore.js";
+    import { filePickerPath } from "../../../stores/uiStore.js";
 
     export let isOpen = false;
 
@@ -22,7 +23,7 @@
     const dispatch = createEventDispatcher();
 
     // State
-    let currentPath = "";
+    let currentPath = $filePickerPath;
     let files = [];
     let directories = [];
     let loading = false;
@@ -30,6 +31,17 @@
     let selectedItem = null;
     let sortBy = "name"; // name, date, size
     let sortAsc = true;
+
+    // Direct path updates from store
+    $: if ($filePickerPath !== currentPath) {
+        currentPath = $filePickerPath;
+        if (isOpen && isConnected) {
+            fetchDirectory(currentPath);
+        }
+    }
+
+    // Update store when path changes locally
+    // (Removed cyclical reactive statement to prevent dependency cycle)
 
     // Upload state
     let uploading = false;
@@ -39,7 +51,7 @@
 
     // Confirm dialog state
     let confirmOpen = false;
-    let confirmMessage = '';
+    let confirmMessage = "";
     let confirmCallback = () => {};
 
     // Input dialog state
@@ -51,13 +63,13 @@
     let inputCallback = () => {};
 
     // Reactive state from stores
-    $: isPrinting = $machineState.status === 'PRINTING';
-    $: isPaused = $machineState.status === 'PAUSED';
+    $: isPrinting = $machineState.status === "PRINTING";
+    $: isPaused = $machineState.status === "PAUSED";
     $: canStartPrint = !isPrinting && !isPaused;
-    $: isConnected = $connectionState === 'connected';
+    $: isConnected = $connectionState === "connected";
 
     // Build breadcrumb path segments
-    $: pathSegments = currentPath ? currentPath.split('/').filter(Boolean) : [];
+    $: pathSegments = currentPath ? currentPath.split("/").filter(Boolean) : [];
 
     // Sorted files
     $: sortedFiles = [...files].sort((a, b) => {
@@ -73,12 +85,14 @@
     });
 
     // Sorted directories
-    $: sortedDirs = [...directories].sort((a, b) => a.dirname.localeCompare(b.dirname));
+    $: sortedDirs = [...directories].sort((a, b) =>
+        a.dirname.localeCompare(b.dirname),
+    );
 
     // Fetch directory contents using server.files.get_directory
     const fetchDirectory = async (path = "") => {
         if (!isConnected) return;
-        
+
         loading = true;
         error = null;
         selectedItem = null;
@@ -88,19 +102,21 @@
             const fullPath = path ? `gcodes/${path}` : "gcodes";
             const result = await send("server.files.get_directory", {
                 path: fullPath,
-                extended: true
+                extended: true,
             });
-            
+
             // The API returns { dirs: [...], files: [...], disk_usage: {...}, root_info: {...} }
             // Filter files to only show gcode files
-            files = (result.files || []).filter(item => {
+            files = (result.files || []).filter((item) => {
                 const name = item.filename || "";
-                const ext = name.split('.').pop().toLowerCase();
-                return ext === 'gcode' || ext === 'g';
+                const ext = name.split(".").pop().toLowerCase();
+                return ext === "gcode" || ext === "g";
             });
-            
+
             directories = result.dirs || [];
             currentPath = path;
+                // Keep the shared store in sync when navigating locally
+                $filePickerPath = currentPath;
         } catch (e) {
             console.error("Failed to fetch directory:", e);
             error = e.message || "Failed to load files";
@@ -120,9 +136,9 @@
     // Navigate to parent directory
     const navigateUp = () => {
         if (!currentPath) return;
-        const parts = currentPath.split('/');
+        const parts = currentPath.split("/");
         parts.pop();
-        fetchDirectory(parts.join('/'));
+        fetchDirectory(parts.join("/"));
     };
 
     // Navigate to a specific breadcrumb segment
@@ -130,7 +146,7 @@
         if (index < 0) {
             fetchDirectory("");
         } else {
-            const newPath = pathSegments.slice(0, index + 1).join('/');
+            const newPath = pathSegments.slice(0, index + 1).join("/");
             fetchDirectory(newPath);
         }
     };
@@ -151,19 +167,24 @@
 
     const handleDelete = () => {
         if (!selectedItem) return;
-        
+
         const isDir = !!selectedItem.dirname;
         const name = isDir ? selectedItem.dirname : selectedItem.filename;
         const itemPath = currentPath ? `${currentPath}/${name}` : name;
-        const fullRootPath = `gcodes/${itemPath}`; 
+        const fullRootPath = `gcodes/${itemPath}`;
 
         confirmMessage = `Permanently delete "${name}"?`;
         confirmCallback = async () => {
             try {
                 if (isDir) {
-                    await send("server.files.delete_directory", { path: fullRootPath, force: true });
+                    await send("server.files.delete_directory", {
+                        path: fullRootPath,
+                        force: true,
+                    });
                 } else {
-                    await send("server.files.delete_file", { path: fullRootPath });
+                    await send("server.files.delete_file", {
+                        path: fullRootPath,
+                    });
                 }
                 fetchDirectory(currentPath);
             } catch (e) {
@@ -177,7 +198,7 @@
         if (!selectedItem) return;
         const isDir = !!selectedItem.dirname;
         const oldName = isDir ? selectedItem.dirname : selectedItem.filename;
-        
+
         showInput(
             "RENAME",
             `Rename "${oldName}" to:`,
@@ -186,15 +207,19 @@
             async (newName) => {
                 if (!newName || newName === oldName) return;
                 try {
-                    const oldPath = currentPath ? `${currentPath}/${oldName}` : oldName;
+                    const oldPath = currentPath
+                        ? `${currentPath}/${oldName}`
+                        : oldName;
                     const source = `gcodes/${oldPath}`;
-                    const dest = currentPath ? `gcodes/${currentPath}/${newName}` : `gcodes/${newName}`;
+                    const dest = currentPath
+                        ? `gcodes/${currentPath}/${newName}`
+                        : `gcodes/${newName}`;
                     await send("server.files.move", { source, dest });
                     fetchDirectory(currentPath);
                 } catch (e) {
                     error = `Rename failed: ${e.message}`;
                 }
-            }
+            },
         );
     };
 
@@ -203,26 +228,26 @@
         const isDir = !!selectedItem.dirname;
         const name = isDir ? selectedItem.dirname : selectedItem.filename;
         const oldPath = currentPath ? `${currentPath}/${name}` : name;
-        
+
         showInput(
             "MOVE",
             "Enter new path (relative to gcodes root):",
             oldPath,
             "path/to/destination",
             async (newPath) => {
-                 if (!newPath || newPath === oldPath) return;
-                 try {
-                     const source = `gcodes/${oldPath}`;
-                     const dest = `gcodes/${newPath}`;
-                     await send("server.files.move", { source, dest });
-                     fetchDirectory(currentPath);
-                 } catch (e) {
-                     error = `Move failed: ${e.message}`;
-                 }
-            }
+                if (!newPath || newPath === oldPath) return;
+                try {
+                    const source = `gcodes/${oldPath}`;
+                    const dest = `gcodes/${newPath}`;
+                    await send("server.files.move", { source, dest });
+                    fetchDirectory(currentPath);
+                } catch (e) {
+                    error = `Move failed: ${e.message}`;
+                }
+            },
         );
     };
-    
+
     const handleNewFolder = () => {
         showInput(
             "NEW FOLDER",
@@ -232,13 +257,17 @@
             async (name) => {
                 if (!name) return;
                 try {
-                    const newPath = currentPath ? `gcodes/${currentPath}/${name}` : `gcodes/${name}`;
-                    await send("server.files.post_directory", { path: newPath });
+                    const newPath = currentPath
+                        ? `gcodes/${currentPath}/${name}`
+                        : `gcodes/${name}`;
+                    await send("server.files.post_directory", {
+                        path: newPath,
+                    });
                     fetchDirectory(currentPath);
                 } catch (e) {
-                     error = `Create folder failed: ${e.message}`;
+                    error = `Create folder failed: ${e.message}`;
                 }
-            }
+            },
         );
     };
 
@@ -252,15 +281,18 @@
     const startPrint = async () => {
         // Can only print files
         if (!selectedItem || selectedItem.dirname || !canStartPrint) return;
-        
-        const filePath = currentPath 
-            ? `${currentPath}/${selectedItem.filename}` 
+
+        const filePath = currentPath
+            ? `${currentPath}/${selectedItem.filename}`
             : selectedItem.filename;
-        
+
         const doPrint = async () => {
             try {
                 await send("printer.print.start", { filename: filePath });
-                dispatch("printStarted", { path: filePath, file: selectedItem });
+                dispatch("printStarted", {
+                    path: filePath,
+                    file: selectedItem,
+                });
                 handleClose();
             } catch (e) {
                 console.error("Failed to start print:", e);
@@ -269,7 +301,7 @@
         };
 
         if ($configStore.printControl?.confirmStartPrint ?? true) {
-            showConfirm('Are you sure?', doPrint);
+            showConfirm("Are you sure?", doPrint);
         } else {
             await doPrint();
         }
@@ -278,11 +310,11 @@
     // Handle file upload
     const handleUpload = async (fileList) => {
         if (!fileList || fileList.length === 0) return;
-        
+
         const file = fileList[0];
-        const ext = file.name.split('.').pop().toLowerCase();
-        
-        if (ext !== 'gcode' && ext !== 'g') {
+        const ext = file.name.split(".").pop().toLowerCase();
+
+        if (ext !== "gcode" && ext !== "g") {
             error = "Only .gcode and .g files are supported";
             return;
         }
@@ -295,7 +327,7 @@
             // Get the server URL from config
             const serverConfig = $configStore.server;
             const baseUrl = `http://${serverConfig.ip}:${serverConfig.port}`;
-            
+
             const formData = new FormData();
             formData.append("file", file);
             if (currentPath) {
@@ -303,7 +335,7 @@
             }
 
             const xhr = new XMLHttpRequest();
-            
+
             xhr.upload.addEventListener("progress", (e) => {
                 if (e.lengthComputable) {
                     uploadProgress = Math.round((e.loaded / e.total) * 100);
@@ -406,7 +438,11 @@
     const formatDate = (timestamp) => {
         if (!timestamp) return "—";
         const date = new Date(timestamp * 1000);
-        return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return (
+            date.toLocaleDateString() +
+            " " +
+            date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        );
     };
 
     // Get estimated print time if available
@@ -436,8 +472,8 @@
 
 {#if isOpen}
     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-    <div 
-        class="modal-overlay" 
+    <div
+        class="modal-overlay"
         on:click={handleOverlayClick}
         on:dragover={handleDragOver}
         on:dragleave={handleDragLeave}
@@ -452,8 +488,12 @@
             <div class="modal-header">
                 <span>▸ FILE BROWSER</span>
                 <div class="header-actions">
-                    <button class="upload-btn" on:click={triggerUpload} disabled={uploading}>
-                        {uploading ? 'UPLOADING...' : 'UPLOAD'}
+                    <button
+                        class="upload-btn"
+                        on:click={triggerUpload}
+                        disabled={uploading}
+                    >
+                        {uploading ? "UPLOADING..." : "UPLOAD"}
                     </button>
                     <button class="close-btn" on:click={handleClose}>×</button>
                 </div>
@@ -462,8 +502,8 @@
             <div class="modal-content">
                 <!-- Breadcrumb Navigation -->
                 <div class="breadcrumb">
-                    <button 
-                        class="breadcrumb-item" 
+                    <button
+                        class="breadcrumb-item"
                         class:active={currentPath === ""}
                         on:click={() => navigateToBreadcrumb(-1)}
                     >
@@ -471,7 +511,7 @@
                     </button>
                     {#each pathSegments as segment, i}
                         <span class="breadcrumb-separator">/</span>
-                        <button 
+                        <button
                             class="breadcrumb-item"
                             class:active={i === pathSegments.length - 1}
                             on:click={() => navigateToBreadcrumb(i)}
@@ -489,21 +529,39 @@
                 <!-- Upload progress -->
                 {#if uploading}
                     <div class="upload-progress">
-                        <div class="upload-bar" style="width: {uploadProgress}%"></div>
-                        <span class="upload-text">UPLOADING... {uploadProgress}%</span>
+                        <div
+                            class="upload-bar"
+                            style="width: {uploadProgress}%"
+                        ></div>
+                        <span class="upload-text"
+                            >UPLOADING... {uploadProgress}%</span
+                        >
                     </div>
                 {/if}
 
                 <!-- File list header -->
                 <div class="file-list-header">
-                    <button class="sort-btn name" on:click={() => toggleSort("name")}>
+                    <button
+                        class="sort-btn name"
+                        on:click={() => toggleSort("name")}
+                    >
                         NAME {sortBy === "name" ? (sortAsc ? "▲" : "▼") : ""}
                     </button>
-                    <button class="sort-btn size" on:click={() => toggleSort("size")}>
+                    <button
+                        class="sort-btn size"
+                        on:click={() => toggleSort("size")}
+                    >
                         SIZE {sortBy === "size" ? (sortAsc ? "▲" : "▼") : ""}
                     </button>
-                    <button class="sort-btn date" on:click={() => toggleSort("date")}>
-                        MODIFIED {sortBy === "date" ? (sortAsc ? "▲" : "▼") : ""}
+                    <button
+                        class="sort-btn date"
+                        on:click={() => toggleSort("date")}
+                    >
+                        MODIFIED {sortBy === "date"
+                            ? sortAsc
+                                ? "▲"
+                                : "▼"
+                            : ""}
                     </button>
                 </div>
 
@@ -522,7 +580,10 @@
                     {:else}
                         <!-- Parent directory -->
                         {#if currentPath}
-                            <button class="file-item directory" on:click={navigateUp}>
+                            <button
+                                class="file-item directory"
+                                on:click={navigateUp}
+                            >
                                 <span class="file-icon">📁</span>
                                 <span class="file-name">..</span>
                                 <span class="file-size">—</span>
@@ -532,8 +593,8 @@
 
                         <!-- Directories -->
                         {#each sortedDirs as dir}
-                            <button 
-                                class="file-item directory" 
+                            <button
+                                class="file-item directory"
                                 class:selected={selectedItem === dir}
                                 on:click={() => selectItem(dir)}
                                 on:dblclick={() => navigateToDir(dir.dirname)}
@@ -541,14 +602,16 @@
                                 <span class="file-icon">📁</span>
                                 <span class="file-name">{dir.dirname}</span>
                                 <span class="file-size">—</span>
-                                <span class="file-date">{formatDate(dir.modified)}</span>
+                                <span class="file-date"
+                                    >{formatDate(dir.modified)}</span
+                                >
                             </button>
                         {/each}
 
                         <!-- Files -->
                         {#each sortedFiles as file}
-                            <button 
-                                class="file-item" 
+                            <button
+                                class="file-item"
                                 class:selected={selectedItem === file}
                                 on:click={() => selectItem(file)}
                                 on:dblclick={startPrint}
@@ -557,11 +620,17 @@
                                 <span class="file-name">
                                     {file.filename}
                                     {#if getEstimatedTime(file)}
-                                        <span class="file-meta">({getEstimatedTime(file)})</span>
+                                        <span class="file-meta"
+                                            >({getEstimatedTime(file)})</span
+                                        >
                                     {/if}
                                 </span>
-                                <span class="file-size">{formatSize(file.size)}</span>
-                                <span class="file-date">{formatDate(file.modified)}</span>
+                                <span class="file-size"
+                                    >{formatSize(file.size)}</span
+                                >
+                                <span class="file-date"
+                                    >{formatDate(file.modified)}</span
+                                >
                             </button>
                         {/each}
                     {/if}
@@ -569,8 +638,8 @@
 
                 <!-- Actions -->
                 <div class="actions">
-                    <input 
-                        type="file" 
+                    <input
+                        type="file"
                         accept=".gcode,.g"
                         bind:this={fileInput}
                         on:change={onFileInputChange}
@@ -579,21 +648,35 @@
                     <CncButton variant="standard" on:click={handleNewFolder}>
                         NEW FOLDER
                     </CncButton>
-                    <CncButton 
-                        variant="action" 
-                        on:click={startPrint} 
-                        disabled={!selectedItem || !!selectedItem.dirname || !canStartPrint}
+                    <CncButton
+                        variant="action"
+                        on:click={startPrint}
+                        disabled={!selectedItem ||
+                            !!selectedItem.dirname ||
+                            !canStartPrint}
                     >
                         {isPrinting || isPaused ? "BUSY" : "PRINT"}
                     </CncButton>
-                    
-                    <CncButton variant="standard" disabled={!selectedItem} on:click={handleRename}>
+
+                    <CncButton
+                        variant="standard"
+                        disabled={!selectedItem}
+                        on:click={handleRename}
+                    >
                         RENAME
                     </CncButton>
-                    <CncButton variant="standard" disabled={!selectedItem} on:click={handleMove}>
+                    <CncButton
+                        variant="standard"
+                        disabled={!selectedItem}
+                        on:click={handleMove}
+                    >
                         MOVE
                     </CncButton>
-                    <CncButton variant="danger" disabled={!selectedItem} on:click={handleDelete}>
+                    <CncButton
+                        variant="danger"
+                        disabled={!selectedItem}
+                        on:click={handleDelete}
+                    >
                         DELETE
                     </CncButton>
                 </div>
@@ -601,6 +684,25 @@
         </div>
     </div>
 {/if}
+
+<!-- Confirm Dialog -->
+<ConfirmDialog
+    bind:isOpen={confirmOpen}
+    message={confirmMessage}
+    onConfirm={confirmCallback}
+    onCancel={() => {}}
+/>
+
+<!-- Input Dialog -->
+<InputDialog
+    bind:isOpen={inputOpen}
+    title={inputTitle}
+    message={inputMessage}
+    value={inputValue}
+    placeholder={inputPlaceholder}
+    onConfirm={inputCallback}
+    onCancel={() => {}}
+/>
 
 <style>
     .modal-overlay {
@@ -656,7 +758,11 @@
     }
 
     .upload-btn {
-        background: linear-gradient(180deg, var(--retro-orange) 0%, var(--retro-orange-dim) 100%);
+        background: linear-gradient(
+            180deg,
+            var(--retro-orange) 0%,
+            var(--retro-orange-dim) 100%
+        );
         border: 1px solid #ff8833;
         color: #000;
         padding: 5px 15px;
@@ -671,7 +777,7 @@
         background: linear-gradient(180deg, #ff7722 0%, #dd6611 100%);
         color: var(--green);
     }
-    
+
     .upload-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
@@ -757,7 +863,11 @@
         top: 0;
         left: 0;
         height: 100%;
-        background: linear-gradient(90deg, var(--retro-green-dim) 0%, var(--retro-green) 100%);
+        background: linear-gradient(
+            90deg,
+            var(--retro-green-dim) 0%,
+            var(--retro-green) 100%
+        );
         transition: width 0.2s ease;
     }
 
@@ -924,22 +1034,3 @@
         background: #444;
     }
 </style>
-
-<!-- Confirm Dialog -->
-<ConfirmDialog
-    bind:isOpen={confirmOpen}
-    message={confirmMessage}
-    onConfirm={confirmCallback}
-    onCancel={() => {}}
-/>
-
-<!-- Input Dialog -->
-<InputDialog
-    bind:isOpen={inputOpen}
-    title={inputTitle}
-    message={inputMessage}
-    value={inputValue}
-    placeholder={inputPlaceholder}
-    onConfirm={inputCallback}
-    onCancel={() => {}}
-/>

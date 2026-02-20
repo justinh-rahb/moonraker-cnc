@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+ ## [1.2.2] - 2026-02-20
+
+### Added
+- **Camera System**:
+  - **WebRTC Support**: Added native support for low-latency WebRTC streams via `go2rtc` and `camera-streamer` protocols.
+  - **Stream Type**: New configuration option to toggle between MJPEG (default), WebRTC (go2rtc), and WebRTC (camera-streamer).
+  - **Smart Streaming**: Automatically pauses active streams or switches to snapshots when tab is hidden or panel is out of view to save bandwidth.
+  - **Optimized Loading**: Switched from polling to recursive request-chaining (congestion control) to prevent network flooding for MJPEG streams.
+  - **FPS Counter**: Improved stability and readability using exponential smoothing and throttled display updates. (MJPEG only)
+- **Settings Modal / Sysinfo tab**:
+  - Moved "About" details (build version, git tag/commit links, repository link) and the embedded `SystemInfo` component into this tab.
+  - The `SystemInfo` section now displays runtime and diagnostics data, including host OS, CPU, memory, Klipper host software, and MCU firmware versions.
+- **Console (Debug)**:
+  - Added additional console status message updates when the debug flag is enabled.
+
+### Changed
+- **Print Status Panel**:
+  - Layer tracking now prioritizes slicer-provided layer information from `SET_PRINT_STATS_INFO` command when available, falling back to Z position-based calculation when not provided. This ensures accurate layer counts when slicers properly send layer data while maintaining compatibility with slicers that don't.
+
+### Fixed
+- **Navigation / History**:
+  - Fixed an issue where the browser History API could add a new history entry for every page content change.
+
 ## [1.2.1] - 2026-01-26
 
 ### Fixed
