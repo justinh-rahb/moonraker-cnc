@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+ ## [1.2.2] - 2026-02-20
 
 ### Added
 - **Camera System**:
@@ -17,10 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Settings Modal / Sysinfo tab**:
   - Moved "About" details (build version, git tag/commit links, repository link) and the embedded `SystemInfo` component into this tab.
   - The `SystemInfo` section now displays runtime and diagnostics data, including host OS, CPU, memory, Klipper host software, and MCU firmware versions.
+- **Console (Debug)**:
+  - Added additional console status message updates when the debug flag is enabled.
 
 ### Changed
 - **Print Status Panel**:
   - Layer tracking now prioritizes slicer-provided layer information from `SET_PRINT_STATS_INFO` command when available, falling back to Z position-based calculation when not provided. This ensures accurate layer counts when slicers properly send layer data while maintaining compatibility with slicers that don't.
+
+### Fixed
+- **Navigation / History**:
+  - Fixed an issue where the browser History API could add a new history entry for every page content change.
 
 ## [1.2.1] - 2026-01-26
 
