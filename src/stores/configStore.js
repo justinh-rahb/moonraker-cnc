@@ -146,12 +146,12 @@ function loadWorkspace() {
         const config = legacy ? mergeConfig(defaults, migrateConfig(legacy)) : freshConfig();
         validateConfig(config);
         const id = generateId();
-        return { version: 2, activeHostId: id, global: { theme: 'retro' }, hosts: [{ id, name: config.title, config }] };
+        return { version: 2, activeHostId: id, global: { theme: typeof __APP_THEME__ === 'undefined' ? 'flight' : __APP_THEME__ }, hosts: [{ id, name: config.title, config }] };
     } catch (error) {
         console.error('Unable to restore settings; original storage preserved', error);
         try { const original = localStorage.getItem(WORKSPACE_KEY); if (original) localStorage.setItem(WORKSPACE_KEY + '_recovery_' + Date.now(), original); } catch { /* Storage may be full or unavailable. */ }
         const id = generateId();
-        return { version: 2, activeHostId: id, global: { theme: 'retro' }, hosts: [{ id, name: defaults.title, config: freshConfig() }] };
+        return { version: 2, activeHostId: id, global: { theme: typeof __APP_THEME__ === 'undefined' ? 'flight' : __APP_THEME__ }, hosts: [{ id, name: defaults.title, config: freshConfig() }] };
     }
 }
 export const workspaceStore = writable(loadWorkspace());

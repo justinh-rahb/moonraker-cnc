@@ -50,7 +50,7 @@
     });
     return () => { stopNavigation(); stopConfig(); disconnect(); };
   });
-  $: if (typeof document !== 'undefined') document.documentElement.dataset.theme = typeof __APP_THEME__ === 'undefined' ? 'retro' : __APP_THEME__;
+  $: if (typeof document !== 'undefined') document.documentElement.dataset.theme = typeof __APP_THEME__ === 'undefined' ? 'flight' : __APP_THEME__;
 </script>
 
 <Scanline />

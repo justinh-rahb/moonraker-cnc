@@ -1,9 +1,16 @@
 # Retrograde
 
-A retro-styled, reactive web interface for controlling 3D printers running Klipper/Moonraker. Built with Svelte for a snappy, responsive experience with a distinct 1980s terminal aesthetic.
+A Klipper/Moonraker frontend with a restrained, science-fiction control-interface aesthetic. The v2 Flight theme is the default: clear numeric readouts, compact controls, and a green/orange palette. Built with Svelte.
 
-![Retrograde Home](docs/screenshot-1.png)
-![Retrograde Config](docs/screenshot-2.png)
+## Screenshots
+
+### Dashboard · v2 Flight
+
+![Retrograde v2 Flight dashboard with live camera, printer controls and temperatures](docs/screenshot-1.png)
+
+### Files and print previews
+
+![Retrograde file browser with G-code metadata and thumbnail preview](docs/screenshot-2.png)
 
 ## Features
 
@@ -71,7 +78,7 @@ A retro-styled, reactive web interface for controlling 3D printers running Klipp
 - **Unlimited Macros**: Add as many macros as needed with custom labels, G-code, and colors
 - **Panel Reordering**: Drag and organize panels to your preference
 - **Custom Panel Title**: Rename the interface for your machine
-- **Persistent Settings**: Auto-save all settings to localStorage
+- **Persistent Settings**: Per-printer settings and UX preferences in Moonraker, with a local cache for offline startup
 - **Settings Import/Export**: Backup and restore all settings via JSON file
 - **Autoconnect**: Optional automatic connection on page load
 - **Version Information**: Build version and commit hash displayed in Settings with GitHub links
@@ -83,12 +90,10 @@ A retro-styled, reactive web interface for controlling 3D printers running Klipp
 - **Confirmation Dialogs**: Optional confirmations for Pause, Cancel, and Start Print actions
 - **Power Lock Protection**: Respects `locked_while_printing` flag to prevent accidental power-off
 
-### 🎨 Retro Aesthetic
-- **CRT Scanline Effect**: Authentic terminal appearance
-- **Glowing Green Displays**: Classic monochrome look
-- **Tactile Button Feedback**: Shadow-based 3D press effects
-- **Orbitron Font**: Retro-futuristic typography
-- **Color-Coded Controls**: Orange accents, cyan system controls, red danger buttons
+### 🎨 Interface Themes
+- **v2 Flight (default)**: Restrained technical panels, tabular numeric readouts, and a green/orange palette
+- **v1 Retro (optional)**: Original CRT styling, glowing displays, and tactile controls
+- **Camera Scanlines**: Optional per-camera overlay, available in either theme
 
 ## Installation
 
@@ -166,7 +171,7 @@ Supply a native settings export as first-run defaults:
 DEFAULT_SETTINGS_FILE=./printer-defaults.json APP_THEME=flight npm run build
 ```
 
-`APP_THEME` accepts `retro` (default) or `flight`, a restrained technical interface using the existing green/orange palette. Theme selection is internal and intentionally has no settings toggle. Defaults only fill missing fields in saved profiles; existing values take precedence. A versioned workspace export can also provide defaults for its active host.
+`APP_THEME` accepts `flight` (v2, default) or `retro` (v1, opt-in). To build the original theme, use `APP_THEME=retro npm run build`. Theme selection is internal and intentionally has no settings toggle. Defaults only fill missing fields in saved profiles; existing values take precedence. A versioned workspace export can also provide defaults for its active host.
 
 For Docker, put the export in the build context:
 
