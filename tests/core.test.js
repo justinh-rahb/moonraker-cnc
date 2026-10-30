@@ -95,3 +95,14 @@ test('camera scanline preference round trips and older camera exports remain val
     assert.doesNotThrow(() => validateConfig({cameras:[{id:'old',name:'Old'}]}));
     assert.throws(() => validateConfig({cameras:[{id:'bad',name:'Bad',scanlines:'true'}]}));
 });
+
+
+test('hiding host and MCU monitors keeps chamber and other passive sensors visible', async () => {
+    const { isSystemTemperature } = await import('../src/lib/temperatures.js');
+    const configured = {'temperature_sensor CPU':{sensor_type:'temperature_host'},'temperature_sensor electronics':{sensor_type:'temperature_mcu'},'temperature_sensor chamber':{sensor_type:'Generic 3950'}};
+    assert.equal(isSystemTemperature('temperature_sensor CPU',configured),true);
+    assert.equal(isSystemTemperature('temperature_sensor electronics',configured),true);
+    assert.equal(isSystemTemperature('temperature_host CPU'),true);
+    assert.equal(isSystemTemperature('temperature_mcu board'),true);
+    for (const key of ['temperature_sensor chamber','temperature_sensor enclosure','heater_bed','extruder','temperature_fan chamber']) assert.equal(isSystemTemperature(key,configured),false);
+});

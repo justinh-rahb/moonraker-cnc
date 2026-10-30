@@ -1,4 +1,5 @@
 <script>
+    import { isSystemTemperature } from '../../temperatures.js';
     import RetroSlider from "../ui/RetroSlider.svelte";
     import PanelModule from "../ui/PanelModule.svelte";
     import { machineState } from "../../../stores/machineStore.js";
@@ -34,7 +35,7 @@
     $: keys = Object.keys(temps)
         .filter((k) => {
             if (!hideMonitors) return true;
-            return isSettable(k);
+            return !isSystemTemperature(k, $machineState.configured);
         })
         .sort((a, b) => {
             // Bed first
