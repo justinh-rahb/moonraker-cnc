@@ -26,6 +26,7 @@
         if (!visible || !source || !surface || destroyed) return;
         const current = session;
         const fallback = () => {
+            if (current !== session || destroyed) return;
             worker?.terminate(); worker = null;
             native = true; nativeUrl = source; error = ''; onFps(0);
         };
@@ -53,7 +54,8 @@
             worker.postMessage({type:'start',url:source,maxFps:rate});
         } catch { fallback(); }
     }
-    function nativeError() {
+    function nativeError(event) {
+        if (!native || !active || destroyed || event.currentTarget?.src !== nativeUrl) return;
         error = 'Camera unavailable; reconnecting…';
         clearTimeout(reconnect);
         nativeUrl = '';
