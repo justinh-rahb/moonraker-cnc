@@ -102,7 +102,7 @@ A Klipper/Moonraker frontend with a restrained, science-fiction control-interfac
 The classic Klipper ecosystem approach - pipe curl to bash:
 
 ```bash
-curl -sSL https://justinh-rahb.github.io/moonraker-cnc/install.sh | bash
+curl -sSL https://justinh-rahb.github.io/retrograde/install.sh | bash
 ```
 
 This will:
@@ -112,7 +112,7 @@ This will:
 
 ### Manual Installation
 
-1. Download the latest release from the [Releases](https://github.com/justinh-rahb/moonraker-cnc/releases) page
+1. Download the latest release from the [Releases](https://github.com/justinh-rahb/retrograde/releases) page
 2. Extract the zip to your desired location
 3. Serve the files with any web server
 
@@ -127,13 +127,13 @@ python3 -m http.server 8080
 Simply run the installer again - it will backup your existing installation and download the latest version:
 
 ```bash
-curl -sSL https://justinh-rahb.github.io/moonraker-cnc/install.sh | bash
+curl -sSL https://justinh-rahb.github.io/retrograde/install.sh | bash
 ```
 
 ### Uninstalling
 
 ```bash
-curl -sSL https://justinh-rahb.github.io/moonraker-cnc/install.sh | bash -s -- --uninstall
+curl -sSL https://justinh-rahb.github.io/retrograde/install.sh | bash -s -- --uninstall
 ```
 
 ## Development

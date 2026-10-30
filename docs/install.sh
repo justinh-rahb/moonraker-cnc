@@ -1,10 +1,10 @@
 #!/bin/bash
 # Retrograde Installer
-# Usage: curl -sSL https://justinh-rahb.github.io/moonraker-cnc/install.sh | bash
+# Usage: curl -sSL https://justinh-rahb.github.io/retrograde/install.sh | bash
 
 set -e
 
-REPO="justinh-rahb/moonraker-cnc"
+REPO="justinh-rahb/retrograde"
 
 # Determine installation directory (handle sudo execution)
 if [ -n "$SUDO_USER" ]; then
