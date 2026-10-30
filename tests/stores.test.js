@@ -114,11 +114,15 @@ test('status deltas retain slicer layers and metadata is isolated across reconne
         const request=socket.sent.findLast(r => r.method === method);assert.ok(request,method);socket.respond(request.id,result);await settle();
     }
     await response('printer.info',{state:'ready'});
-    await response('printer.objects.list',{objects:['toolhead','webhooks','configfile','print_stats','virtual_sdcard','gcode_move','extruder','fan','output_pin scaled','output_pin light']});
+    await response('printer.objects.list',{objects:['toolhead','webhooks','configfile','print_stats','virtual_sdcard','gcode_move','extruder','fan','stepper_enable','output_pin scaled','output_pin light']});
     await response('printer.objects.query',{status:{configfile:{settings:{printer:{max_velocity:300},extruder:{max_temp:280,min_extrude_temp:170},'output_pin scaled':{scale:255,pwm:true},'output_pin light':{pwm:false}}}}});
     await response('printer.objects.subscribe',{});
-    await response('printer.objects.query',{status:{webhooks:{state:'ready'},toolhead:{position:[0,0,2,0],homed_axes:'xyz',extruder:'extruder'},extruder:{temperature:200,target:210},print_stats:{state:'printing',filename:'current.gcode',print_duration:100,info:{current_layer:5,total_layer:10}},virtual_sdcard:{progress:.5}}});
+    await response('printer.objects.query',{status:{stepper_enable:{steppers:{stepper_x:true,stepper_y:true,extruder:false}},webhooks:{state:'ready'},toolhead:{position:[0,0,2,0],homed_axes:'xyz',extruder:'extruder'},extruder:{temperature:200,target:210},print_stats:{state:'printing',filename:'current.gcode',print_duration:100,info:{current_layer:5,total_layer:10}},virtual_sdcard:{progress:.5}}});
     assert.equal(get(machine.machineState).isReady,true);
+    assert.deepEqual(get(machine.machineState).stepperStates,{stepper_x:true,stepper_y:true,extruder:false});
+    socket.onmessage({data:JSON.stringify({method:'notify_status_update',params:[{stepper_enable:{steppers:{stepper_x:false}}},123]})});
+    assert.equal(get(machine.machineState).stepperStates.stepper_x,false);
+    assert.equal(get(machine.machineState).stepperStates.stepper_y,true);
     assert.equal(get(machine.machineState).currentLayer,5);
     assert.equal(get(machine.machineState).miscDevices['output_pin scaled'].max,255);
     assert.equal(get(machine.machineState).miscDevices['output_pin light'].pwm,false);
@@ -129,6 +133,7 @@ test('status deltas retain slicer layers and metadata is isolated across reconne
     assert.equal(get(machine.machineState).isReady,true);
     const oldMessage = socket.onmessage;
     ws.connect('different-printer:7125');
+    assert.equal(get(machine.machineState).stepperStates,null);
     oldMessage({data:JSON.stringify({method:'notify_status_update',params:[{print_stats:{filename:'wrong.gcode'}},124]})});
     assert.equal(get(machine.machineState).printFilename,'');
     ws.disconnect();
@@ -158,5 +163,24 @@ test('manual movement preserves coordinate modes and cold extrusion sends nothin
     machine.machineState.update(s => ({...s,temperatures:{extruder:{current:20}}}));
     machine.extrude(1);
     assert.equal(socket.sent.filter(r => r.method === 'printer.gcode.script').length,3);
+    ws.disconnect();
+});
+
+test('absolute move checks fresh state, waits for acknowledgement, and cancels across hosts', async () => {
+    ws.connect('absolute-controls:7125'); const socket = FakeSocket.sockets.at(-1); socket.open();
+    machine.machineState.update(s => ({...s,isReady:true,homedAxes:'xyz',printStatsState:'standby'}));
+    const state = {webhooks:{state:'ready'},print_stats:{state:'standby'},virtual_sdcard:{is_active:false},pause_resume:{is_paused:false},toolhead:{homed_axes:'xyz',axis_minimum:[0,0,0],axis_maximum:[270,270,280],max_velocity:300},gcode_move:{position:[10,10,10],gcode_position:[10,10,9.8],speed_factor:1}};
+    const move = machine.moveAbsolute('z',15);
+    const query = socket.sent.findLast(r => r.method === 'printer.objects.query');
+    assert.deepEqual(query.params.objects.gcode_move,['position','gcode_position','speed_factor']);
+    socket.respond(query.id,{status:state}); await new Promise(resolve => setImmediate(resolve));
+    const command = socket.sent.findLast(r => r.method === 'printer.gcode.script');
+    assert.match(command.params.script,/G90\nG1 Z14\.800000/);
+    socket.respond(command.id,{}); assert.equal(await move,true);
+    const cancelled = machine.moveAbsolute('x',20);
+    const before = socket.sent.filter(r => r.method === 'printer.gcode.script').length;
+    ws.connect('another-absolute-host:7125');
+    assert.equal(await cancelled,false);
+    assert.equal(socket.sent.filter(r => r.method === 'printer.gcode.script').length,before);
     ws.disconnect();
 });

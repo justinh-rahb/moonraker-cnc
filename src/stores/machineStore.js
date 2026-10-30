@@ -1,3 +1,4 @@
+import { absoluteMoveScript } from '../lib/motion.js';
 import { writable, get } from 'svelte/store';
 import { send, onNotification, connectionState, getConnectionGeneration } from './websocket.js';
 import { configStore } from './configStore.js';
@@ -16,6 +17,9 @@ const INITIAL_STATE = {
     isReady: false,
     stateMessage: '',
     homedAxes: '',
+    stepperStates: null,
+    axisMinimum: null,
+    axisMaximum: null,
     configured: {},
     availableMacros: [],
     slicerCurrentLayer: null,
@@ -283,7 +287,8 @@ const initializeConnection = async () => {
 
         // 2. Build subscription map
         const subscriptions = {
-            toolhead: ['position', 'extruder', 'status', 'print_time', 'homed_axes', 'max_velocity', 'max_accel', 'square_corner_velocity', 'max_accel_to_decel', 'minimum_cruise_ratio'],
+            toolhead: ['position', 'extruder', 'status', 'print_time', 'homed_axes', 'max_velocity', 'max_accel', 'square_corner_velocity', 'max_accel_to_decel', 'minimum_cruise_ratio', 'axis_minimum', 'axis_maximum'],
+            stepper_enable: ['steppers'],
             'gcode_move': ['speed_factor', 'extrude_factor', 'homing_origin'],
             webhooks: ['state', 'state_message'],
             'print_stats': ['state', 'message', 'filename', 'total_duration', 'print_duration', 'filament_used', 'info'],
@@ -383,7 +388,10 @@ const updateStateFromStatus = (status) => {
             if (!newState.isReady) notificationStore.setSystemStatus(status.webhooks.state === 'shutdown' ? 'shutdown' : 'error');
         }
 
+        if (status.stepper_enable?.steppers) newState.stepperStates = {...newState.stepperStates, ...status.stepper_enable.steppers};
         if (status.toolhead) {
+            if (status.toolhead.axis_minimum) newState.axisMinimum = status.toolhead.axis_minimum;
+            if (status.toolhead.axis_maximum) newState.axisMaximum = status.toolhead.axis_maximum;
             if (status.toolhead.homed_axes !== undefined) newState.homedAxes = status.toolhead.homed_axes;
             if (status.toolhead.extruder) newState.activeExtruder = status.toolhead.extruder;
             const pos = status.toolhead.position;
@@ -769,6 +777,31 @@ export const jog = (axis, direction) => {
     // Simpler Relative Move
     const gcode = `SAVE_GCODE_STATE NAME=retro_jog\nG91\nG1 ${axis.toUpperCase()}${direction * dist} F${feedrate}\nRESTORE_GCODE_STATE NAME=retro_jog`;
     send('printer.gcode.script', { script: gcode });
+};
+
+let absoluteMovePending = false;
+export const moveAbsolute = async (axis, target) => {
+    const generation = getConnectionGeneration();
+    const state = get(machineState);
+    if (absoluteMovePending) return false;
+    if (!state.isReady || ['printing','paused'].includes(state.printStatsState)) { notificationStore.addError('Manual moves require an idle, ready printer'); return false; }
+    if (typeof target !== 'number' || !Number.isFinite(target) || !/^[xyz]$/i.test(axis)) { notificationStore.addError('Enter a valid position'); return false; }
+    absoluteMovePending = true;
+    try {
+        const result = await send('printer.objects.query', {objects:{
+            toolhead:['homed_axes','axis_minimum','axis_maximum','max_velocity'],
+            gcode_move:['position','gcode_position','speed_factor'],
+            webhooks:['state'], print_stats:['state'], virtual_sdcard:['is_active'], pause_resume:['is_paused']
+        }}, {silent:true});
+        const current = get(machineState);
+        if (generation !== getConnectionGeneration() || !current.isReady || ['printing','paused'].includes(current.printStatsState)) throw new Error('Printer state changed; move cancelled');
+        const script = absoluteMoveScript(result.status || {},axis,target,current.configured);
+        await send('printer.gcode.script',{script},{silent:true});
+        return true;
+    } catch (error) {
+        if (generation === getConnectionGeneration()) notificationStore.addError(error.message || 'Move failed');
+        return false;
+    } finally { absoluteMovePending = false; }
 };
 
 export const adjustZOffset = (direction) => {

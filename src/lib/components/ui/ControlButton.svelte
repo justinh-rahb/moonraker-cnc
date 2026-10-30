@@ -2,11 +2,15 @@
     export let variant = "standard"; // standard, arrow, z-up, z-down, home, active, center, danger
     export let active = false;
     export let disabled = false;
+    export let indicator = 'none';
+    export let title = undefined;
+    export let ariaLabel = undefined;
 
     // Compute classes based on variant
     $: classes = [
         "control-button",
         variant,
+        `indicator-${indicator}`,
         active ? "active" : "",
         disabled ? "disabled" : "",
     ]
@@ -14,7 +18,7 @@
         .join(" ");
 </script>
 
-<button class={classes} on:click {disabled}>
+<button class={classes} on:click {disabled} {title} aria-label={ariaLabel}>
     <slot></slot>
 </button>
 
@@ -141,4 +145,7 @@
         cursor: not-allowed;
         filter: grayscale(0.8);
     }
+    .control-button.indicator-on { background:#173824; border-color:var(--retro-green); color:var(--retro-green-hover); box-shadow:inset 0 0 12px #85e7a326; }
+    .control-button.indicator-off { border-color:#59655d; }
+    .control-button.indicator-mixed { border-color:var(--retro-orange); }
 </style>

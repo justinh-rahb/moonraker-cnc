@@ -354,3 +354,6 @@ MIT
 - Inspired by classic 1980s CRT terminal interfaces
 - Built for Klipper/Moonraker ecosystem
 - Fonts: Orbitron, Share Tech Mono (Google Fonts)
+
+
+Toolhead coordinate readouts accept absolute machine positions: click X/Y/Z, enter a value, and press Enter or the checkmark. Escape or × cancels without moving. The app refreshes homing, job state, travel limits and G-code offsets before dispatch; it restores the prior coordinate/feed modes afterward. Home buttons indicate homing with a checkmark and illuminated border. M-OFF reports actual stepper-enable telemetry through its state icon and tooltip. Z pictograms show increasing/decreasing nozzle–bed separation.
