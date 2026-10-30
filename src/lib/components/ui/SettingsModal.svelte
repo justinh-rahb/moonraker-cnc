@@ -36,7 +36,7 @@
     import { machineState } from "../../../stores/machineStore.js";
     import { settingsTab } from "../../../stores/uiStore.js";
     import { availablePowerDevices } from "../../../stores/powerStore.js";
-    import CncButton from "./CncButton.svelte";
+    import ControlButton from "./ControlButton.svelte";
     import ColorPicker from "./ColorPicker.svelte";
     import ConfirmDialog from "./ConfirmDialog.svelte";
     import SystemInfo from "./SystemInfo.svelte";
@@ -1069,7 +1069,7 @@
 
                 {#if currentTab === "Sysinfo"}
                     <div class="info-section">
-                        <div class="section-title">APPLICATION INFO</div>
+                        <div class="section-title">RETROGRADE</div>
                         <div class="info-grid">
                             <div class="info-row">
                                 <span class="info-label">VERSION:</span>

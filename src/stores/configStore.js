@@ -1,6 +1,7 @@
 import { writable, get } from 'svelte/store';
-import { mergeConfig, validateConfig, hostKey } from '../lib/config.js';
+import { mergeConfig, validateConfig, hostKey, brandingTitle } from '../lib/config.js';
 
+// Persisted names remain stable across the Retrograde rebrand.
 const STORAGE_KEY = 'retro_cnc_config_v1';
 
 // Helper to generate unique IDs
@@ -8,7 +9,7 @@ const generateId = () => `id-${Date.now()}-${Math.random().toString(36).substr(2
 
 // Default configuration with panels structure
 export const DEFAULT_CONFIG = {
-    title: 'RETRO CNC PANEL',
+    title: 'RETROGRADE',
     server: {
         ip: window.location.hostname || 'localhost',
         port: '7125',
@@ -83,6 +84,7 @@ export const DEFAULT_CONFIG = {
 // Migration function to convert old macros array to new panels structure
 const migrateConfig = (config) => {
     // If already has panels structure, return as-is
+    if (config.title !== undefined) config = { ...config, title: brandingTitle(config.title) };
     if (config.panels) {
         return config;
     }
@@ -136,7 +138,7 @@ function loadWorkspace() {
     try {
         const saved = JSON.parse(localStorage.getItem(WORKSPACE_KEY) || 'null');
         if (saved?.version === 2 && Array.isArray(saved.hosts) && saved.hosts.length) {
-            saved.hosts.forEach(h => { validateConfig(h.config); h.config = mergeConfig(defaults, h.config); });
+            saved.hosts.forEach(h => { h.name = brandingTitle(h.name); validateConfig(h.config); h.config = mergeConfig(defaults, migrateConfig(h.config)); });
             if (!saved.hosts.some(h => h.id === saved.activeHostId)) saved.activeHostId = saved.hosts[0].id;
             return saved;
         }
@@ -490,7 +492,7 @@ export const importConfig = (jsonString) => {
                 const key = hostKey(h.config.server);
                 if (endpoints.has(key)) throw new Error('Duplicate host address');
                 endpoints.add(key);
-                return { id: h.id, name: String(h.name || h.config.title || h.config.server.ip), config: mergeConfig(defaults, migrateConfig(h.config)) };
+                return { id: h.id, name: brandingTitle(String(h.name || h.config.title || h.config.server.ip)), config: mergeConfig(defaults, migrateConfig(h.config)) };
             });
             const activeHostId = ids.has(parsed.activeHostId) ? parsed.activeHostId : hosts[0].id;
             applyingHost = true;

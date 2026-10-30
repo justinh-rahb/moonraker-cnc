@@ -1,3 +1,6 @@
+// Preserve custom printer titles while updating the former generic app title.
+export const brandingTitle = title => typeof title === 'string' && /^retro[ _-]?cnc(?:[ _-]?panel)?$/i.test(title.trim()) ? 'RETROGRADE' : title;
+
 // Only merge plain JSON objects; arrays are intentional replacements.
 export function mergeConfig(base, override) {
     const result = structuredClone(base);

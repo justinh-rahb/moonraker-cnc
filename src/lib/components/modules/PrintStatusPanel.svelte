@@ -6,7 +6,7 @@
     $: estimate = estimatePrint($machineState, now);
     import PanelModule from "../ui/PanelModule.svelte";
     import Led from "../ui/Led.svelte";
-    import CncButton from "../ui/CncButton.svelte";
+    import ControlButton from "../ui/ControlButton.svelte";
     import RetroGauge from "../ui/RetroGauge.svelte";
     import ConfirmDialog from "../ui/ConfirmDialog.svelte";
     import {
@@ -258,48 +258,48 @@
         {#if showControls}
             <div class="control-buttons">
                 {#if isPrinting}
-                    <CncButton variant="home" disabled={!$machineState.isReady} on:click={handlePause}>
+                    <ControlButton variant="home" disabled={!$machineState.isReady} on:click={handlePause}>
                         PAUSE
-                    </CncButton>
+                    </ControlButton>
                 {:else if isPaused}
-                    <CncButton variant="action" disabled={!$machineState.isReady} on:click={handleResume}>
+                    <ControlButton variant="action" disabled={!$machineState.isReady} on:click={handleResume}>
                         RESUME
-                    </CncButton>
+                    </ControlButton>
                 {/if}
-                <CncButton variant="danger" on:click={handleCancel}>
+                <ControlButton variant="danger" on:click={handleCancel}>
                     CANCEL
-                </CncButton>
+                </ControlButton>
             </div>
         {/if}
 
         <!-- Completion Actions (only when print is complete) -->
         {#if isComplete}
             <div class="completion-buttons">
-                <CncButton variant="dark" on:click={handleClear}>
+                <ControlButton variant="dark" on:click={handleClear}>
                     CLEAR
-                </CncButton>
-                <CncButton
+                </ControlButton>
+                <ControlButton
                     variant="action"
                     on:click={handleReprint}
                     disabled={isReprinting || !(lastCompletedFilename || printFilename)}
                 >
                     {isReprinting ? 'STARTING...' : 'REPRINT'}
-                </CncButton>
+                </ControlButton>
             </div>
         {/if}
 
         {#if isCancelled}
             <div class="completion-buttons">
-                <CncButton variant="dark" on:click={handleClear}>
+                <ControlButton variant="dark" on:click={handleClear}>
                     CLEAR
-                </CncButton>
-                <CncButton
+                </ControlButton>
+                <ControlButton
                     variant="action"
                     on:click={handleReprint}
                     disabled={isReprinting || !(lastCompletedFilename || printFilename)}
                 >
                     {isReprinting ? 'STARTING...' : 'REPRINT'}
-                </CncButton>
+                </ControlButton>
             </div>
         {/if}
     </div>

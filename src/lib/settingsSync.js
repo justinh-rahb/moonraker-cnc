@@ -1,4 +1,4 @@
-import { mergeConfig, validateConfig } from './config.js';
+import { mergeConfig, validateConfig, brandingTitle } from './config.js';
 export const databaseSettings = config => {
     const { server, ...settings } = config;
     return settings;
@@ -22,5 +22,7 @@ export function reconcileSettings(local, remote, base) {
 export function validateRemote(value) {
     if (value?.version !== 1 || !value.settings || typeof value.settings !== 'object') throw new Error('Unsupported server settings format');
     validateConfig(value.settings);
-    return mergeConfig({}, value.settings);
+    const settings = mergeConfig({}, value.settings);
+    if (settings.title !== undefined) settings.title = brandingTitle(settings.title);
+    return settings;
 }

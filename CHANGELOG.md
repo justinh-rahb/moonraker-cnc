@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Branding
+- Rename the application to Retrograde; keep existing repository URLs and saved settings compatible.
+
 ### Added
 - Multiple host profiles, legacy/workspace import-export and build-time defaults.
 - Moonraker-backed printer and UX settings with local caching and conflict handling.
@@ -288,7 +291,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2026-01-24
 
 ### Added
-- Initial release of Retro CNC Panel
+- Initial release of Retrograde
 - Toolhead control panel with XYZ positioning and homing controls
 - Extruder control with load/unload macro buttons
 - Temperature panel for hotend and bed monitoring

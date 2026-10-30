@@ -80,7 +80,7 @@ jobs:
         if: steps.check_release.outputs.exists == 'false'
         run: |
           cd dist
-          zip -r ../retro-cnc-panel-${{ steps.changelog.outputs.version }}.zip .
+          zip -r ../retrograde-${{ steps.changelog.outputs.version }}.zip .
 
       - name: Create draft release
         if: steps.check_release.outputs.exists == 'false'
@@ -88,8 +88,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "v${{ steps.changelog.outputs.version }}" \
-            --title "Retro CNC Panel v${{ steps.changelog.outputs.version }}" \
+            --title "Retrograde v${{ steps.changelog.outputs.version }}" \
             --notes-file release_notes.md \
             --draft \
-            retro-cnc-panel-${{ steps.changelog.outputs.version }}.zip \
+            retrograde-${{ steps.changelog.outputs.version }}.zip \
             docs/install.sh

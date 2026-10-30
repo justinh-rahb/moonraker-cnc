@@ -15,7 +15,7 @@
 
   // Update page title dynamically based on user's configured machine title
   $: if (typeof document !== "undefined") {
-    document.title = $configStore.title || "Retro CNC Panel";
+    document.title = $configStore.title || "Retrograde";
   }
 
   import { initializeNavigation } from './stores/navigation.js';

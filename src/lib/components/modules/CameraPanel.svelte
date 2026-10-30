@@ -1,7 +1,7 @@
 <script>
   import { serverUrl } from "../../config.js";
   import PanelModule from "../ui/PanelModule.svelte";
-  import CncButton from "../ui/CncButton.svelte";
+  import ControlButton from "../ui/ControlButton.svelte";
   import WebRTCPlayer from "../ui/WebRTCPlayer.svelte";
   import { configStore } from "../../../stores/configStore.js";
   import { onDestroy, onMount } from "svelte";

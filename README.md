@@ -1,9 +1,9 @@
-# Retro CNC Panel
+# Retrograde
 
-A retro-styled, reactive web interface for controlling 3D printers and CNC machines running Klipper/Moonraker. Built with Svelte for a snappy, responsive experience with a distinct 1980s terminal aesthetic.
+A retro-styled, reactive web interface for controlling 3D printers running Klipper/Moonraker. Built with Svelte for a snappy, responsive experience with a distinct 1980s terminal aesthetic.
 
-![Retro CNC Panel Home](docs/screenshot-1.png)
-![Retro CNC Panel Config](docs/screenshot-2.png)
+![Retrograde Home](docs/screenshot-1.png)
+![Retrograde Config](docs/screenshot-2.png)
 
 ## Features
 
@@ -101,7 +101,7 @@ curl -sSL https://justinh-rahb.github.io/moonraker-cnc/install.sh | bash
 
 This will:
 - Download the latest release
-- Install to `~/retro-cnc-panel`
+- Install to `~/retrograde`
 - Optionally configure nginx to serve the panel
 
 ### Manual Installation
@@ -112,7 +112,7 @@ This will:
 
 Example with Python:
 ```bash
-cd ~/retro-cnc-panel
+cd ~/retrograde
 python3 -m http.server 8080
 ```
 
@@ -147,6 +147,8 @@ npm run build
 
 Open your browser to `http://localhost:5173`
 
+Retrograde was previously named Retro CNC Panel. Existing settings and Moonraker database keys retain their legacy identifiers for compatibility. The installer reuses existing installation directories and accepts older release archive names. Repository and documentation URLs remain unchanged until the repository is renamed.
+
 ## Host profiles, shared settings and layouts
 
 Use **HOSTS** to add, select, edit or remove Moonraker connections. Each printer keeps its own macros, cameras, presets, console preferences and dashboard layout. Settings and UX preferences synchronize through that printer's Moonraker database in the application's own `retro_cnc_panel` namespace. Local storage caches settings for offline startup and keeps the browser's connection list. A sync indicator reports unavailable storage or conflicting edits from another browser.
@@ -168,8 +170,8 @@ DEFAULT_SETTINGS_FILE=./printer-defaults.json APP_THEME=flight npm run build
 For Docker, put the export in the build context:
 
 ```sh
-docker build --build-arg DEFAULT_SETTINGS_FILE=printer-defaults.json --build-arg APP_THEME=flight -t retro-cnc .
-docker run --rm -p 1337:80 retro-cnc
+docker build --build-arg DEFAULT_SETTINGS_FILE=printer-defaults.json --build-arg APP_THEME=flight -t retrograde .
+docker run --rm -p 1337:80 retrograde
 ```
 
 Build defaults are embedded in public JavaScript; use UI configuration without credentials. No settings export from a developer's Downloads folder is included in the repository.

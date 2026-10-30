@@ -5,7 +5,7 @@
     let pendingMacro;
     $: if (!$machineState.isReady) { confirmOpen = false; pendingMacro = null; }
     import PanelModule from "../ui/PanelModule.svelte";
-    import CncButton from "../ui/CncButton.svelte";
+    import ControlButton from "../ui/ControlButton.svelte";
     import { send } from "../../../stores/websocket.js";
 
     export let panel;
@@ -24,13 +24,13 @@
 <PanelModule title={panel.title}>
     <div class="action-buttons">
         {#each sortedMacros as macro (macro.id)}
-            <CncButton
+            <ControlButton
                 variant={macro.color || "action"}
                 on:click={() => runMacro(macro)}
                 disabled={editMode || !$machineState.isReady || !macro.gcode.trim()}
             >
                 {macro.label}
-            </CncButton>
+            </ControlButton>
         {/each}
     </div>
 </PanelModule>

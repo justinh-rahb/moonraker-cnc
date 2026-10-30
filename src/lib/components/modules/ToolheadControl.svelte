@@ -1,7 +1,7 @@
 <script>
     $: jobActive = ["printing","paused"].includes($machineState.printStatsState);
     import PanelModule from "../ui/PanelModule.svelte";
-    import CncButton from "../ui/CncButton.svelte";
+    import ControlButton from "../ui/ControlButton.svelte";
     import RetroSlider from "../ui/RetroSlider.svelte";
     import {
         machineState,
@@ -58,23 +58,23 @@
 
     <!-- Jog Controls -->
     <div class="control-pad">
-        <CncButton variant="action" disabled={jobActive} on:click={homeX}>X</CncButton>
-        <CncButton variant="arrow" disabled={jobActive || !$machineState.homedAxes.includes("y")} on:click={() => jog("y", 1)}>Y+</CncButton>
-        <CncButton variant="action" disabled={jobActive} on:click={homeY}>Y</CncButton>
+        <ControlButton variant="action" disabled={jobActive} on:click={homeX}>X</ControlButton>
+        <ControlButton variant="arrow" disabled={jobActive || !$machineState.homedAxes.includes("y")} on:click={() => jog("y", 1)}>Y+</ControlButton>
+        <ControlButton variant="action" disabled={jobActive} on:click={homeY}>Y</ControlButton>
 
-        <CncButton variant="arrow" disabled={jobActive || !$machineState.homedAxes.includes("x")} on:click={() => jog("x", -1)}>X-</CncButton>
-        <CncButton variant="home" disabled={jobActive} on:click={home}>ALL</CncButton>
-        <CncButton variant="arrow" disabled={jobActive || !$machineState.homedAxes.includes("x")} on:click={() => jog("x", 1)}>X+</CncButton>
+        <ControlButton variant="arrow" disabled={jobActive || !$machineState.homedAxes.includes("x")} on:click={() => jog("x", -1)}>X-</ControlButton>
+        <ControlButton variant="home" disabled={jobActive} on:click={home}>ALL</ControlButton>
+        <ControlButton variant="arrow" disabled={jobActive || !$machineState.homedAxes.includes("x")} on:click={() => jog("x", 1)}>X+</ControlButton>
 
-        <CncButton variant="action" disabled={jobActive} on:click={homeZ}>Z</CncButton>
-        <CncButton variant="arrow" disabled={jobActive || !$machineState.homedAxes.includes("y")} on:click={() => jog("y", -1)}>Y-</CncButton>
-        <CncButton variant="danger" disabled={jobActive} on:click={motorsOff}>M-OFF</CncButton>
+        <ControlButton variant="action" disabled={jobActive} on:click={homeZ}>Z</ControlButton>
+        <ControlButton variant="arrow" disabled={jobActive || !$machineState.homedAxes.includes("y")} on:click={() => jog("y", -1)}>Y-</ControlButton>
+        <ControlButton variant="danger" disabled={jobActive} on:click={motorsOff}>M-OFF</ControlButton>
     </div>
 
     <!-- Z Controls -->
     <div class="z-controls">
-        <CncButton variant="z-up" disabled={jobActive || !$machineState.homedAxes.includes("z")} on:click={() => jog("z", 1)}>Z+</CncButton>
-        <CncButton variant="z-down" disabled={jobActive || !$machineState.homedAxes.includes("z")} on:click={() => jog("z", -1)}>Z-</CncButton>
+        <ControlButton variant="z-up" disabled={jobActive || !$machineState.homedAxes.includes("z")} on:click={() => jog("z", 1)}>Z+</ControlButton>
+        <ControlButton variant="z-down" disabled={jobActive || !$machineState.homedAxes.includes("z")} on:click={() => jog("z", -1)}>Z-</ControlButton>
     </div>
 
     <!-- Distance Select -->
@@ -100,11 +100,11 @@
         </div>
 
         <div class="z-offset-controls">
-            <CncButton variant="arrow" on:click={() => adjustZOffset(1)}
-                >+</CncButton
+            <ControlButton variant="arrow" on:click={() => adjustZOffset(1)}
+                >+</ControlButton
             >
-            <CncButton variant="arrow" on:click={() => adjustZOffset(-1)}
-                >-</CncButton
+            <ControlButton variant="arrow" on:click={() => adjustZOffset(-1)}
+                >-</ControlButton
             >
         </div>
 

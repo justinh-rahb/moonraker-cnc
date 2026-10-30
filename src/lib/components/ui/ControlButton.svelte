@@ -5,7 +5,7 @@
 
     // Compute classes based on variant
     $: classes = [
-        "cnc-button",
+        "control-button",
         variant,
         active ? "active" : "",
         disabled ? "disabled" : "",
@@ -19,7 +19,7 @@
 </button>
 
 <style>
-    .cnc-button {
+    .control-button {
         background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
         border: 3px solid #4a4a4a;
         color: var(--retro-green);
@@ -36,13 +36,13 @@
         width: 100%; /* Ensure it fills grid cells */
     }
 
-    .cnc-button:hover:not(:disabled) {
+    .control-button:hover:not(:disabled) {
         background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
         color: var(--retro-green-hover);
     }
 
-    .cnc-button:active:not(:disabled),
-    .cnc-button.active {
+    .control-button:active:not(:disabled),
+    .control-button.active {
         transform: translateY(4px);
         box-shadow:
             0 0 0 #1a1a1a,
@@ -51,16 +51,16 @@
     }
 
     /* Variants */
-    .cnc-button.arrow {
+    .control-button.arrow {
         font-size: 24px;
     }
 
-    .cnc-button.z-up,
-    .cnc-button.z-down {
+    .control-button.z-up,
+    .control-button.z-down {
         font-size: 20px;
     }
 
-    .cnc-button.home {
+    .control-button.home {
         background: linear-gradient(
             180deg,
             var(--retro-orange) 0%,
@@ -73,23 +73,23 @@
         letter-spacing: 1px;
         text-transform: uppercase;
     }
-    .cnc-button.home:hover:not(:disabled) {
+    .control-button.home:hover:not(:disabled) {
         background: linear-gradient(180deg, #ff7722 0%, #dd6611 100%);
     }
 
-    .cnc-button.center {
+    .control-button.center {
         background: #0a0a0a;
         cursor: default;
         border-color: #333;
         box-shadow: none;
     }
-    .cnc-button.center:hover {
+    .control-button.center:hover {
         background: #0a0a0a;
         color: var(--retro-green);
     }
 
     /* Action button style (reusing base but modifying) */
-    .cnc-button.action {
+    .control-button.action {
         background: linear-gradient(180deg, #004400 0%, #003300 100%);
         border: 3px solid #006600;
         padding: 16px;
@@ -101,14 +101,14 @@
             0 6px 15px rgba(0, 100, 0, 0.5);
     }
 
-    .cnc-button.action:active {
+    .control-button.action:active {
         transform: translateY(4px);
         box-shadow:
             0 0 0 #002200,
             0 2px 8px rgba(0, 100, 0, 0.3);
     }
 
-    .cnc-button.danger {
+    .control-button.danger {
         background: linear-gradient(180deg, #440000 0%, #330000 100%);
         border-color: #660000;
         color: #ff4444;
@@ -122,7 +122,7 @@
     }
 
     /* Darkened variant - like move buttons */
-    .cnc-button.dark {
+    .control-button.dark {
         background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
         border: 3px solid #4a4a4a;
         color: var(--retro-green);
@@ -136,7 +136,7 @@
             inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
 
-    .cnc-button:disabled {
+    .control-button:disabled {
         opacity: 0.5;
         cursor: not-allowed;
         filter: grayscale(0.8);

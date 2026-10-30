@@ -12,7 +12,7 @@
     } from "../../../stores/configStore.js";
     import { hostsOpen } from "../../../stores/uiStore.js";
     import { serverUrl } from "../../config.js";
-    import CncButton from "./CncButton.svelte";
+    import ControlButton from "./ControlButton.svelte";
     import { onDestroy } from "svelte";
 
     // Local state for inputs
@@ -105,11 +105,11 @@
                 <button on:click={() => ($hostsOpen = true)}>MANAGE HOSTS</button>
                 <button on:click={() => dismissed = true}>CONTINUE OFFLINE</button>
                 <div class="actions">
-                    <CncButton variant="action" on:click={handleConnect}>
+                    <ControlButton variant="action" on:click={handleConnect}>
                         {state === "connecting"
                             ? "CONNECTING..."
                             : "INITIATE UPLINK"}
-                    </CncButton>
+                    </ControlButton>
                 </div>
             </div>
         </div>

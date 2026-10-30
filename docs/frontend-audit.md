@@ -2,7 +2,7 @@
 
 ## Reference and scope
 
-Compared the running Retro CNC Panel and Mainsail on the same Qidi printer in Chrome. Inspected the current source and three native settings exports (January and October formats). Reviewed Moonraker's current file, history and database APIs, Klipper's status reference, and upstream Mainsail/Fluidd persistence code. Printer inspection was read-only; no print, movement, heating, calibration, configuration changes or database writes were performed on the printer.
+Compared the running Retrograde and Mainsail on the same Qidi printer in Chrome. Inspected the current source and three native settings exports (January and October formats). Reviewed Moonraker's current file, history and database APIs, Klipper's status reference, and upstream Mainsail/Fluidd persistence code. Printer inspection was read-only; no print, movement, heating, calibration, configuration changes or database writes were performed on the printer.
 
 The implementation targets dependable everyday printer control and job workflows. It does not claim every Mainsail plugin or advanced visualization.
 

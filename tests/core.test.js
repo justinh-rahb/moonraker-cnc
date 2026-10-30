@@ -69,3 +69,11 @@ test('database reconciliation handles new browsers, offline edits, and conflicts
     assert.equal(canonical({b:1,a:2}),canonical({a:2,b:1}));
     assert.throws(() => validateRemote({version:42,settings:a}));
 });
+
+test('rebrand updates generic titles and preserves custom printer names', async () => {
+    const { brandingTitle } = await import('../src/lib/config.js');
+    assert.equal(brandingTitle('RETRO CNC PANEL'),'RETROGRADE');
+    assert.equal(brandingTitle('Retro CNC Panel'),'RETROGRADE');
+    assert.equal(brandingTitle('QIDI Q2C'),'QIDI Q2C');
+    assert.equal(validateRemote({version:1,settings:{title:'RETRO CNC PANEL'}}).title,'RETROGRADE');
+});

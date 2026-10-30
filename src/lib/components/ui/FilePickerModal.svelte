@@ -1,7 +1,7 @@
 <script>
     import { dialog } from "../../dialog.js";
     import { createEventDispatcher, onMount, onDestroy } from "svelte";
-    import CncButton from "./CncButton.svelte";
+    import ControlButton from "./ControlButton.svelte";
     import ConfirmDialog from "./ConfirmDialog.svelte";
     import InputDialog from "./InputDialog.svelte";
     import { send, connectionState, getConnectionGeneration, onNotification } from "../../../stores/websocket.js";
@@ -695,10 +695,10 @@
                         on:change={onFileInputChange}
                         style="display: none;"
                     />
-                    <CncButton variant="standard" on:click={handleNewFolder}>
+                    <ControlButton variant="standard" on:click={handleNewFolder}>
                         NEW FOLDER
-                    </CncButton>
-                    <CncButton
+                    </ControlButton>
+                    <ControlButton
                         variant="action"
                         on:click={startPrint}
                         disabled={!selectedItem ||
@@ -706,29 +706,29 @@
                             !canStartPrint}
                     >
                         {isPrinting || isPaused ? "BUSY" : "PRINT"}
-                    </CncButton>
+                    </ControlButton>
 
-                    <CncButton
+                    <ControlButton
                         variant="standard"
                         disabled={!selectedItem || selectedInUse}
                         on:click={handleRename}
                     >
                         RENAME
-                    </CncButton>
-                    <CncButton
+                    </ControlButton>
+                    <ControlButton
                         variant="standard"
                         disabled={!selectedItem || selectedInUse}
                         on:click={handleMove}
                     >
                         MOVE
-                    </CncButton>
-                    <CncButton
+                    </ControlButton>
+                    <ControlButton
                         variant="danger"
                         disabled={!selectedItem || selectedInUse}
                         on:click={handleDelete}
                     >
                         DELETE
-                    </CncButton>
+                    </ControlButton>
                 </div>
             </div>
         </div>

@@ -25,7 +25,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
 .estimate-source,.extrusion-hint { color:#a1aca4; font-size:12px; margin-top:8px; }
 
 [data-theme=flight] .readout-value { font-family:var(--numeric-font); font-variant-numeric:tabular-nums; text-shadow:none; font-size:28px; }
-[data-theme=flight] .cnc-button { padding:12px; font-family:var(--numeric-font); font-size:15px; background:#17251c; border-color:#3d5747; }
+[data-theme=flight] .control-button { padding:12px; font-family:var(--numeric-font); font-size:15px; background:#17251c; border-color:#3d5747; }
 [data-theme=flight] .gauge-label { font-family:var(--numeric-font); color:#afc4b6; }
 .value-box { background:#080c09; border:1px solid #405447; padding:6px; width:84px; min-width:0; }
 @media(max-width:650px) {

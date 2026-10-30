@@ -1,7 +1,7 @@
 <script>
     import PanelModule from "../ui/PanelModule.svelte";
     import RetroSlider from "../ui/RetroSlider.svelte";
-    import CncButton from "../ui/CncButton.svelte";
+    import ControlButton from "../ui/ControlButton.svelte";
     import {
         machineState,
         setActiveExtruder,
@@ -147,14 +147,14 @@
     </div>
 
     <div class="action-buttons">
-        <CncButton variant="action" disabled={manualDisabled} on:click={retract}>RETRACT</CncButton>
-        <CncButton variant="action" disabled={manualDisabled} on:click={extrude}>EXTRUDE</CncButton>
+        <ControlButton variant="action" disabled={manualDisabled} on:click={retract}>RETRACT</ControlButton>
+        <ControlButton variant="action" disabled={manualDisabled} on:click={extrude}>EXTRUDE</ControlButton>
     </div>
 
     {#if cold}<p class="extrusion-hint">Heat the active extruder to enable manual extrusion.</p>{/if}
     <div class="action-buttons filament-actions">
-        <CncButton variant="action" disabled={["printing","paused"].includes($machineState.printStatsState)} on:click={unloadFilament}>UNLOAD</CncButton>
-        <CncButton variant="action" disabled={["printing","paused"].includes($machineState.printStatsState)} on:click={loadFilament}>LOAD</CncButton>
+        <ControlButton variant="action" disabled={["printing","paused"].includes($machineState.printStatsState)} on:click={unloadFilament}>UNLOAD</ControlButton>
+        <ControlButton variant="action" disabled={["printing","paused"].includes($machineState.printStatsState)} on:click={loadFilament}>LOAD</ControlButton>
     </div>
 </PanelModule>
 
@@ -172,7 +172,7 @@
         margin-bottom: 0;
     }
 
-    .filament-actions :global(.cnc-button.action) {
+    .filament-actions :global(.control-button.action) {
         background: linear-gradient(180deg, #333 0%, #222 100%);
         border-color: #444;
         box-shadow: 0 4px 0 #111;
