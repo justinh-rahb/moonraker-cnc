@@ -4,8 +4,11 @@
     import { emergencyStop } from "../../../stores/machineStore.js";
     import { configStore } from "../../../stores/configStore.js";
     import { currentPowerDevice, togglePower } from "../../../stores/powerStore.js";
-    import { filePickerOpen, settingsOpen } from "../../../stores/uiStore.js";
+    import { filePickerOpen, settingsOpen, hostsOpen, historyOpen } from "../../../stores/uiStore.js";
+    import { connectionState } from "../../../stores/websocket.js";
+    export let editing = false;
     let confirmPowerOpen = false;
+    $: if ($connectionState !== "connected") confirmPowerOpen = false;
     let powerAction = "";
 
     const handlePowerClick = () => {
@@ -47,9 +50,20 @@
 <div class="panel-header">
     <div class="machine-title">{$configStore.title}</div>
     <div class="header-controls">
+        <button class="settings-btn" class:layout-active={editing} aria-label={editing ? 'Lock panel layout' : 'Arrange panels'} title={editing ? 'Lock panel layout' : 'Arrange panels'} aria-pressed={editing} on:click={() => editing = !editing}>
+            <svg class="icon-layout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+        </button>
+        <button class="settings-btn" title="Hosts" aria-label="Hosts" on:click={() => $hostsOpen = true}>
+            <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="6" rx="1"/><rect x="3" y="15" width="18" height="6" rx="1"/><path d="M7 6h.01M7 18h.01M12 9v6"/></svg>
+        </button>
+        <button class="settings-btn" title="History" aria-label="History" on:click={() => { $settingsOpen = false; $filePickerOpen = false; $historyOpen = true; }}>
+            <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.5 7M3 4v7h7M12 7v5l3 2"/></svg>
+        </button>
         <button
             class="settings-btn"
-            on:click={() => ($filePickerOpen = true)}
+            on:click={() => ($settingsOpen = false, $historyOpen = false, $filePickerOpen = true)}
             title="Files"
         >
             <svg class="icon-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -58,7 +72,7 @@
         </button>
         <button
             class="settings-btn"
-            on:click={() => ($settingsOpen = true)}
+            on:click={() => ($filePickerOpen = false, $historyOpen = false, $settingsOpen = true)}
             title="Settings"
         >
             <svg class="icon-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -106,7 +120,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
         padding: 20px;
         background: linear-gradient(180deg, #0a0a0a 0%, #151515 100%);
         border: 3px solid #333;
@@ -124,8 +138,17 @@
 
     .header-controls {
         display: flex;
-        gap: 15px;
+        gap: 10px;
         align-items: center;
+    }
+
+    .header-controls > button {
+        height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        padding-block: 0;
     }
 
     .power-btn {
@@ -303,6 +326,10 @@
         0%, 100% { opacity: 1; transform: scale(1); }
         50% { opacity: 0.8; transform: scale(1.1); }
     }
+
+    .header-icon { width:24px; height:24px; }
+    .icon-layout { width:24px; height:24px; }
+    .settings-btn.layout-active { color:var(--retro-green); border-color:var(--retro-green); }
 
     .icon-folder {
         width: 24px;

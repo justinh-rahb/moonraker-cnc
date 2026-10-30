@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { send } from './websocket.js';
+import { send, getConnectionGeneration, connectionState } from './websocket.js';
 import { notificationStore } from './notificationStore.js';
 
 // Store for available cameras from Moonraker
@@ -11,13 +11,15 @@ export const isFetchingCameras = writable(false);
  * Calls server.webcams.list endpoint
  */
 export async function fetchMoonrakerCameras() {
+    const generation = getConnectionGeneration();
     isFetchingCameras.set(true);
     
     try {
         const response = await send('server.webcams.list', {});
         
-        if (response?.result?.webcams) {
-            const cameras = response.result.webcams.map(cam => ({
+        if (generation !== getConnectionGeneration()) return [];
+        if (response?.webcams) {
+            const cameras = response.webcams.map(cam => ({
                 uid: cam.uid || cam.name,
                 name: cam.name || 'Unknown Camera',
                 stream_url: cam.stream_url || cam.urlStream || '',
@@ -39,6 +41,7 @@ export async function fetchMoonrakerCameras() {
             return [];
         }
     } catch (error) {
+        if (generation !== getConnectionGeneration()) return [];
         console.error('Failed to fetch cameras from Moonraker:', error);
         notificationStore.addError(
             error?.message || 'Failed to fetch cameras from Moonraker'
@@ -46,7 +49,7 @@ export async function fetchMoonrakerCameras() {
         availableCameras.set([]);
         return [];
     } finally {
-        isFetchingCameras.set(false);
+        if (generation === getConnectionGeneration()) isFetchingCameras.set(false);
     }
 }
 
@@ -56,3 +59,5 @@ export async function fetchMoonrakerCameras() {
 export function clearAvailableCameras() {
     availableCameras.set([]);
 }
+
+connectionState.subscribe(state => { if (state !== 'connected') { availableCameras.set([]); isFetchingCameras.set(false); } });

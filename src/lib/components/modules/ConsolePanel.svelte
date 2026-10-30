@@ -142,7 +142,7 @@
     };
 </script>
 
-<PanelModule title="CONSOLE">
+<PanelModule requiresReady={false} title="CONSOLE">
     <div class="console-container">
         <!-- Input at top if newest first -->
         {#if newestFirst}

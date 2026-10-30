@@ -1,9 +1,16 @@
-# Retro CNC Panel
+# Retrograde
 
-A retro-styled, reactive web interface for controlling 3D printers and CNC machines running Klipper/Moonraker. Built with Svelte for a snappy, responsive experience with a distinct 1980s terminal aesthetic.
+A Klipper/Moonraker frontend with a restrained, science-fiction control-interface aesthetic. The v2 Flight theme is the default: clear numeric readouts, compact controls, and a green/orange palette. Built with Svelte.
 
-![Retro CNC Panel Home](docs/screenshot-1.png)
-![Retro CNC Panel Config](docs/screenshot-2.png)
+## Screenshots
+
+### Dashboard · v2 Flight
+
+![Retrograde v2 Flight dashboard with live camera, printer controls and temperatures](docs/screenshot-1.jpg)
+
+### Files and print previews
+
+![Retrograde file browser with G-code metadata and thumbnail preview](docs/screenshot-2.jpg)
 
 ## Features
 
@@ -63,14 +70,15 @@ A retro-styled, reactive web interface for controlling 3D printers and CNC machi
 - **Orientation Controls**: Flip horizontal/vertical and rotate (0°, 90°, 180°, 270°)
 - **Aspect Ratio Options**: Support for 16:9, 4:3, 1:1, and 21:9 ratios
 - **FPS Counter**: Optional live FPS overlay per camera
-- **Configurable Refresh Rate**: Per-camera target refresh rate settings
+- **Continuous MJPEG**: A worker parses and decodes a persistent stream; bounded frame queues discard stale frames rather than accumulating latency
+- **Configurable Display Rate**: Per-camera rendering limit (new cameras default to 30 FPS; existing limits are preserved)
 
 ### ⚙️ Customization
 - **Customizable Macro Panels**: Create, edit, delete, and reorder macro panels
 - **Unlimited Macros**: Add as many macros as needed with custom labels, G-code, and colors
 - **Panel Reordering**: Drag and organize panels to your preference
 - **Custom Panel Title**: Rename the interface for your machine
-- **Persistent Settings**: Auto-save all settings to localStorage
+- **Persistent Settings**: Per-printer settings and UX preferences in Moonraker, with a local cache for offline startup
 - **Settings Import/Export**: Backup and restore all settings via JSON file
 - **Autoconnect**: Optional automatic connection on page load
 - **Version Information**: Build version and commit hash displayed in Settings with GitHub links
@@ -82,12 +90,10 @@ A retro-styled, reactive web interface for controlling 3D printers and CNC machi
 - **Confirmation Dialogs**: Optional confirmations for Pause, Cancel, and Start Print actions
 - **Power Lock Protection**: Respects `locked_while_printing` flag to prevent accidental power-off
 
-### 🎨 Retro Aesthetic
-- **CRT Scanline Effect**: Authentic terminal appearance
-- **Glowing Green Displays**: Classic monochrome look
-- **Tactile Button Feedback**: Shadow-based 3D press effects
-- **Orbitron Font**: Retro-futuristic typography
-- **Color-Coded Controls**: Orange accents, cyan system controls, red danger buttons
+### 🎨 Interface Themes
+- **v2 Flight (default)**: Restrained technical panels, tabular numeric readouts, and a green/orange palette
+- **v1 Retro (optional)**: Original CRT styling, glowing displays, and tactile controls
+- **Camera Scanlines**: Optional per-camera overlay, available in either theme
 
 ## Installation
 
@@ -96,23 +102,23 @@ A retro-styled, reactive web interface for controlling 3D printers and CNC machi
 The classic Klipper ecosystem approach - pipe curl to bash:
 
 ```bash
-curl -sSL https://justinh-rahb.github.io/moonraker-cnc/install.sh | bash
+curl -sSL https://justinh-rahb.github.io/retrograde/install.sh | bash
 ```
 
 This will:
 - Download the latest release
-- Install to `~/retro-cnc-panel`
+- Install to `~/retrograde`
 - Optionally configure nginx to serve the panel
 
 ### Manual Installation
 
-1. Download the latest release from the [Releases](https://github.com/justinh-rahb/moonraker-cnc/releases) page
+1. Download the latest release from the [Releases](https://github.com/justinh-rahb/retrograde/releases) page
 2. Extract the zip to your desired location
 3. Serve the files with any web server
 
 Example with Python:
 ```bash
-cd ~/retro-cnc-panel
+cd ~/retrograde
 python3 -m http.server 8080
 ```
 
@@ -121,13 +127,13 @@ python3 -m http.server 8080
 Simply run the installer again - it will backup your existing installation and download the latest version:
 
 ```bash
-curl -sSL https://justinh-rahb.github.io/moonraker-cnc/install.sh | bash
+curl -sSL https://justinh-rahb.github.io/retrograde/install.sh | bash
 ```
 
 ### Uninstalling
 
 ```bash
-curl -sSL https://justinh-rahb.github.io/moonraker-cnc/install.sh | bash -s -- --uninstall
+curl -sSL https://justinh-rahb.github.io/retrograde/install.sh | bash -s -- --uninstall
 ```
 
 ## Development
@@ -146,6 +152,44 @@ npm run build
 ```
 
 Open your browser to `http://localhost:5173`
+
+Retrograde was previously named Retro CNC Panel. Existing settings and Moonraker database keys retain their legacy identifiers for compatibility. The installer reuses existing installation directories and accepts older release archive names. Repository and documentation URLs remain unchanged until the repository is renamed.
+
+## Host profiles, shared settings and layouts
+
+Use **HOSTS** to add, select, edit or remove Moonraker connections. Each printer keeps its own macros, cameras, presets, console preferences and dashboard layout. Settings and UX preferences synchronize through that printer's Moonraker database in the application's own `retro_cnc_panel` namespace. Local storage caches settings for offline startup and keeps the browser's connection list. A sync indicator reports unavailable storage or conflicting edits from another browser.
+
+**ARRANGE PANELS** enables drag handles and keyboard-accessible move buttons; **LOCK LAYOUT** hides them. Phone and desktop arrangements are saved separately. **HISTORY** opens recorded Moonraker jobs. File browsing includes filtering, metadata previews, downloads and sequential multiple-file uploads. Slider controls support numeric entry and a reset button. Temperature/fan resets turn the device off; speed/extrusion factors reset to 100%; tuning resets restore Klipper's configured values.
+
+Existing single-printer JSON exports still import. Importing another host adds/selects its profile. **EXPORT CONFIG** exports the active host; **EXPORT ALL HOSTS** backs up the workspace. The old v1 local-storage entry is retained during migration.
+
+### Build defaults and internal themes
+
+Supply a native settings export as first-run defaults:
+
+```sh
+DEFAULT_SETTINGS_FILE=./printer-defaults.json APP_THEME=flight npm run build
+```
+
+`APP_THEME` accepts `flight` (v2, default) or `retro` (v1, opt-in). To build the original theme, use `APP_THEME=retro npm run build`. Theme selection is internal and intentionally has no settings toggle. Defaults only fill missing fields in saved profiles; existing values take precedence. A versioned workspace export can also provide defaults for its active host.
+
+For Docker, put the export in the build context:
+
+```sh
+docker build --build-arg DEFAULT_SETTINGS_FILE=printer-defaults.json --build-arg APP_THEME=flight -t retrograde .
+docker run --rm -p 1337:80 retrograde
+```
+
+Build defaults are embedded in public JavaScript; use UI configuration without credentials. No settings export from a developer's Downloads folder is included in the repository.
+
+For read-only acceptance testing against a real printer:
+
+```sh
+VITE_READ_ONLY=true DEFAULT_SETTINGS_FILE=./printer-defaults.json npm run dev
+npm test
+```
+
+This validation mode blocks hardware, file and database writes from the frontend. Run a normal build for everyday control. Review the [audit and validation record](docs/frontend-audit.md) for remaining Mainsail differences and hardware acceptance limits.
 
 ## Initial Setup
 
@@ -195,7 +239,9 @@ Configure load/unload operations:
 - **Multiple Cameras**: Add, configure, and enable/disable cameras
 - **Stream URLs**: Configure MJPEG stream and snapshot URLs per camera
 - **Orientation**: Flip and rotation controls per camera
-- **Refresh Rate**: Target FPS for adaptive MJPEG streams
+- **Display Rate**: Maximum rendered FPS for worker-backed MJPEG streams; this does not reduce source bandwidth
+- **Visibility**: Camera traffic stops when collapsed, offscreen, in a hidden tab, or removed. Streams reconnect when visible again.
+- **Compatibility**: Browsers without worker image decoding, or cameras that block cross-origin fetches, use a persistent native MJPEG image; FPS reporting and display limiting are unavailable in that fallback. Relative camera URLs use the same-host app proxy when available.
 
 ### Dial Gauge Settings
 - **Max Rates**: Configure maximum speed and flow values
@@ -313,3 +359,6 @@ MIT
 - Inspired by classic 1980s CRT terminal interfaces
 - Built for Klipper/Moonraker ecosystem
 - Fonts: Orbitron, Share Tech Mono (Google Fonts)
+
+
+Toolhead coordinate readouts accept absolute machine positions: click X/Y/Z, enter a value, and press Enter or the checkmark. Escape or × cancels without moving. The app refreshes homing, job state, travel limits and G-code offsets before dispatch; it restores the prior coordinate/feed modes afterward. Home buttons indicate homing with a checkmark and illuminated border. M-OFF reports actual stepper-enable telemetry through its state icon and tooltip. Z pictograms show increasing/decreasing nozzle–bed separation.

@@ -1,10 +1,14 @@
 <script>
+    $: jobActive = ["printing","paused"].includes($machineState.printStatsState);
+    import { tick } from 'svelte';
+    import { motorEnableState } from '../../motion.js';
     import PanelModule from "../ui/PanelModule.svelte";
-    import CncButton from "../ui/CncButton.svelte";
+    import ControlButton from "../ui/ControlButton.svelte";
     import RetroSlider from "../ui/RetroSlider.svelte";
     import {
         machineState,
         jog,
+        moveAbsolute,
         setJogDistance,
         setZOffsetIncrement,
         adjustZOffset,
@@ -16,6 +20,28 @@
         setSpeedFactor,
     } from "../../../stores/machineStore.js";
 
+    let axisButtons = {};
+    let editingAxis = '';
+    let targetPosition;
+    let moving = false;
+    $: controlsLocked = jobActive || moving;
+    $: if (jobActive || !$machineState.isReady) editingAxis = '';
+    $: motorState = motorEnableState($machineState.stepperStates);
+    $: motorDescription = {on:'Motors enabled',off:'Motors disabled',mixed:'Some motors enabled',unknown:'Motor state unavailable'}[motorState];
+    $: allHomed = ['x','y','z'].every(axis => $machineState.homedAxes.includes(axis));
+    $: homeDescriptions = Object.fromEntries(['x','y','z'].map(axis => [axis, `Home ${axis.toUpperCase()} — ${$machineState.homedAxes.includes(axis) ? 'homed' : 'not homed'}`]));
+    function editPosition(axis) { editingAxis = axis; targetPosition = $machineState.position[axis]; }
+    function focusPosition(node) { queueMicrotask(() => { node.focus(); node.select(); }); }
+    async function cancelPosition() {
+        const axis = editingAxis; editingAxis = '';
+        await tick(); axisButtons[axis]?.focus();
+    }
+    async function commitPosition(axis) {
+        if (moving) return;
+        moving = true;
+        try { if (await moveAbsolute(axis,targetPosition)) { moving = false; await cancelPosition(); } }
+        finally { moving = false; }
+    }
     $: pos = $machineState.position;
     $: currentDist = $machineState.jogDistance;
     $: currentZOffsetIncrement = $machineState.zOffsetIncrement;
@@ -34,46 +60,66 @@
     <!-- Axis Readout -->
     <div class="led-display">
         <div class="axis-readout">
+            {#each ['x','y','z'] as axis, index}
             <div class="axis">
-                <div class="axis-label">X</div>
-                <div class="axis-value">
-                    {typeof pos.x === "number" ? pos.x.toFixed(2) : "0.00"}
-                </div>
+                <div class="axis-label">{axis.toUpperCase()}</div>
+                {#if editingAxis === axis}
+                    <form class="axis-editor" on:submit|preventDefault={() => commitPosition(axis)}>
+                        <input type="number" step="any" bind:value={targetPosition} use:focusPosition
+                            aria-label={axis.toUpperCase() + ' absolute position in millimetres'}
+                            min={$machineState.axisMinimum?.[index]} max={$machineState.axisMaximum?.[index]}
+                            disabled={moving} required on:keydown={e => {if(e.key === 'Escape') {e.preventDefault(); cancelPosition();}}} />
+                        <div class="axis-editor-actions">
+                            <button type="submit" disabled={moving} aria-label={'Move ' + axis.toUpperCase() + ' to entered position'} title="Move to position">✓</button>
+                            <button type="button" disabled={moving} aria-label="Cancel position entry" title="Cancel" on:click={cancelPosition}>×</button>
+                        </div>
+                    </form>
+                {:else}
+                    <button class="axis-value" bind:this={axisButtons[axis]} on:click={() => editPosition(axis)}
+                        disabled={controlsLocked || !$machineState.homedAxes.includes(axis)}
+                        aria-label={'Set ' + axis.toUpperCase() + ' absolute position'}
+                        title={$machineState.homedAxes.includes(axis) ? 'Enter absolute position (mm)' : 'Home this axis to enter a position'}>
+                        {typeof pos[axis] === 'number' ? pos[axis].toFixed(axis === 'z' ? 3 : 2) : '—'}
+                    </button>
+                {/if}
             </div>
-            <div class="axis">
-                <div class="axis-label">Y</div>
-                <div class="axis-value">
-                    {typeof pos.y === "number" ? pos.y.toFixed(2) : "0.00"}
-                </div>
-            </div>
-            <div class="axis">
-                <div class="axis-label">Z</div>
-                <div class="axis-value">
-                    {typeof pos.z === "number" ? pos.z.toFixed(3) : "0.000"}
-                </div>
-            </div>
+            {/each}
         </div>
     </div>
 
     <!-- Jog Controls -->
     <div class="control-pad">
-        <CncButton variant="action" on:click={homeX}>X</CncButton>
-        <CncButton variant="arrow" on:click={() => jog("y", 1)}>Y+</CncButton>
-        <CncButton variant="action" on:click={homeY}>Y</CncButton>
+        <ControlButton variant="action" disabled={controlsLocked} indicator={$machineState.homedAxes.includes('x') ? 'on' : 'off'} title={homeDescriptions.x} ariaLabel={homeDescriptions.x} on:click={homeX}>
+            <span class="home-mark" aria-hidden="true">{$machineState.homedAxes.includes('x') ? '✓' : '○'}</span> X
+        </ControlButton>
+        <ControlButton variant="arrow" disabled={controlsLocked || !$machineState.homedAxes.includes("y")} on:click={() => jog("y", 1)}>Y+</ControlButton>
+        <ControlButton variant="action" disabled={controlsLocked} indicator={$machineState.homedAxes.includes('y') ? 'on' : 'off'} title={homeDescriptions.y} ariaLabel={homeDescriptions.y} on:click={homeY}>
+            <span class="home-mark" aria-hidden="true">{$machineState.homedAxes.includes('y') ? '✓' : '○'}</span> Y
+        </ControlButton>
 
-        <CncButton variant="arrow" on:click={() => jog("x", -1)}>X-</CncButton>
-        <CncButton variant="home" on:click={home}>ALL</CncButton>
-        <CncButton variant="arrow" on:click={() => jog("x", 1)}>X+</CncButton>
+        <ControlButton variant="arrow" disabled={controlsLocked || !$machineState.homedAxes.includes("x")} on:click={() => jog("x", -1)}>X-</ControlButton>
+        <ControlButton variant="home" disabled={controlsLocked} indicator={allHomed ? 'on' : $machineState.homedAxes ? 'mixed' : 'off'} title={'Home all axes — ' + ($machineState.homedAxes.toUpperCase() || 'none') + ' homed'} on:click={home}>
+            <span class="home-mark" aria-hidden="true">{allHomed ? '✓' : $machineState.homedAxes ? '◐' : '○'}</span> ALL
+        </ControlButton>
+        <ControlButton variant="arrow" disabled={controlsLocked || !$machineState.homedAxes.includes("x")} on:click={() => jog("x", 1)}>X+</ControlButton>
 
-        <CncButton variant="action" on:click={homeZ}>Z</CncButton>
-        <CncButton variant="arrow" on:click={() => jog("y", -1)}>Y-</CncButton>
-        <CncButton variant="danger" on:click={motorsOff}>M-OFF</CncButton>
+        <ControlButton variant="action" disabled={controlsLocked} indicator={$machineState.homedAxes.includes('z') ? 'on' : 'off'} title={homeDescriptions.z} ariaLabel={homeDescriptions.z} on:click={homeZ}>
+            <span class="home-mark" aria-hidden="true">{$machineState.homedAxes.includes('z') ? '✓' : '○'}</span> Z
+        </ControlButton>
+        <ControlButton variant="arrow" disabled={controlsLocked || !$machineState.homedAxes.includes("y")} on:click={() => jog("y", -1)}>Y-</ControlButton>
+        <ControlButton variant="danger" indicator={motorState} disabled={controlsLocked || motorState === 'off'} title={'Disable motors — ' + motorDescription} ariaLabel={'Disable motors — ' + motorDescription} on:click={motorsOff}>
+            <span class="motor-mark" class:enabled={motorState === 'on'} class:mixed={motorState === 'mixed'} aria-hidden="true">{motorState === 'unknown' ? '?' : motorState === 'off' ? '○' : motorState === 'mixed' ? '◐' : '●'}</span> M-OFF
+        </ControlButton>
     </div>
 
     <!-- Z Controls -->
     <div class="z-controls">
-        <CncButton variant="z-up" on:click={() => jog("z", 1)}>Z+</CncButton>
-        <CncButton variant="z-down" on:click={() => jog("z", -1)}>Z-</CncButton>
+        <ControlButton variant="z-up" disabled={controlsLocked || !$machineState.homedAxes.includes("z")} title="Z+: increase nozzle–bed gap" ariaLabel="Z plus: increase nozzle–bed gap" on:click={() => jog("z", 1)}>
+            <svg class="z-direction" viewBox="0 0 44 36" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 31h32M14 4h16l-4 7h-8zM22 14v13m-4-9 4-4 4 4m-8 5 4 4 4-4"/></svg>Z+
+        </ControlButton>
+        <ControlButton variant="z-down" disabled={controlsLocked || !$machineState.homedAxes.includes("z")} title="Z−: decrease nozzle–bed gap" ariaLabel="Z minus: decrease nozzle–bed gap" on:click={() => jog("z", -1)}>
+            <svg class="z-direction" viewBox="0 0 44 36" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 31h32M14 4h16l-4 7h-8zM22 14v13m-4-13 4 4 4-4m-8 13 4-4 4 4"/></svg>Z−
+        </ControlButton>
     </div>
 
     <!-- Distance Select -->
@@ -99,11 +145,11 @@
         </div>
 
         <div class="z-offset-controls">
-            <CncButton variant="arrow" on:click={() => adjustZOffset(1)}
-                >+</CncButton
+            <ControlButton variant="arrow" on:click={() => adjustZOffset(1)}
+                >+</ControlButton
             >
-            <CncButton variant="arrow" on:click={() => adjustZOffset(-1)}
-                >-</CncButton
+            <ControlButton variant="arrow" on:click={() => adjustZOffset(-1)}
+                >-</ControlButton
             >
         </div>
 
@@ -174,12 +220,24 @@
         margin-bottom: 8px;
     }
 
+    .axis-editor input { width:100%; min-width:0; box-sizing:border-box; padding:6px 2px; font:inherit; font-size:24px; font-family:var(--numeric-font); color:var(--retro-green); background:#080d0b; border:1px solid var(--retro-green); text-align:center; }
+    .axis-editor-actions { display:flex; gap:4px; margin-top:4px; }
+    .axis-editor-actions button { flex:1; min-height:30px; font-size:18px; cursor:pointer; background:#17251c; color:var(--retro-green); border:1px solid var(--border-color); }
+    .home-mark,.motor-mark { display:inline-block; min-width:1em; font-family:var(--numeric-font); }
+    .motor-mark { color:#91a297; } .motor-mark.enabled { color:var(--retro-green); } .motor-mark.mixed { color:var(--retro-orange); }
+    .z-direction { display:inline-block; width:38px; height:32px; vertical-align:middle; margin-right:10px; }
+    .axis { min-width:0; }
     .axis-value {
+        width:100%; padding:4px 0; border:1px solid transparent; background:transparent; font-family:inherit; cursor:pointer;
+
         font-size: 32px;
         color: var(--retro-green);
         font-weight: 700;
         letter-spacing: 3px;
     }
+
+    .axis-value:hover:not(:disabled) { border-color:var(--retro-green-dim); }
+    .axis-value:disabled { opacity:.6; cursor:default; }
 
     .control-pad {
         display: grid;

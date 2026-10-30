@@ -1,10 +1,10 @@
 #!/bin/bash
-# Retro CNC Panel Installer
-# Usage: curl -sSL https://justinh-rahb.github.io/moonraker-cnc/install.sh | bash
+# Retrograde Installer
+# Usage: curl -sSL https://justinh-rahb.github.io/retrograde/install.sh | bash
 
 set -e
 
-REPO="justinh-rahb/moonraker-cnc"
+REPO="justinh-rahb/retrograde"
 
 # Determine installation directory (handle sudo execution)
 if [ -n "$SUDO_USER" ]; then
@@ -13,15 +13,23 @@ if [ -n "$SUDO_USER" ]; then
     else
         USER_HOME=$(eval echo "~$SUDO_USER")
     fi
-    DEFAULT_DIR="${USER_HOME}/retro-cnc-panel"
+    DEFAULT_DIR="${USER_HOME}/retrograde"
 else
-    DEFAULT_DIR="${HOME}/retro-cnc-panel"
+    DEFAULT_DIR="${HOME}/retrograde"
 fi
 
+# Reuse an existing installation when upgrading under the former name.
+LEGACY_DIR="${DEFAULT_DIR%/retrograde}/retro-cnc-panel"
+if [ ! -d "$DEFAULT_DIR" ] && [ -d "$LEGACY_DIR" ]; then
+    DEFAULT_DIR="$LEGACY_DIR"
+fi
 INSTALL_DIR="${INSTALL_PATH:-$DEFAULT_DIR}"
 NGINX_AVAILABLE="/etc/nginx/sites-available"
 NGINX_ENABLED="/etc/nginx/sites-enabled"
-NGINX_CONF="retro-cnc-panel"
+NGINX_CONF="retrograde"
+if [ -f "${NGINX_AVAILABLE}/retro-cnc-panel" ]; then
+    NGINX_CONF="retro-cnc-panel"
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -33,7 +41,7 @@ NC='\033[0m' # No Color
 print_header() {
     echo -e "${CYAN}"
     echo "╔═══════════════════════════════════════════╗"
-    echo "║       RETRO CNC PANEL INSTALLER           ║"
+    echo "║           RETROGRADE INSTALLER            ║"
     echo "╚═══════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -90,16 +98,20 @@ get_latest_version() {
 }
 
 download_and_install() {
-    print_info "Downloading Retro CNC Panel ${VERSION_NUM}..."
+    print_info "Downloading Retrograde ${VERSION_NUM}..."
 
-    local download_url="https://github.com/${REPO}/releases/download/${LATEST_VERSION}/retro-cnc-panel-${VERSION_NUM}.zip"
+    local download_url="https://github.com/${REPO}/releases/download/${LATEST_VERSION}/retrograde-${VERSION_NUM}.zip"
     local temp_dir=$(mktemp -d)
-    local zip_file="${temp_dir}/retro-cnc-panel.zip"
+    local zip_file="${temp_dir}/retrograde.zip"
 
-    if ! curl -sSL -o "$zip_file" "$download_url"; then
-        print_error "Failed to download release"
-        rm -rf "$temp_dir"
-        exit 1
+    if ! curl -fsSL -o "$zip_file" "$download_url"; then
+        # Older releases keep their original archive names.
+        local legacy_url="https://github.com/${REPO}/releases/download/${LATEST_VERSION}/retro-cnc-panel-${VERSION_NUM}.zip"
+        if ! curl -fsSL -o "$zip_file" "$legacy_url"; then
+            print_error "Failed to download release"
+            rm -rf "$temp_dir"
+            exit 1
+        fi
     fi
 
     print_success "Downloaded successfully"
@@ -134,7 +146,7 @@ setup_serving() {
 
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
             use_nginx=true
-            read -p "Enter port number for Retro CNC Panel [8080]: " port < /dev/tty
+            read -p "Enter port number for Retrograde [8080]: " port < /dev/tty
             port=${port:-8080}
 
             print_info "Creating nginx configuration..."
@@ -171,7 +183,7 @@ EOF
                 sudo systemctl reload nginx
                 print_success "nginx configured and reloaded"
                 echo ""
-                print_success "✓ Retro CNC Panel is now available at: http://localhost:${port}"
+                print_success "✓ Retrograde is now available at: http://localhost:${port}"
                 echo ""
                 return
             else
@@ -207,7 +219,7 @@ EOF
         if kill -0 $SERVER_PID 2>/dev/null; then
             print_success "File server started (PID: ${SERVER_PID})"
             echo ""
-            print_success "✓ Retro CNC Panel is now available at: http://localhost:${port}"
+            print_success "✓ Retrograde is now available at: http://localhost:${port}"
             echo ""
             print_info "To stop the server: kill ${SERVER_PID}"
             print_info "To restart: cd ${INSTALL_DIR} && python3 -m http.server ${port} &"
@@ -234,7 +246,7 @@ print_footer() {
 
 uninstall() {
     print_header
-    print_info "Uninstalling Retro CNC Panel..."
+    print_info "Uninstalling Retrograde..."
 
     # Kill any running Python servers
     pkill -f "http.server.*${INSTALL_DIR}" 2>/dev/null || true

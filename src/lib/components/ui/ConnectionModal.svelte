@@ -1,4 +1,6 @@
 <script>
+    import { get } from "svelte/store";
+    import { dialog } from "../../dialog.js";
     import {
         connectionState,
         lastError,
@@ -8,16 +10,20 @@
         configStore,
         updateServerConfig,
     } from "../../../stores/configStore.js";
-    import CncButton from "./CncButton.svelte";
-    import { onMount, onDestroy } from "svelte";
+    import { hostsOpen } from "../../../stores/uiStore.js";
+    import { serverUrl } from "../../config.js";
+    import ControlButton from "./ControlButton.svelte";
+    import { onDestroy } from "svelte";
 
     // Local state for inputs
     let ipAddress = window.location.hostname || "localhost";
     let port = "7125";
     let autoConnect = false;
+    let dismissed = false;
+    $: if (state === "connected") dismissed = true;
 
     // Load from configStore when valid
-    configStore.subscribe((val) => {
+    const unsubscribe = configStore.subscribe((val) => {
         if (val.server) {
             ipAddress = val.server.ip;
             port = val.server.port;
@@ -25,43 +31,35 @@
         }
     });
 
-    $: fullUrl = `${ipAddress}:${port}`;
     $: state = $connectionState;
     $: error = $lastError;
 
-    $: if (typeof document !== "undefined") {
-        document.body.style.overflow = state !== "connected" ? "hidden" : "";
-    }
+
 
     onDestroy(() => {
-        if (typeof document !== "undefined") {
-            document.body.style.overflow = "";
-        }
+        unsubscribe();
+
     });
 
     const handleConnect = () => {
         if (state === "connecting") return;
 
-        // Save config
-        updateServerConfig(ipAddress, port, autoConnect);
+        try {
+            updateServerConfig(ipAddress, port, autoConnect);
+            if (!["connecting","connected"].includes(get(connectionState))) connect(serverUrl($configStore.server));
+        } catch(e) { lastError.set(e.message); }
 
-        connect(fullUrl);
     };
 
     const handleKeydown = (e) => {
         if (e.key === "Enter") handleConnect();
     };
 
-    onMount(() => {
-        if (autoConnect) {
-            connect(fullUrl);
-        }
-    });
 </script>
 
-{#if state !== "connected"}
+{#if state !== "connected" && !dismissed}
     <div class="modal-overlay">
-        <div class="modal-window">
+        <div class="modal-window" use:dialog={{label: "Connection", close: () => dismissed = true}}>
             <div class="modal-header">▸ SYSTEM CONNECTION</div>
 
             <div class="modal-content">
@@ -104,12 +102,16 @@
                     </label>
                 </div>
 
+                <div class="secondary-actions">
+                    <ControlButton on:click={() => ($hostsOpen = true)}>MANAGE HOSTS</ControlButton>
+                    <ControlButton on:click={() => dismissed = true}>CONTINUE OFFLINE</ControlButton>
+                </div>
                 <div class="actions">
-                    <CncButton variant="action" on:click={handleConnect}>
+                    <ControlButton variant="action" disabled={state === "connecting"} on:click={handleConnect}>
                         {state === "connecting"
                             ? "CONNECTING..."
                             : "INITIATE UPLINK"}
-                    </CncButton>
+                    </ControlButton>
                 </div>
             </div>
         </div>
@@ -133,6 +135,10 @@
 
     .modal-window {
         width: 500px;
+        max-width:calc(100vw - 24px);
+        max-height:calc(100dvh - 24px);
+        overflow-y:auto;
+        box-sizing:border-box;
         background: var(--bg-module);
         border: 4px solid var(--border-color);
         box-shadow:
@@ -157,6 +163,10 @@
         flex-direction: column;
         gap: 20px;
     }
+
+    .secondary-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .secondary-actions :global(.control-button) { height:100%; padding:12px 8px; font-size:12px; line-height:1.4; }
+    @media(max-width:400px) { .secondary-actions { grid-template-columns:minmax(0,1fr); } }
 
     .status-line {
         font-family: "Share Tech Mono", monospace;

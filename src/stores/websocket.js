@@ -2,127 +2,154 @@ import { writable } from 'svelte/store';
 import { notificationStore } from './notificationStore.js';
 import { consoleStore } from './consoleStore.js';
 
-export const connectionState = writable('disconnected'); // disconnected, connecting, connected, error
+export const connectionState = writable('disconnected');
 export const lastError = writable(null);
-
-let socket = null;
+const listeners = new Set();
+let socket;
+let endpoint;
+let generation = 0;
 let requestId = 0;
-const pendingRequests = new Map();
-const eventListeners = new Set(); // Listeners for notify_* events
+let retries = 0;
+let reconnectTimer;
+let heartbeatTimer;
+let openingTimer;
+let desired = false;
+const pending = new Map();
+export const getConnectionGeneration = () => generation;
 
-export const connect = (url) => {
-    if (socket) {
-        socket.close();
-    }
-
-    connectionState.set('connecting');
-    lastError.set(null);
-
-    // Normalize URL
-    if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
-        url = `ws://${url}`;
-    }
-    // Append /websocket if not present
-    if (!url.endsWith('/websocket')) {
-        url = `${url.replace(/\/+$/, '')}/websocket`;
-    }
-
-    try {
-        socket = new WebSocket(url);
-    } catch (e) {
-        connectionState.set('error');
-        lastError.set(e.message);
-        return;
-    }
-
-    socket.onopen = () => {
+export function normalizeWebsocketUrl(input) {
+    const url = new URL(input.includes('://') ? input : `${globalThis.location?.protocol === 'https:' ? 'wss' : 'ws'}://${input}`);
+    url.protocol = ['https:', 'wss:'].includes(url.protocol) ? 'wss:' : 'ws:';
+    url.pathname = `${url.pathname.replace(/\/(websocket)?\/*$/, '').replace(/\/$/, '')}/websocket`;
+    return url.href;
+}
+function cleanup(message = 'Connection closed; request was not retried') {
+    clearTimeout(reconnectTimer);
+    clearInterval(heartbeatTimer);
+    clearTimeout(openingTimer);
+    for (const { reject, timer } of pending.values()) { clearTimeout(timer); reject(new Error(message)); }
+    pending.clear();
+    const previous = socket;
+    socket = undefined;
+    if (previous) { previous.onclose = previous.onmessage = previous.onopen = previous.onerror = null; previous.close(); }
+}
+function retry() {
+    if (!desired) return;
+    connectionState.set('reconnecting');
+    const delay = Math.min(30000, 1000 * 2 ** Math.min(retries++, 5)) + Math.random() * 300;
+    reconnectTimer = setTimeout(openSocket, delay);
+}
+function openSocket() {
+    cleanup();
+    const session = ++generation;
+    connectionState.set(retries ? 'reconnecting' : 'connecting');
+    let current;
+    try { current = new WebSocket(endpoint); socket = current; }
+    catch (error) { lastError.set(error.message); retry(); return; }
+    const currentSession = () => session === generation && socket === current;
+    openingTimer = setTimeout(() => { if (currentSession() && current.readyState !== 1) current.close(); }, 12000);
+    current.onopen = () => {
+        if (!currentSession()) return;
+        clearTimeout(openingTimer);
+        retries = 0;
+        lastError.set(null);
         connectionState.set('connected');
-        console.log('Connected to Moonraker at', url);
+        heartbeatTimer = setInterval(() => {
+            send('server.info', {}, { timeout: 10000, silent: true }).catch(() => {
+                if (currentSession()) current.close();
+            });
+        }, 20000);
     };
-
-    socket.onclose = () => {
-        connectionState.set('disconnected');
-        console.log('Disconnected from Moonraker');
-        socket = null;
-        // Optionally auto-reconnect logic could go here
+    current.onclose = () => {
+        if (!currentSession()) return;
+        clearTimeout(openingTimer);
+        generation++;
+        cleanup();
+        lastError.set('Connection interrupted. Reconnecting automatically…');
+        retry();
     };
-
-    socket.onerror = (err) => {
-        console.error('WebSocket Error:', err);
-        connectionState.set('error');
-        lastError.set('Connection failed');
-    };
-
-    socket.onmessage = (message) => {
-        try {
-            const data = JSON.parse(message.data);
-
-            // Handle Responses
-            if (data.id !== undefined && pendingRequests.has(data.id)) {
-                const { resolve, reject } = pendingRequests.get(data.id);
-                pendingRequests.delete(data.id);
-                if (data.error) {
-                    // Don't show notification for "Method not found" errors (e.g., optional plugins)
-                    if (data.error.code !== -32601) {
-                        notificationStore.addError(data.error);
-                    }
-                    reject(data.error);
-                } else {
-                    resolve(data.result);
-                }
-            }
-            // Handle Notifications (no ID)
-            else if (data.method) {
-                // Monitor for system-wide alerts
-                if (data.method === 'notify_klippy_shutdown') {
-                    notificationStore.setSystemStatus('shutdown');
-                } else if (data.method === 'notify_klippy_disconnected') {
-                     // Maybe treat disconnect same as shutdown/error?
-                     notificationStore.setSystemStatus('error');
-                } else if (data.method === 'notify_klippy_ready') {
-                    notificationStore.setSystemStatus('ready');
-                }
-                
-                eventListeners.forEach(listener => listener(data.method, data.params));
-            }
-        } catch (e) {
-            console.error('Error parsing message:', e);
+    current.onerror = () => { if (currentSession()) lastError.set('Unable to reach Moonraker'); };
+    current.onmessage = message => {
+        if (!currentSession()) return;
+        let data;
+        try { data = JSON.parse(message.data); } catch { return; }
+        if (data.id !== undefined && pending.has(data.id)) {
+            const request = pending.get(data.id);
+            clearTimeout(request.timer);
+            pending.delete(data.id);
+            if (data.error) {
+                if (!request.silent && data.error.code !== -32601) notificationStore.addError(data.error);
+                request.reject(data.error);
+            } else request.resolve(data.result);
+        } else if (data.method) {
+            if (data.method === 'notify_klippy_shutdown') notificationStore.setSystemStatus('shutdown');
+            if (data.method === 'notify_klippy_disconnected') notificationStore.setSystemStatus('error');
+            if (data.method === 'notify_klippy_ready') notificationStore.setSystemStatus('ready');
+            for (const listener of listeners) { try { listener(data.method, data.params); } catch (error) { console.error('Notification handler failed', error); } }
         }
     };
-};
-
-export const disconnect = () => {
-    if (socket) {
-        socket.close();
-    }
-};
-
-export const send = (method, params = {}) => {
-    return new Promise((resolve, reject) => {
-        if (!socket || socket.readyState !== WebSocket.OPEN) {
-            reject(new Error('Socket not connected'));
+}
+export function connect(url) {
+    try { endpoint = normalizeWebsocketUrl(url); }
+    catch (error) { lastError.set(error.message); return; }
+    desired = true;
+    retries = 0;
+    openSocket();
+}
+export function disconnect() {
+    desired = false;
+    generation++;
+    cleanup();
+    connectionState.set('disconnected');
+}
+export function send(method, params = {}, { timeout = 15000, silent = false } = {}) {
+    const promise = new Promise((resolve, reject) => {
+        if (import.meta.env?.VITE_READ_ONLY === 'true' && !/^(server\.(info|files\.(get_directory|metadata|list)|history\.(list|totals)|database\.(list|get_item)|webcams\.list)|printer\.(info|objects\.(list|query|subscribe))|machine\.(system_info|device_power\.(devices|status)))$/.test(method)) { reject(new Error('Hardware writes are disabled in this validation build')); return; }
+        if (!socket || socket.readyState !== 1) {
+            const error = new Error('Moonraker is disconnected. Reconnect before sending commands.');
+            if (!silent) notificationStore.addError(error);
+            reject(error);
             return;
         }
-
-        // Log G-code commands to console
-        if (method === 'printer.gcode.script' && params.script) {
-            consoleStore.addCommand(params.script);
-        }
-
         const id = ++requestId;
-        const payload = JSON.stringify({
-            jsonrpc: '2.0',
-            method,
-            params,
-            id
-        });
-
-        pendingRequests.set(id, { resolve, reject });
-        socket.send(payload);
+        const timer = setTimeout(() => {
+            pending.delete(id);
+            const error = new Error(`${method} timed out. Its outcome is unknown; refresh state before retrying.`);
+            if (!silent) notificationStore.addError(error);
+            reject(error);
+        }, timeout);
+        pending.set(id, { resolve, reject, timer, silent });
+        try {
+            socket.send(JSON.stringify({ jsonrpc: '2.0', method, params, id }));
+            if (method === 'printer.gcode.script' && params.script) consoleStore.addCommand(params.script);
+        } catch (error) { clearTimeout(timer); pending.delete(id); reject(error); }
     });
-};
+    // Event handlers can fire and forget; callers that await still receive rejection.
+    promise.catch(() => {});
+    return promise;
+}
+export const onNotification = callback => { listeners.add(callback); return () => listeners.delete(callback); };
 
-export const onNotification = (callback) => {
-    eventListeners.add(callback);
-    return () => eventListeners.delete(callback);
-};
+// A heartbeat detects half-open sockets after sleep; focus probes immediately.
+async function resume() {
+    if (!desired || globalThis.document?.visibilityState === 'hidden') return;
+    const session = generation;
+    if (socket?.readyState === 1) {
+        try { await send('server.info', {}, { timeout: 5000, silent: true }); }
+        catch { if (session === generation) openSocket(); }
+    } else openSocket();
+}
+if (typeof window !== 'undefined') {
+    window.addEventListener('online', resume);
+    window.addEventListener('focus', resume);
+    window.addEventListener('pageshow', resume);
+    document.addEventListener('visibilitychange', resume);
+}
+
+if (import.meta.hot) import.meta.hot.dispose(() => {
+    disconnect();
+    window.removeEventListener('online',resume);
+    window.removeEventListener('focus',resume);
+    window.removeEventListener('pageshow',resume);
+    document.removeEventListener('visibilitychange',resume);
+});

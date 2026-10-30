@@ -18,7 +18,7 @@
     // Smoothed value state (for needle animation)
     let smoothedValue = $state(0);
     let needleElement = $state(null);
-    let prevValue = $state(value);
+    let prevValue = $state(null);
 
     // Exponential Moving Average (EMA) smoothing
     $effect(() => {

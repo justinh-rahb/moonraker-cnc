@@ -1,17 +1,20 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
+import { mergeConfig, validateConfig, hostKey, brandingTitle } from '../lib/config.js';
 
+// Persisted names remain stable across the Retrograde rebrand.
 const STORAGE_KEY = 'retro_cnc_config_v1';
 
 // Helper to generate unique IDs
 const generateId = () => `id-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 // Default configuration with panels structure
-const DEFAULT_CONFIG = {
-    title: 'RETRO CNC PANEL',
+export const DEFAULT_CONFIG = {
+    title: 'RETROGRADE',
     server: {
         ip: window.location.hostname || 'localhost',
         port: '7125',
-        autoConnect: false
+        autoConnect: false,
+        protocol: window.location.protocol === 'https:' ? 'https' : 'http'
     },
     panels: [
         {
@@ -81,6 +84,7 @@ const DEFAULT_CONFIG = {
 // Migration function to convert old macros array to new panels structure
 const migrateConfig = (config) => {
     // If already has panels structure, return as-is
+    if (config.title !== undefined) config = { ...config, title: brandingTitle(config.title) };
     if (config.panels) {
         return config;
     }
@@ -95,7 +99,7 @@ const migrateConfig = (config) => {
             order: idx
         }));
 
-        const systemMacros = config.macros.slice(4, 8).map((macro, idx) => ({
+        const systemMacros = config.macros.slice(4).map((macro, idx) => ({
             id: generateId(),
             label: macro.label || '',
             gcode: macro.gcode || '',
@@ -122,50 +126,89 @@ const migrateConfig = (config) => {
         };
     }
 
-    return {
-        ...config,
-        tempPresets: config.tempPresets || DEFAULT_CONFIG.tempPresets,
-        temperature: config.temperature || DEFAULT_CONFIG.temperature,
-        power: config.power || DEFAULT_CONFIG.power,
-        panels: [
-            // ... (rest of logic handles panels)
-        ]
-    };
+    return config;
 };
 
-// Load initial config
-const loadConfig = () => {
+// Printer settings and UX belong to each host; the registry and build theme are global.
+const WORKSPACE_KEY = 'retro_cnc_workspace_v2';
+const buildDefaults = typeof __DEFAULT_CONFIG__ === 'undefined' ? {} : __DEFAULT_CONFIG__;
+const defaults = mergeConfig(DEFAULT_CONFIG, migrateConfig(buildDefaults));
+const freshConfig = (server = defaults.server) => mergeConfig(defaults, { server });
+function loadWorkspace() {
     try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            const migrated = migrateConfig(parsed);
-            // Merge with defaults to ensure new fields exist
-            return { ...DEFAULT_CONFIG, ...migrated };
+        const saved = JSON.parse(localStorage.getItem(WORKSPACE_KEY) || 'null');
+        if (saved?.version === 2 && Array.isArray(saved.hosts) && saved.hosts.length) {
+            saved.hosts.forEach(h => { h.name = brandingTitle(h.name); validateConfig(h.config); h.config = mergeConfig(defaults, migrateConfig(h.config)); });
+            if (!saved.hosts.some(h => h.id === saved.activeHostId)) saved.activeHostId = saved.hosts[0].id;
+            return saved;
         }
-    } catch (e) {
-        console.error('Failed to load config', e);
+        const legacy = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+        const config = legacy ? mergeConfig(defaults, migrateConfig(legacy)) : freshConfig();
+        validateConfig(config);
+        const id = generateId();
+        return { version: 2, activeHostId: id, global: { theme: typeof __APP_THEME__ === 'undefined' ? 'flight' : __APP_THEME__ }, hosts: [{ id, name: config.title, config }] };
+    } catch (error) {
+        console.error('Unable to restore settings; original storage preserved', error);
+        try { const original = localStorage.getItem(WORKSPACE_KEY); if (original) localStorage.setItem(WORKSPACE_KEY + '_recovery_' + Date.now(), original); } catch { /* Storage may be full or unavailable. */ }
+        const id = generateId();
+        return { version: 2, activeHostId: id, global: { theme: typeof __APP_THEME__ === 'undefined' ? 'flight' : __APP_THEME__ }, hosts: [{ id, name: defaults.title, config: freshConfig() }] };
     }
-    return DEFAULT_CONFIG;
-};
-
-export const configStore = writable(loadConfig());
-
-// Subscribe and save on change
-configStore.subscribe(val => {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(val));
-    } catch (e) {
-        console.error('Failed to save config', e);
-    }
+}
+export const workspaceStore = writable(loadWorkspace());
+export const configStore = writable(get(workspaceStore).hosts.find(h => h.id === get(workspaceStore).activeHostId).config);
+let applyingHost = false;
+workspaceStore.subscribe(value => {
+    try { localStorage.setItem(WORKSPACE_KEY, JSON.stringify(value)); }
+    catch (error) { console.error('Unable to save settings', error); }
 });
+configStore.subscribe(config => {
+    if (applyingHost) return;
+    workspaceStore.update(w => ({ ...w, hosts: w.hosts.map(h => h.id === w.activeHostId ? { ...h, config } : h) }));
+});
+export function switchHost(id) {
+    const w = get(workspaceStore);
+    const host = w.hosts.find(h => h.id === id);
+    if (!host) throw new Error('Unknown host');
+    applyingHost = true;
+    workspaceStore.set({ ...w, activeHostId: id });
+    configStore.set(host.config);
+    applyingHost = false;
+}
+export function addHost(name, server) {
+    validateConfig({ server });
+    const w = get(workspaceStore);
+    if (w.hosts.some(h => hostKey(h.config.server) === hostKey(server))) throw new Error('This host already exists');
+    const id = generateId();
+    workspaceStore.update(w => ({ ...w, hosts: [...w.hosts, { id, name: name.trim() || server.ip, config: { ...freshConfig(server), title:name.trim() || server.ip } }] }));
+    switchHost(id);
+    return id;
+}
+export function editHost(id, name, server) {
+    validateConfig({ server });
+    const w = get(workspaceStore);
+    if (w.hosts.some(h => h.id !== id && hostKey(h.config.server) === hostKey(server))) throw new Error('This host already exists');
+    workspaceStore.update(w => ({ ...w, hosts: w.hosts.map(h => h.id === id ? { ...h, name: name.trim() || server.ip, config: { ...h.config, server } } : h) }));
+    if (w.activeHostId === id) switchHost(id);
+}
+export function removeHost(id) {
+    const w = get(workspaceStore);
+    if (w.hosts.length < 2) throw new Error('Keep at least one host');
+    if (id === w.activeHostId) switchHost(w.hosts.find(h => h.id !== id).id);
+    workspaceStore.update(w => ({ ...w, hosts: w.hosts.filter(h => h.id !== id) }));
+}
+export const exportWorkspace = () => JSON.stringify(get(workspaceStore), null, 2);
 
 // Helper to update specific sections (cleaner API)
 export const updateServerConfig = (ip, port, autoConnect) => {
-    configStore.update(s => ({
-        ...s,
-        server: { ip, port, autoConnect }
-    }));
+    const current = get(configStore);
+    const server = { ...current.server, ip:ip.trim(), port:String(port || ''), autoConnect };
+    validateConfig({server});
+    if (hostKey(server) !== hostKey(current.server)) {
+        const existing = get(workspaceStore).hosts.find(h => hostKey(h.config.server) === hostKey(server));
+        if (existing) switchHost(existing.id);
+        else addHost(server.ip, server);
+    }
+    configStore.update(s => ({...s,server}));
 };
 
 export const updateTitle = (title) => {
@@ -219,7 +262,8 @@ export const addCamera = () => {
                 flipV: false,
                 rotation: 0,
                 showFps: false,
-                targetRefreshRate: 5
+                scanlines: false,
+                targetRefreshRate: 30
             }
         ]
     }));
@@ -438,17 +482,34 @@ export const importConfig = (jsonString) => {
     try {
         const parsed = JSON.parse(jsonString);
 
-        // Basic validation - check for required fields
-        if (typeof parsed !== 'object' || parsed === null) {
-            throw new Error('Invalid configuration format');
+        if (parsed?.version === 2 && Array.isArray(parsed.hosts)) {
+            if (!parsed.hosts.length) throw new Error('Export contains no hosts');
+            const ids = new Set();
+            const endpoints = new Set();
+            const hosts = parsed.hosts.map(h => {
+                if (!h.id || ids.has(h.id)) throw new Error('Invalid or duplicate host ID');
+                ids.add(h.id);
+                validateConfig(h.config);
+                const key = hostKey(h.config.server);
+                if (endpoints.has(key)) throw new Error('Duplicate host address');
+                endpoints.add(key);
+                return { id: h.id, name: brandingTitle(String(h.name || h.config.title || h.config.server.ip)), config: mergeConfig(defaults, migrateConfig(h.config)) };
+            });
+            const activeHostId = ids.has(parsed.activeHostId) ? parsed.activeHostId : hosts[0].id;
+            applyingHost = true;
+            workspaceStore.set({ version: 2, activeHostId, hosts, global: { theme: 'retro', ...parsed.global } });
+            configStore.set(hosts.find(h => h.id === activeHostId).config);
+            applyingHost = false;
+        } else {
+            validateConfig(parsed);
+            const merged = mergeConfig(defaults, migrateConfig(parsed));
+            // Legacy exports describe one printer. Never overwrite a different printer.
+            const w = get(workspaceStore);
+            const match = w.hosts.find(h => hostKey(h.config.server) === hostKey(merged.server));
+            const id = match?.id || generateId();
+            workspaceStore.update(w => ({ ...w, hosts: match ? w.hosts.map(h => h.id === id ? { ...h, config: merged } : h) : [...w.hosts, { id, name: merged.title, config: merged }] }));
+            switchHost(id);
         }
-
-        // Migrate if needed and merge with defaults
-        const migrated = migrateConfig(parsed);
-        const merged = { ...DEFAULT_CONFIG, ...migrated };
-
-        // Update the store
-        configStore.set(merged);
 
         return { success: true };
     } catch (e) {

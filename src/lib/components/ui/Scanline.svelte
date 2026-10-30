@@ -1,10 +1,11 @@
 <script>
-    // Pure CSS effect, no logic needed
+    export let contained = false;
 </script>
 
-<div class="scanline"></div>
+<div class="scanline" class:contained aria-hidden="true"></div>
 
 <style>
+    .scanline.contained { position:absolute; z-index:1; }
     .scanline {
         position: fixed;
         top: 0;

@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { execSync } from 'child_process'
 import { readFileSync } from 'fs'
+import { validateConfig } from './src/lib/config.js'
 
 // Get build-time git information with fallback handling
 function getGitCommit() {
@@ -29,6 +30,11 @@ function getAppVersion() {
   }
 }
 
+const defaultConfigPath = process.env.DEFAULT_SETTINGS_FILE
+let defaultConfig = defaultConfigPath ? JSON.parse(readFileSync(defaultConfigPath, 'utf8')) : {}
+if (defaultConfig.version === 2) defaultConfig = defaultConfig.hosts?.find(h => h.id === defaultConfig.activeHostId)?.config || defaultConfig.hosts?.[0]?.config
+validateConfig(defaultConfig)
+if (!['retro', 'flight'].includes(process.env.APP_THEME || 'flight')) throw new Error('APP_THEME must be retro or flight')
 const gitCommit = getGitCommit()
 const gitTag = getGitTag()
 const appVersion = getAppVersion()
@@ -37,6 +43,8 @@ const appVersion = getAppVersion()
 export default defineConfig({
   plugins: [svelte()],
   define: {
+    __DEFAULT_CONFIG__: JSON.stringify(defaultConfig),
+    __APP_THEME__: JSON.stringify(process.env.APP_THEME || 'flight'),
     __APP_VERSION__: JSON.stringify(appVersion),
     __GIT_COMMIT__: JSON.stringify(gitCommit),
     __GIT_TAG__: JSON.stringify(gitTag),
