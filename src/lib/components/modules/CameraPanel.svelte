@@ -223,7 +223,7 @@
 
 </script>
 
-<PanelModule title="CAMERA FEED">
+<PanelModule requiresReady={false} title="CAMERA FEED">
   {#if enabledCameras.length === 0}
     <div class="no-camera">
       <p>NO CAMERAS CONFIGURED</p>

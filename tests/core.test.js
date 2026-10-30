@@ -77,3 +77,11 @@ test('rebrand updates generic titles and preserves custom printer names', async 
     assert.equal(brandingTitle('QIDI Q2C'),'QIDI Q2C');
     assert.equal(validateRemote({version:1,settings:{title:'RETRO CNC PANEL'}}).title,'RETROGRADE');
 });
+
+
+test('collapsed sections survive database round trips and reject malformed state', () => {
+    const settings = {collapsedPanels:['CONSOLE','macro:maintenance']};
+    assert.deepEqual(validateRemote({version:1,settings:databaseSettings(settings)}),settings);
+    for (const collapsedPanels of [null,{},'CONSOLE',[false]]) assert.throws(() => validateConfig({collapsedPanels}));
+    assert.doesNotThrow(() => validateConfig({title:'Older export'}));
+});

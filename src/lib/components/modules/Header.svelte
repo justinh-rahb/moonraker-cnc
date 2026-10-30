@@ -55,8 +55,12 @@
                 <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
             </svg>
         </button>
-        <button class="settings-btn" title="Hosts" on:click={() => $hostsOpen = true}>HOSTS</button>
-        <button class="settings-btn" title="History" on:click={() => { $settingsOpen = false; $filePickerOpen = false; $historyOpen = true; }}>HISTORY</button>
+        <button class="settings-btn" title="Hosts" aria-label="Hosts" on:click={() => $hostsOpen = true}>
+            <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="6" rx="1"/><rect x="3" y="15" width="18" height="6" rx="1"/><path d="M7 6h.01M7 18h.01M12 9v6"/></svg>
+        </button>
+        <button class="settings-btn" title="History" aria-label="History" on:click={() => { $settingsOpen = false; $filePickerOpen = false; $historyOpen = true; }}>
+            <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.5 7M3 4v7h7M12 7v5l3 2"/></svg>
+        </button>
         <button
             class="settings-btn"
             on:click={() => ($settingsOpen = false, $historyOpen = false, $filePickerOpen = true)}
@@ -323,6 +327,7 @@
         50% { opacity: 0.8; transform: scale(1.1); }
     }
 
+    .header-icon { width:24px; height:24px; }
     .icon-layout { width:24px; height:24px; }
     .settings-btn.layout-active { color:var(--retro-green); border-color:var(--retro-green); }
 

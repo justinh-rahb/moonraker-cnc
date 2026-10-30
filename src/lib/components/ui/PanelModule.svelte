@@ -1,10 +1,25 @@
 <script>
+    import { configStore } from '../../../stores/configStore.js';
+    import { machineState } from '../../../stores/machineStore.js';
     export let title = "MODULE";
+    export let panelKey = '';
+    export let requiresReady = true;
+    $: key = panelKey || title;
+    $: collapsed = ($configStore.collapsedPanels || []).includes(key);
+    function toggle() {
+        configStore.update(config => ({ ...config, collapsedPanels: collapsed
+            ? (config.collapsedPanels || []).filter(id => id !== key)
+            : [...(config.collapsedPanels || []), key] }));
+    }
 </script>
 
-<div class="module">
-    <div class="module-header">▸ {title}</div>
-    <slot></slot>
+<div class="module" class:collapsed>
+    <button class="module-header" aria-expanded={!collapsed} aria-controls={'panel-content-' + encodeURIComponent(key)} on:click={toggle}>
+        <span class="disclosure" aria-hidden="true">{collapsed ? '▸' : '▾'}</span> {title}
+    </button>
+    <div id={'panel-content-' + encodeURIComponent(key)} hidden={collapsed} inert={requiresReady && !$machineState.isReady}>
+        <slot></slot>
+    </div>
 </div>
 
 <style>
@@ -18,7 +33,14 @@
         height: 100%; /* Ensure modules can stretch if needed */
     }
 
+    .collapsed .module-header { margin-bottom:0; }
     .module-header {
+        display:block;
+        width:100%;
+        text-align:left;
+        border:0;
+        cursor:pointer;
+
         font-family: "Orbitron", monospace;
         font-size: 18px;
         font-weight: 700;

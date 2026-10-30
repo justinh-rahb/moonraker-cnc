@@ -21,7 +21,7 @@
     };
 </script>
 
-<PanelModule title={panel.title}>
+<PanelModule title={panel.title} panelKey={'macro:' + panel.id}>
     <div class="action-buttons">
         {#each sortedMacros as macro (macro.id)}
             <ControlButton

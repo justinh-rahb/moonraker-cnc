@@ -47,3 +47,5 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
 }
 
 .machine-error { color:var(--retro-red); border:1px solid var(--retro-red-dim); padding:10px; margin-bottom:12px; white-space:pre-wrap; overflow-wrap:anywhere; }
+
+[data-theme=flight] .module.collapsed .module-header { margin-bottom:0; }

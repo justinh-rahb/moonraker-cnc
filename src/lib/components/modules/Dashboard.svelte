@@ -3,7 +3,6 @@
     import { onMount } from 'svelte';
     import { configStore } from '../../../stores/configStore.js';
     import { connectionState } from '../../../stores/websocket.js';
-    import { machineState } from '../../../stores/machineStore.js';
     import PrintStatusPanel from './PrintStatusPanel.svelte';
     import ToolheadControl from './ToolheadControl.svelte';
     import ExtruderControl from './ExtruderControl.svelte';
@@ -63,10 +62,8 @@
             <button aria-label={'Move ' + id + ' later'} disabled={order.indexOf(id) === order.length-1} on:click={() => moveBy(id,1)}>↓</button>
         </div>
         {/if}
-        <div inert={!$machineState.isReady && !['status','console','camera'].includes(id)}>
         {#if modules[id]}<svelte:component this={modules[id]} />
         {:else}{@const panel = $configStore.panels.find(p => 'macro:' + p.id === id)}{#if panel}<MacroPanel {panel} />{/if}{/if}
-        </div>
     </section>
 {/each}
 </div>

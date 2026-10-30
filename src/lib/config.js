@@ -30,6 +30,7 @@ export function validateConfig(config) {
         serverUrl(config.server);
     }
     for (const key of ['cameras', 'panels', 'tempPresets', 'macros']) if (config[key] !== undefined && !Array.isArray(config[key])) throw new Error(`${key} must be an array`);
+    if (config.collapsedPanels !== undefined && (!Array.isArray(config.collapsedPanels) || config.collapsedPanels.some(id => typeof id !== 'string'))) throw new Error('Invalid collapsed panels');
     for (const key of ['dashboard']) if (config[key]) for (const value of Object.values(config[key])) if (!Array.isArray(value) || value.some(v => typeof v !== 'string')) throw new Error('Invalid dashboard layout');
     const uniqueIds = (items, label) => {
         const ids = new Set();

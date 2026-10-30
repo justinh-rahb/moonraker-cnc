@@ -168,7 +168,7 @@
     };
 </script>
 
-<PanelModule title="PRINT STATUS">
+<PanelModule requiresReady={false} title="PRINT STATUS">
     <div class="status-panel">
         {#if $machineState.stateMessage && (!$machineState.isReady || isError)}<p class="machine-error" role="alert">{$machineState.stateMessage}</p>{/if}
         <!-- Status Indicator Row -->
