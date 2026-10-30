@@ -2,226 +2,61 @@
   import Scanline from "../ui/Scanline.svelte";
   import { serverUrl } from "../../config.js";
   import PanelModule from "../ui/PanelModule.svelte";
-  import ControlButton from "../ui/ControlButton.svelte";
   import WebRTCPlayer from "../ui/WebRTCPlayer.svelte";
+  import MjpegPlayer from "../ui/MjpegPlayer.svelte";
   import { configStore } from "../../../stores/configStore.js";
-  import { onDestroy, onMount } from "svelte";
-
-  const CAMERA_SELECTION_KEY = 'retro_cnc_camera_selection';
+  import { onMount } from "svelte";
 
   let selectedCameraId = null;
-  let refreshTimer = null;
-  let imageTimestamp = Date.now();
-  
-  // FPS calculation
-  let lastFrameTime = 0;
   let currentFps = 0;
-  let rawFps = 0;
-  let lastDisplayUpdate = 0;
-  let startLoadTime = 0;
-  
-  let containerElement;
   let isIntersecting = false;
   let isPageVisible = typeof document !== 'undefined' ? document.visibilityState === 'visible' : true;
-
-  $: isVisible = isIntersecting && isPageVisible;
-
-  // Get enabled cameras
+  $: expanded = !($configStore.collapsedPanels || []).includes('CAMERA FEED');
+  $: isVisible = isIntersecting && isPageVisible && expanded;
   $: enabledCameras = ($configStore.cameras || []).filter(c => c.enabled);
-  $: if ($configStore.selectedCameraId) selectedCameraId = $configStore.selectedCameraId;
+  $: selectedCameraId = $configStore.selectedCameraId || null;
   $: selectedCamera = enabledCameras.find(c => c.id === selectedCameraId) || enabledCameras[0];
   $: hasMultipleCameras = enabledCameras.length > 1;
-
-  // Calculate aspect ratio padding
   $: aspectRatioPadding = (() => {
-    if (!selectedCamera?.aspectRatio) return '56.25%'; // Default 16:9
-    const [w, h] = selectedCamera.aspectRatio.split(':').map(Number);
-    return Number.isFinite(h/w) && h > 0 && w > 0 ? `${(h / w) * 100}%` : '56.25%';
+    const [w,h] = (selectedCamera?.aspectRatio || '16:9').split(':').map(Number);
+    return Number.isFinite(h/w) && h > 0 && w > 0 ? `${h/w*100}%` : '56.25%';
   })();
-
-  // Calculate transform CSS
   $: transformStyle = (() => {
-    if (!selectedCamera) return '';
     const transforms = [];
-    if (selectedCamera.flipH) transforms.push('scaleX(-1)');
-    if (selectedCamera.flipV) transforms.push('scaleY(-1)');
-    if (selectedCamera.rotation) transforms.push(`rotate(${selectedCamera.rotation}deg)`);
+    if (selectedCamera?.flipH) transforms.push('scaleX(-1)');
+    if (selectedCamera?.flipV) transforms.push('scaleY(-1)');
+    if (selectedCamera?.rotation) transforms.push(`rotate(${selectedCamera.rotation}deg)`);
     return transforms.length ? transforms.join(' ') : 'none';
   })();
-
-  // Update stream URL with timestamp for refresh
-  // Decoupled to prevent reactive chain re-evaluation every interval
-  $: cameraOrigin = new URL(serverUrl($configStore.server)).origin.replace(/:7125$/, '');
-  const resolveCamera = (url, origin) => { try { const parsed = new URL(url,origin); return url && ['http:','https:'].includes(parsed.protocol) ? parsed.href : ''; } catch { return ''; } };
-  $: baseStreamUrl = resolveCamera(selectedCamera?.streamUrl || '', cameraOrigin);
-  $: streamType = selectedCamera?.streamType || 'mjpeg';
+  // Prefer this installation's camera proxy when it shares the printer's host.
+  // This keeps worker fetches same-origin on the port-1337 installation.
+  $: printerOrigin = new URL(serverUrl($configStore.server)).origin.replace(/:7125$/, '');
+  $: cameraOrigin = typeof location !== 'undefined' && new URL(printerOrigin).hostname === location.hostname ? location.origin : printerOrigin;
   $: streamUrl = (() => {
-    // If hidden and snapshot URL available, show static snapshot to close connection
-    if (!isVisible && selectedCamera?.snapshotUrl) {
-      return resolveCamera(selectedCamera.snapshotUrl, cameraOrigin);
-    }
-    
-    // For WebRTC, just return base URL, don't append timestamp
-    if (streamType === 'go2rtc' || streamType === 'camera-streamer') {
-        return baseStreamUrl;
-    }
-
-    // Otherwise show stream (updating or stale based on timestamp updates)
-    return baseStreamUrl 
-      ? `${baseStreamUrl}${baseStreamUrl.includes('?') ? '&' : '?'}t=${imageTimestamp}`
-      : '';
+    try {
+      if (!selectedCamera?.streamUrl) return '';
+      const url = new URL(selectedCamera.streamUrl,cameraOrigin);
+      return ['http:','https:'].includes(url.protocol) ? url.href : '';
+    } catch { return ''; }
   })();
-  
-  // Track refresh timer for MJPEG
-  // For WebRTC, the player component handles its own connection lifecycle
-  $: isMjpeg = !streamType || streamType === 'mjpeg';
-
-  // Trigger next frame load
-  function triggerLoad() {
-    if (!isMjpeg) return; // Only MJPEG needs manual refresh loop
-
-    if (refreshTimer) clearTimeout(refreshTimer);
-    refreshTimer = null;
-
-    if (isVisible) {
-      startLoadTime = performance.now();
-      imageTimestamp = Date.now();
-    }
-  }
-
-  // Handle visibility changes to start/stop loop
-  $: if (isVisible) {
-    // If we became visible and no timer/load is pending, kickstart
-    if (!refreshTimer && isMjpeg) {
-       triggerLoad();
-    }
-  } else {
-    // If hidden, stop the loop
-    if (refreshTimer) {
-      clearTimeout(refreshTimer);
-      refreshTimer = null;
-    }
-  }
-  
-  // Reset when camera changes
-  $: if (selectedCameraId) {
-     currentFps = 0;
-     rawFps = 0;
-     lastFrameTime = 0;
-     refreshTimer = null;
-     if (isVisible && isMjpeg) triggerLoad();
-  }
-
-  // Handle frame load for FPS calculation and scheduling next frame
-  function handleFrameLoad() {
-    // Only calculate FPS for MJPEG
-    if (!isMjpeg) return;
-
-    const now = performance.now();
-    
-    // Calculate FPS if we have a previous frame time
-    if (lastFrameTime > 0) {
-      const delta = now - lastFrameTime;
-      const instantFps = 1000 / delta;
-      
-      // Simple EMA (Exponential Moving Average) for smoothing: 0.05 weight for new value
-      // Use rawFps for calculation to keep high precision
-      rawFps = rawFps === 0 
-        ? instantFps 
-        : (rawFps * 0.95 + instantFps * 0.05);
-
-      // Only update display every 500ms to prevent rapid flickering
-      if (now - lastDisplayUpdate > 500) {
-        currentFps = rawFps;
-        lastDisplayUpdate = now;
-      }
-    }
-    
-    lastFrameTime = now;
-    
-    // Schedule next frame
-    scheduleNextFrame(now);
-  }
-
-  function handleFrameError() {
-    // On error, just schedule next attempt with default delay
-    scheduleNextFrame(performance.now());
-  }
-
-  function scheduleNextFrame(nowCallback) {
-    if (!isVisible || !isMjpeg) return;
-
-    const targetFps = selectedCamera?.targetRefreshRate || 5;
-    const targetInterval = 1000 / targetFps;
-    const loadTime = nowCallback - startLoadTime;
-    
-    // Calculate how long to wait to maintain target interval
-    // If load took longer than interval, wait 0 (or small breath)
-    const delay = Math.max(0, targetInterval - loadTime);
-    
-    refreshTimer = setTimeout(triggerLoad, delay);
-  }
-
-  // Start refresh interval for MJPEG streams
-  onMount(() => {
-    // Setup visibility tracking
-    const observer = new IntersectionObserver((entries) => {
+  $: streamType = selectedCamera?.streamType || 'mjpeg';
+  $: isMjpeg = streamType === 'mjpeg';
+  function observeVisibility(element) {
+    const observer = new IntersectionObserver(entries => {
       isIntersecting = entries[0].isIntersecting;
-    }, { threshold: 0.01 }); // Trigger as soon as 1% is visible
-
-    if (containerElement) {
-      observer.observe(containerElement);
-    }
-
-    const handleVisibilityChange = () => {
-      isPageVisible = document.visibilityState === 'visible';
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Load saved camera selection from localStorage
-    try {
-      const savedCameraId = $configStore.selectedCameraId || localStorage.getItem(CAMERA_SELECTION_KEY);
-      if (savedCameraId && enabledCameras.some(c => c.id === savedCameraId)) {
-        selectedCameraId = savedCameraId;
-      }
-    } catch (e) {
-      console.error('Failed to load camera selection', e);
-    }
-    
-    // Initial trigger if already visible
-    if (isVisible && isMjpeg) {
-        triggerLoad();
-    }
-
-    return () => {
-      observer.disconnect();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (refreshTimer) clearTimeout(refreshTimer);
-    };
-  });
-
-  onDestroy(() => {
-    if (refreshTimer) {
-      clearTimeout(refreshTimer);
-    }
-  });
-
-  function selectCamera(cameraId) {
-    selectedCameraId = cameraId;
-    
-    // Persist selection to localStorage
-    try {
-      configStore.update(c => ({ ...c, selectedCameraId: cameraId }));
-    } catch (e) {
-      console.error('Failed to save camera selection', e);
-    }
-    
-    // Reset FPS counter when switching cameras
-    currentFps = 0;
-    rawFps = 0;
-    if (isMjpeg) triggerLoad();
+    }, {threshold:0.01});
+    observer.observe(element);
+    return {destroy() { observer.disconnect(); isIntersecting = false; }};
   }
-
+  onMount(() => {
+    const update = () => isPageVisible = document.visibilityState === 'visible';
+    document.addEventListener('visibilitychange',update);
+    return () => document.removeEventListener('visibilitychange',update);
+  });
+  function selectCamera(id) {
+    currentFps = 0;
+    configStore.update(c => ({...c,selectedCameraId:id}));
+  }
 </script>
 
 <PanelModule requiresReady={false} title="CAMERA FEED">
@@ -232,18 +67,14 @@
     </div>
   {:else}
     {#if selectedCamera}
-      <div class="camera-container" bind:this={containerElement}>
+      <div class="camera-container" use:observeVisibility>
         <div class="aspect-ratio-box" style="padding-bottom: {aspectRatioPadding};">
           {#if streamUrl}
             {#if isMjpeg}
-                <img
-                    src={streamUrl}
-                    alt={selectedCamera.name}
-                    class="camera-feed"
-                    style="transform: {transformStyle};"
-                    on:load={handleFrameLoad}
-                    on:error={handleFrameError}
-                />
+                {#key selectedCamera.id}
+                  <MjpegPlayer url={streamUrl} active={isVisible} maxFps={selectedCamera.targetRefreshRate || 30}
+                    label={selectedCamera.name} {transformStyle} onFps={fps => currentFps = fps} />
+                {/key}
             {:else if (streamType === 'go2rtc' || streamType === 'camera-streamer') && isVisible}
                 <div class="camera-feed">
                     <WebRTCPlayer

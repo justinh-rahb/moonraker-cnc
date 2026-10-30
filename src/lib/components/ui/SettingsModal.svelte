@@ -988,23 +988,20 @@
                                     <div class="camera-row">
                                         {#if !camera.streamType || camera.streamType === "mjpeg"}
                                             <div class="input-col">
-                                                <span>TARGET REFRESH RATE (FPS)</span>
+                                                <span>MAX DISPLAY RATE (FPS)</span>
                                                 <input
                                                     type="number"
                                                     min="1"
-                                                    max="30"
-                                                    aria-label="Target refresh rate in FPS"
+                                                    max="60"
+                                                    aria-label="Maximum camera display rate in FPS"
                                                     value={camera.targetRefreshRate ||
-                                                        5}
+                                                        30}
                                                     on:input={(e) =>
                                                         updateCamera(
                                                             camera.id,
                                                             {
                                                                 targetRefreshRate:
-                                                                    parseInt(
-                                                                        e.target
-                                                                            .value,
-                                                                    ) || 5,
+                                                                    Math.max(1, Math.min(60, parseInt(e.target.value) || 30)),
                                                             },
                                                         )}
                                                 />

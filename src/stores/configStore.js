@@ -263,7 +263,7 @@ export const addCamera = () => {
                 rotation: 0,
                 showFps: false,
                 scanlines: false,
-                targetRefreshRate: 5
+                targetRefreshRate: 30
             }
         ]
     }));

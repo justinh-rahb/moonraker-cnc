@@ -63,7 +63,8 @@ A retro-styled, reactive web interface for controlling 3D printers running Klipp
 - **Orientation Controls**: Flip horizontal/vertical and rotate (0°, 90°, 180°, 270°)
 - **Aspect Ratio Options**: Support for 16:9, 4:3, 1:1, and 21:9 ratios
 - **FPS Counter**: Optional live FPS overlay per camera
-- **Configurable Refresh Rate**: Per-camera target refresh rate settings
+- **Continuous MJPEG**: A worker parses and decodes a persistent stream; bounded frame queues discard stale frames rather than accumulating latency
+- **Configurable Display Rate**: Per-camera rendering limit (new cameras default to 30 FPS; existing limits are preserved)
 
 ### ⚙️ Customization
 - **Customizable Macro Panels**: Create, edit, delete, and reorder macro panels
@@ -233,7 +234,9 @@ Configure load/unload operations:
 - **Multiple Cameras**: Add, configure, and enable/disable cameras
 - **Stream URLs**: Configure MJPEG stream and snapshot URLs per camera
 - **Orientation**: Flip and rotation controls per camera
-- **Refresh Rate**: Target FPS for adaptive MJPEG streams
+- **Display Rate**: Maximum rendered FPS for worker-backed MJPEG streams; this does not reduce source bandwidth
+- **Visibility**: Camera traffic stops when collapsed, offscreen, in a hidden tab, or removed. Streams reconnect when visible again.
+- **Compatibility**: Browsers without worker image decoding, or cameras that block cross-origin fetches, use a persistent native MJPEG image; FPS reporting and display limiting are unavailable in that fallback. Relative camera URLs use the same-host app proxy when available.
 
 ### Dial Gauge Settings
 - **Max Rates**: Configure maximum speed and flow values
