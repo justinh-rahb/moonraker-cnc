@@ -1,4 +1,5 @@
 <script>
+  import Scanline from "../ui/Scanline.svelte";
   import { serverUrl } from "../../config.js";
   import PanelModule from "../ui/PanelModule.svelte";
   import ControlButton from "../ui/ControlButton.svelte";
@@ -258,6 +259,8 @@
             </div>
           {/if}
 
+          {#if selectedCamera.scanlines}<Scanline contained />{/if}
+
           {#if isMjpeg && selectedCamera.showFps && currentFps > 0}
             <div class="fps-overlay">
               {Math.round(currentFps)} FPS
@@ -339,6 +342,7 @@
   }
 
   .fps-overlay {
+    z-index:2;
     position: absolute;
     top: 10px;
     right: 10px;

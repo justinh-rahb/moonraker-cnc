@@ -14,7 +14,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
 [data-theme=flight] .panel-header { box-shadow:none; border-width:1px; background:#0a110d; padding:16px; }
 [data-theme=flight] .machine-title { font-family:var(--numeric-font); font-weight:600; font-size:25px; letter-spacing:3px; text-shadow:none; }
 [data-theme=flight] button { text-shadow:none; box-shadow:none; border-width:1px; }
-[data-theme=flight] .scanline,[data-theme=flight] .scanlines { display:none; }
+[data-theme=flight] .scanline:not(.contained) { display:none; }
 [data-theme=flight] .temp-current { font-size:25px; text-shadow:none; }
 [data-theme=flight] .status-text { font-size:21px; letter-spacing:2px; text-shadow:none; }
 [data-theme=flight] .gauge-svg { max-height:130px; }

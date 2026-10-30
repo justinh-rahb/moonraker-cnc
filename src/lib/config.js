@@ -50,6 +50,7 @@ export function validateConfig(config) {
     }
     for (const camera of config.cameras || []) if (!camera || typeof camera.id !== 'string' || typeof camera.name !== 'string') throw new Error('Invalid camera');
     for (const camera of config.cameras || []) {
+        if (camera.scanlines !== undefined && typeof camera.scanlines !== 'boolean') throw new Error('Invalid camera scanlines preference');
         for (const key of ['streamUrl', 'snapshotUrl', 'aspectRatio']) if (camera[key] !== undefined && typeof camera[key] !== 'string') throw new Error('Invalid camera URL or aspect ratio');
     }
     for (const [key,value] of Object.entries(config.increments || {})) if (!Number.isFinite(value) || value <= 0 || (key === 'zOffsetIncrement' && value > 1)) throw new Error('Invalid control increment');

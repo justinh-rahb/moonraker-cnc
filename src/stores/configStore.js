@@ -262,6 +262,7 @@ export const addCamera = () => {
                 flipV: false,
                 rotation: 0,
                 showFps: false,
+                scanlines: false,
                 targetRefreshRate: 5
             }
         ]

@@ -1053,6 +1053,11 @@
                                                 SHOW FPS
                                             </label>
                                         {/if}
+                                        <label>
+                                            <input type="checkbox" checked={camera.scanlines === true}
+                                                on:change={e => updateCamera(camera.id, { scanlines: e.target.checked })} />
+                                            SCANLINES
+                                        </label>
                                     </div>
                                 </div>
                             </div>

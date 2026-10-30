@@ -85,3 +85,13 @@ test('collapsed sections survive database round trips and reject malformed state
     for (const collapsedPanels of [null,{},'CONSOLE',[false]]) assert.throws(() => validateConfig({collapsedPanels}));
     assert.doesNotThrow(() => validateConfig({title:'Older export'}));
 });
+
+
+test('camera scanline preference round trips and older camera exports remain valid', () => {
+    for (const scanlines of [true,false]) {
+        const settings = {cameras:[{id:'bed',name:'Bed',scanlines}]};
+        assert.deepEqual(validateRemote({version:1,settings}),settings);
+    }
+    assert.doesNotThrow(() => validateConfig({cameras:[{id:'old',name:'Old'}]}));
+    assert.throws(() => validateConfig({cameras:[{id:'bad',name:'Bad',scanlines:'true'}]}));
+});
