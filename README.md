@@ -6,11 +6,11 @@ A Klipper/Moonraker frontend with a restrained, science-fiction control-interfac
 
 ### Dashboard · v2 Flight
 
-![Retrograde v2 Flight dashboard with live camera, printer controls and temperatures](docs/screenshot-1.png)
+![Retrograde v2 Flight dashboard with live camera, printer controls and temperatures](docs/screenshot-1.jpg)
 
 ### Files and print previews
 
-![Retrograde file browser with G-code metadata and thumbnail preview](docs/screenshot-2.png)
+![Retrograde file browser with G-code metadata and thumbnail preview](docs/screenshot-2.jpg)
 
 ## Features
 
