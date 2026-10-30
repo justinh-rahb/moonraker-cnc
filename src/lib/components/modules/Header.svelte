@@ -4,8 +4,10 @@
     import { emergencyStop } from "../../../stores/machineStore.js";
     import { configStore } from "../../../stores/configStore.js";
     import { currentPowerDevice, togglePower } from "../../../stores/powerStore.js";
-    import { filePickerOpen, settingsOpen } from "../../../stores/uiStore.js";
+    import { filePickerOpen, settingsOpen, hostsOpen, historyOpen } from "../../../stores/uiStore.js";
+    import { connectionState } from "../../../stores/websocket.js";
     let confirmPowerOpen = false;
+    $: if ($connectionState !== "connected") confirmPowerOpen = false;
     let powerAction = "";
 
     const handlePowerClick = () => {
@@ -47,9 +49,11 @@
 <div class="panel-header">
     <div class="machine-title">{$configStore.title}</div>
     <div class="header-controls">
+        <button class="settings-btn" title="Hosts" on:click={() => $hostsOpen = true}>HOSTS</button>
+        <button class="settings-btn" title="History" on:click={() => { $settingsOpen = false; $filePickerOpen = false; $historyOpen = true; }}>HISTORY</button>
         <button
             class="settings-btn"
-            on:click={() => ($filePickerOpen = true)}
+            on:click={() => ($settingsOpen = false, $historyOpen = false, $filePickerOpen = true)}
             title="Files"
         >
             <svg class="icon-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -58,7 +62,7 @@
         </button>
         <button
             class="settings-btn"
-            on:click={() => ($settingsOpen = true)}
+            on:click={() => ($filePickerOpen = false, $historyOpen = false, $settingsOpen = true)}
             title="Settings"
         >
             <svg class="icon-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -124,8 +128,17 @@
 
     .header-controls {
         display: flex;
-        gap: 15px;
+        gap: 10px;
         align-items: center;
+    }
+
+    .header-controls > button {
+        height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        padding-block: 0;
     }
 
     .power-btn {

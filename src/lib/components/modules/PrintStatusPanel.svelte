@@ -1,7 +1,12 @@
 <script>
+    import { onMount } from "svelte";
+    import { estimatePrint } from "../../printEstimates.js";
+    let now = Date.now();
+    onMount(() => { const timer = setInterval(() => now = Date.now(), 1000); return () => clearInterval(timer); });
+    $: estimate = estimatePrint($machineState, now);
     import PanelModule from "../ui/PanelModule.svelte";
     import Led from "../ui/Led.svelte";
-    import CncButton from "../ui/CncButton.svelte";
+    import ControlButton from "../ui/ControlButton.svelte";
     import RetroGauge from "../ui/RetroGauge.svelte";
     import ConfirmDialog from "../ui/ConfirmDialog.svelte";
     import {
@@ -23,7 +28,7 @@
     $: status = $machineState.status;
     $: lastCompletedFilename = $machineState.lastCompletedFilename;
     $: printFilename = $machineState.printFilename;
-    $: printProgress = $machineState.printProgress;
+    $: printProgress = estimate.progress;
     $: printDuration = $machineState.printDuration;
     $: liveSpeed = $machineState.liveSpeed;
     $: liveExtruderVelocity = $machineState.liveExtruderVelocity;
@@ -90,6 +95,7 @@
 
     // Confirm dialog state
     let confirmOpen = false;
+    $: if (!$machineState.isReady) confirmOpen = false;
     let confirmMessage = '';
     let confirmCallback = () => {};
 
@@ -148,7 +154,7 @@
         };
 
         if ($configStore.printControl?.confirmStartPrint ?? true) {
-            showConfirm('Are you sure?', doReprint);
+            showConfirm(`Start printing "${fileToReprint}" again?`, doReprint);
         } else {
             await doReprint();
         }
@@ -164,6 +170,7 @@
 
 <PanelModule title="PRINT STATUS">
     <div class="status-panel">
+        {#if $machineState.stateMessage && (!$machineState.isReady || isError)}<p class="machine-error" role="alert">{$machineState.stateMessage}</p>{/if}
         <!-- Status Indicator Row -->
         <div class="status-row">
             <div class="status-leds">
@@ -212,9 +219,12 @@
                     <div class="progress-bar" style="width: {printProgress * 100}%"></div>
                 </div>
                 <div class="progress-row">
-                    <span class="info-label">TIME:</span>
-                    <span class="info-value">{formatDuration(printDuration)}</span>
+                    <span class="info-label">ELAPSED:</span>
+                    <span class="info-value">{formatDuration(estimate.elapsed)}</span>
                 </div>
+                <div class="progress-row"><span class="info-label">REMAINING:</span><span class="info-value" title={estimate.source}>{estimate.remaining === null ? '—' : '~' + formatDuration(estimate.remaining)}</span></div>
+                <div class="progress-row"><span class="info-label">FINISHES:</span><span class="info-value">{isPaused ? 'Paused' : estimate.completion ? '~' + new Date(estimate.completion).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '—'}</span></div>
+                <div class="estimate-source">{estimate.source}</div>
                 {#if totalLayers > 0}
                     <div class="progress-row">
                         <span class="info-label">LAYER:</span>
@@ -248,48 +258,48 @@
         {#if showControls}
             <div class="control-buttons">
                 {#if isPrinting}
-                    <CncButton variant="home" on:click={handlePause}>
+                    <ControlButton variant="home" disabled={!$machineState.isReady} on:click={handlePause}>
                         PAUSE
-                    </CncButton>
+                    </ControlButton>
                 {:else if isPaused}
-                    <CncButton variant="action" on:click={handleResume}>
+                    <ControlButton variant="action" disabled={!$machineState.isReady} on:click={handleResume}>
                         RESUME
-                    </CncButton>
+                    </ControlButton>
                 {/if}
-                <CncButton variant="danger" on:click={handleCancel}>
+                <ControlButton variant="danger" on:click={handleCancel}>
                     CANCEL
-                </CncButton>
+                </ControlButton>
             </div>
         {/if}
 
         <!-- Completion Actions (only when print is complete) -->
         {#if isComplete}
             <div class="completion-buttons">
-                <CncButton variant="dark" on:click={handleClear}>
+                <ControlButton variant="dark" on:click={handleClear}>
                     CLEAR
-                </CncButton>
-                <CncButton
+                </ControlButton>
+                <ControlButton
                     variant="action"
                     on:click={handleReprint}
                     disabled={isReprinting || !(lastCompletedFilename || printFilename)}
                 >
                     {isReprinting ? 'STARTING...' : 'REPRINT'}
-                </CncButton>
+                </ControlButton>
             </div>
         {/if}
 
         {#if isCancelled}
             <div class="completion-buttons">
-                <CncButton variant="dark" on:click={handleClear}>
+                <ControlButton variant="dark" on:click={handleClear}>
                     CLEAR
-                </CncButton>
-                <CncButton
+                </ControlButton>
+                <ControlButton
                     variant="action"
                     on:click={handleReprint}
                     disabled={isReprinting || !(lastCompletedFilename || printFilename)}
                 >
                     {isReprinting ? 'STARTING...' : 'REPRINT'}
-                </CncButton>
+                </ControlButton>
             </div>
         {/if}
     </div>

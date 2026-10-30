@@ -1,7 +1,7 @@
 <script>
     import PanelModule from "../ui/PanelModule.svelte";
     import RetroSlider from "../ui/RetroSlider.svelte";
-    import CncButton from "../ui/CncButton.svelte";
+    import ControlButton from "../ui/ControlButton.svelte";
     import {
         machineState,
         setActiveExtruder,
@@ -14,7 +14,6 @@
         unloadFilament,
         setExtrusionFactor,
     } from "../../../stores/machineStore.js";
-    import { send } from "../../../stores/websocket.js";
 
     $: extruders = $machineState.availableExtruders || [];
     $: activeExt = $machineState.activeExtruder || "extruder";
@@ -22,7 +21,9 @@
     $: currentSpeed = $machineState.extrudeSpeed;
 
     $: pa = $machineState.pressureAdvance || 0;
-    $: st = $machineState.smoothTime || 0.04;
+    $: st = $machineState.smoothTime ?? 0.04;
+    $: cold = ($machineState.temperatures[activeExt]?.current || 0) < ($machineState.configured[activeExt]?.min_extrude_temp ?? 170);
+    $: manualDisabled = cold || ["printing", "paused"].includes($machineState.printStatsState);
 
     const amounts = [1, 5, 10, 25, 50, 100];
     const speeds = [1, 2, 5, 10, 20];
@@ -68,7 +69,7 @@
     {/if}
 
     <RetroSlider
-        label="EXTRUSION FACTOR ({$machineState.extrusionFactor}%)"
+        label="EXTRUSION FACTOR"
         value={$machineState.extrusionFactor}
         on:change={onExtrusionChange}
     />
@@ -82,7 +83,8 @@
                 <button class="adj-btn" on:click={() => adjustPA(-0.005)}
                     >-</button
                 >
-                <div class="value-box">{pa.toFixed(3)}</div>
+                <input class="value-box" aria-label="Pressure advance" type="number" min="0" max="1" step="0.001" value={pa} on:change={e => {if(e.currentTarget.checkValidity() && e.currentTarget.value !== '') updatePressureAdvance(Number(e.currentTarget.value));}} />
+                <button class="adj-btn" title="Reset pressure advance to configured value" on:click={() => updatePressureAdvance($machineState.configured[activeExt]?.pressure_advance ?? 0)}>↺</button>
                 <button class="adj-btn" on:click={() => adjustPA(0.005)}
                     >+</button
                 >
@@ -94,7 +96,8 @@
                 <button class="adj-btn" on:click={() => adjustST(-0.005)}
                     >-</button
                 >
-                <div class="value-box">{st.toFixed(3)}</div>
+                <input class="value-box" aria-label="Smooth time" type="number" min="0.001" max="0.2" step="0.001" value={st} on:change={e => {if(e.currentTarget.checkValidity() && e.currentTarget.value !== '') updateSmoothTime(Number(e.currentTarget.value));}} />
+                <button class="adj-btn" title="Reset smooth time to configured value" on:click={() => updateSmoothTime($machineState.configured[activeExt]?.pressure_advance_smooth_time ?? 0.04)}>↺</button>
                 <button class="adj-btn" on:click={() => adjustST(0.005)}
                     >+</button
                 >
@@ -103,12 +106,18 @@
     </div>
 
     <div class="control-section">
-        <span class="section-label">AMOUNT (mm)</span>
+        <div class="control-heading">
+            <label class="section-label" for="extrusion-amount">AMOUNT</label>
+            <input id="extrusion-amount" class="value-box" aria-label="Extrusion amount" type="number" min="0.1" max={$machineState.configured[activeExt]?.max_extrude_only_distance ?? 50} step="0.1" value={currentAmount} on:change={e => {if(e.currentTarget.checkValidity() && e.currentTarget.value !== '') setExtrudeAmount(Number(e.currentTarget.value));}} />
+            <span class="control-unit">mm</span>
+            <button class="adj-btn" aria-label="Reset extrusion amount" on:click={() => setExtrudeAmount(10)}>↺</button>
+        </div>
         <div class="selector-grid">
             {#each amounts as amt}
                 <button
                     class="select-btn"
                     class:active={currentAmount === amt}
+                    disabled={amt > ($machineState.configured[activeExt]?.max_extrude_only_distance ?? 50)}
                     on:click={() => setExtrudeAmount(amt)}
                 >
                     {amt}
@@ -118,7 +127,12 @@
     </div>
 
     <div class="control-section">
-        <span class="section-label">SPEED (mm/s)</span>
+        <div class="control-heading">
+            <label class="section-label" for="extrusion-speed">SPEED</label>
+            <input id="extrusion-speed" class="value-box" aria-label="Extrusion speed" type="number" min="0.1" max="50" step="0.1" value={currentSpeed} on:change={e => {if(e.currentTarget.checkValidity() && e.currentTarget.value !== '') setExtrudeSpeed(Number(e.currentTarget.value));}} />
+            <span class="control-unit">mm/s</span>
+            <button class="adj-btn" aria-label="Reset extrusion speed" on:click={() => setExtrudeSpeed(5)}>↺</button>
+        </div>
         <div class="selector-grid">
             {#each speeds as spd}
                 <button
@@ -133,13 +147,14 @@
     </div>
 
     <div class="action-buttons">
-        <CncButton variant="action" on:click={retract}>RETRACT</CncButton>
-        <CncButton variant="action" on:click={extrude}>EXTRUDE</CncButton>
+        <ControlButton variant="action" disabled={manualDisabled} on:click={retract}>RETRACT</ControlButton>
+        <ControlButton variant="action" disabled={manualDisabled} on:click={extrude}>EXTRUDE</ControlButton>
     </div>
 
+    {#if cold}<p class="extrusion-hint">Heat the active extruder to enable manual extrusion.</p>{/if}
     <div class="action-buttons filament-actions">
-        <CncButton variant="action" on:click={unloadFilament}>UNLOAD</CncButton>
-        <CncButton variant="action" on:click={loadFilament}>LOAD</CncButton>
+        <ControlButton variant="action" disabled={["printing","paused"].includes($machineState.printStatsState)} on:click={unloadFilament}>UNLOAD</ControlButton>
+        <ControlButton variant="action" disabled={["printing","paused"].includes($machineState.printStatsState)} on:click={loadFilament}>LOAD</ControlButton>
     </div>
 </PanelModule>
 
@@ -151,11 +166,13 @@
         margin-bottom: 12px;
     }
 
+    :global(.extrusion-hint) { margin: 0 0 12px; line-height: 1.5; }
+
     .filament-actions {
         margin-bottom: 0;
     }
 
-    .filament-actions :global(.cnc-button.action) {
+    .filament-actions :global(.control-button.action) {
         background: linear-gradient(180deg, #333 0%, #222 100%);
         border-color: #444;
         box-shadow: 0 4px 0 #111;
@@ -165,6 +182,16 @@
         margin-bottom: 15px;
     }
 
+    .control-heading {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 76px 32px 32px;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+    .control-heading .section-label { margin: 0; }
+    .control-heading .value-box { width: 76px; }
+    .control-unit { font-size: 13px; text-align: center; color: var(--retro-green); }
     .section-label {
         display: block;
         font-family: "Orbitron", sans-serif;
@@ -180,7 +207,8 @@
     }
 
     .select-btn {
-        flex: 1;
+        flex: 1 1 0;
+        min-width: 0;
         background: #1a1a1a;
         border: 2px solid #333;
         color: var(--retro-orange);
@@ -215,7 +243,8 @@
     }
 
     .tool-btn {
-        flex: 1;
+        flex: 1 1 0;
+        min-width: 0;
         background: #000;
         border: 2px solid #333;
         color: #666;
@@ -232,14 +261,19 @@
         font-weight: bold;
     }
 
+    @media (max-width: 650px) {
+        .tuning-grid { grid-template-columns: minmax(0, 1fr) !important; }
+    }
+
     .tuning-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 12px;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
     }
 
     .tuning-card {
+        min-width: 0;
         background: #000;
         border: 1px solid #222;
         padding: 10px;
@@ -249,7 +283,7 @@
     .tuning-label {
         display: block;
         font-family: "Orbitron", sans-serif;
-        font-size: 8px;
+        font-size: 10px;
         color: #666;
         margin-bottom: 8px;
         letter-spacing: 1px;
@@ -259,22 +293,28 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
+        gap: 8px;
     }
 
     .value-box {
+        background: #080c09;
+        border: 1px solid #405447;
+        padding: 6px;
+        width: 84px;
         font-family: "Share Tech Mono", monospace;
         font-size: 16px;
         color: var(--retro-orange);
-        min-width: 60px;
+        min-width: 0;
+        height: 32px;
     }
 
     .adj-btn {
         background: #1a1a1a;
         border: 1px solid #333;
         color: #fff;
-        width: 24px;
-        height: 24px;
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
         display: flex;
         align-items: center;
         justify-content: center;

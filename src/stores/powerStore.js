@@ -1,5 +1,5 @@
 import { writable, derived, get } from 'svelte/store';
-import { send, onNotification, connectionState } from './websocket.js';
+import { send, onNotification, connectionState, getConnectionGeneration } from './websocket.js';
 import { configStore } from './configStore.js';
 import { notificationStore } from './notificationStore.js';
 import { machineState } from './machineStore.js';
@@ -16,32 +16,9 @@ const powerState = writable({
 let cleanupNotification = null;
 let pollInterval = null;
 
-connectionState.subscribe(async (state) => {
-    if (state === 'connected') {
-        await initializePowerDevices();
-        startPolling();
-    } else if (state === 'disconnected') {
-        // Cleanup notification listener
-        if (cleanupNotification) {
-            cleanupNotification();
-            cleanupNotification = null;
-        }
-        // Stop polling
-        if (pollInterval) {
-            clearInterval(pollInterval);
-            pollInterval = null;
-        }
-        powerState.set({
-            devices: [],
-            deviceStatuses: {},
-            isInitialized: false,
-            lastError: null
-        });
-    }
-});
-
 // Fetch available power devices from Moonraker
 const fetchDevices = async () => {
+    const generation = getConnectionGeneration();
     try {
         const result = await send('machine.device_power.devices');
         return result.devices || [];
@@ -51,6 +28,7 @@ const fetchDevices = async () => {
             // Method not found - device_power plugin not configured
             return [];
         }
+        if (generation !== getConnectionGeneration()) return [];
         console.warn('Failed to fetch power devices:', error);
         powerState.update(s => ({ ...s, lastError: error.message || 'Failed to fetch devices' }));
         return [];
@@ -74,7 +52,9 @@ const fetchDeviceStatus = async (deviceName) => {
 
 // Initialize power device system
 const initializePowerDevices = async () => {
+    const generation = getConnectionGeneration();
     const devices = await fetchDevices();
+    if (generation !== getConnectionGeneration()) return;
     
     if (devices.length === 0) {
         powerState.set({
@@ -90,6 +70,7 @@ const initializePowerDevices = async () => {
     const statuses = {};
     for (const device of devices) {
         const status = await fetchDeviceStatus(device.device);
+        if (generation !== getConnectionGeneration()) return;
         statuses[device.device] = {
             status: device.status || status,
             locked: device.locked_while_printing || false,
@@ -119,7 +100,8 @@ const initializePowerDevices = async () => {
 const handlePowerNotification = (params) => {
     if (!params || !params[0]) return;
     
-    const updates = params[0];
+    const entry = params[0];
+    const updates = entry.device ? { [entry.device]: entry } : entry;
     powerState.update(s => {
         const newStatuses = { ...s.deviceStatuses };
         
@@ -137,6 +119,7 @@ const handlePowerNotification = (params) => {
 
 // Poll device statuses periodically
 const pollDeviceStatuses = async () => {
+    const generation = getConnectionGeneration();
     const state = get(powerState);
     if (!state.isInitialized || state.devices.length === 0) {
         return;
@@ -144,6 +127,7 @@ const pollDeviceStatuses = async () => {
 
     for (const device of state.devices) {
         const status = await fetchDeviceStatus(device.device);
+        if (generation !== getConnectionGeneration()) return;
         powerState.update(s => ({
             ...s,
             deviceStatuses: {
@@ -182,7 +166,8 @@ export const currentPowerDevice = derived(
             };
         }
 
-        const selectedDevice = $config.power?.selectedDevice || 'AUTO';
+        const selectedDevice = $config.power?.selectedDevice || 'OFF';
+        if (selectedDevice === 'OFF') return { isAvailable:false, isOn:false, locked:false, displayName:'Power control disabled' };
         let targetDevice = null;
 
         if (selectedDevice === 'AUTO') {
@@ -231,6 +216,7 @@ export const currentPowerDevice = derived(
 
 // Toggle power for the current device
 export const togglePower = async () => {
+    const generation = getConnectionGeneration();
     const device = get(currentPowerDevice);
     
     if (!device.isAvailable || device.locked || !device.deviceName) {
@@ -245,6 +231,7 @@ export const togglePower = async () => {
         // Wait for websocket notification to update state (graceful recovery)
         return true;
     } catch (error) {
+        if (generation !== getConnectionGeneration()) return false;
         console.error(`Failed to toggle power for ${device.deviceName}:`, error);
         notificationStore.addError({
             message: `Failed to turn ${action} ${device.deviceName}: ${error.message || 'Unknown error'}`,
@@ -253,6 +240,7 @@ export const togglePower = async () => {
         
         // Re-fetch status for graceful recovery
         const currentStatus = await fetchDeviceStatus(device.deviceName);
+        if (generation !== getConnectionGeneration()) return false;
         powerState.update(s => ({
             ...s,
             deviceStatuses: {
@@ -280,3 +268,28 @@ export const refreshPowerDevices = async () => {
         await initializePowerDevices();
     }
 };
+
+connectionState.subscribe(async (state) => {
+    if (state === 'connected') {
+        const generation = getConnectionGeneration();
+        await initializePowerDevices();
+        if (generation === getConnectionGeneration()) startPolling();
+    } else {
+        // Cleanup notification listener
+        if (cleanupNotification) {
+            cleanupNotification();
+            cleanupNotification = null;
+        }
+        // Stop polling
+        if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+        }
+        powerState.set({
+            devices: [],
+            deviceStatuses: {},
+            isInitialized: false,
+            lastError: null
+        });
+    }
+});

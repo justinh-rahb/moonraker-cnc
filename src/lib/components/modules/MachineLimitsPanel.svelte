@@ -1,4 +1,7 @@
 <script>
+    import ConfirmDialog from "../ui/ConfirmDialog.svelte";
+    let confirmSave = false;
+    $: if (!$machineState.isReady) confirmSave = false;
     import PanelModule from "../ui/PanelModule.svelte";
     import { machineState, setVelocityLimit } from "../../../stores/machineStore.js";
     import { send } from "../../../stores/websocket.js";
@@ -128,6 +131,7 @@
 
 <PanelModule title="MOTION LIMITS">
     <div class="limits-container">
+        <button class="btn btn-reset" title="Restore configured motion limits" on:click={() => { const c = $machineState.configured.printer || {}; setVelocityLimit({ velocity:c.max_velocity, accel:c.max_accel, squareCornerVelocity:c.square_corner_velocity ?? 5, ...(usingMinimumCruiseRatio ? { minimumCruiseRatio:c.minimum_cruise_ratio ?? 0.5 } : { accelToDecel:c.max_accel_to_decel }) }); }}>↺ RESET TO CONFIGURED LIMITS</button>
         <!-- Max Velocity -->
         <div class="limit-row">
             <div class="limit-label" title="Maximum toolhead velocity">
@@ -334,17 +338,19 @@
         <!-- Info and Actions -->
         <div class="info-section">
             <div class="info-text">
-                Click values to edit. Changes apply immediately. Use SAVE_CONFIG
-                to persist.
+                Runtime limits apply immediately. Edit printer.cfg to persist limits. SAVE_CONFIG saves pending calibrations and restarts Klipper.
             </div>
-            <button class="btn btn-save" on:click={saveConfig}>
+            <button class="btn btn-save" disabled={["printing","paused"].includes($machineState.printStatsState)} on:click={() => confirmSave = true}>
                 SAVE CONFIG
             </button>
         </div>
     </div>
 </PanelModule>
 
+<ConfirmDialog bind:isOpen={confirmSave} title="SAVE AND RESTART" message="Save pending calibration results and restart Klipper? Runtime velocity limits are temporary; edit printer.cfg to persist those values." onConfirm={saveConfig} onCancel={() => confirmSave = false} />
 <style>
+    .btn-reset { color:var(--retro-green); background:#101b14; min-height:36px; }
+
     .limits-container {
         display: flex;
         flex-direction: column;

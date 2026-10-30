@@ -1,9 +1,9 @@
-# Retro CNC Panel
+# Retrograde
 
-A retro-styled, reactive web interface for controlling 3D printers and CNC machines running Klipper/Moonraker. Built with Svelte for a snappy, responsive experience with a distinct 1980s terminal aesthetic.
+A retro-styled, reactive web interface for controlling 3D printers running Klipper/Moonraker. Built with Svelte for a snappy, responsive experience with a distinct 1980s terminal aesthetic.
 
-![Retro CNC Panel Home](docs/screenshot-1.png)
-![Retro CNC Panel Config](docs/screenshot-2.png)
+![Retrograde Home](docs/screenshot-1.png)
+![Retrograde Config](docs/screenshot-2.png)
 
 ## Features
 
@@ -101,7 +101,7 @@ curl -sSL https://justinh-rahb.github.io/moonraker-cnc/install.sh | bash
 
 This will:
 - Download the latest release
-- Install to `~/retro-cnc-panel`
+- Install to `~/retrograde`
 - Optionally configure nginx to serve the panel
 
 ### Manual Installation
@@ -112,7 +112,7 @@ This will:
 
 Example with Python:
 ```bash
-cd ~/retro-cnc-panel
+cd ~/retrograde
 python3 -m http.server 8080
 ```
 
@@ -146,6 +146,44 @@ npm run build
 ```
 
 Open your browser to `http://localhost:5173`
+
+Retrograde was previously named Retro CNC Panel. Existing settings and Moonraker database keys retain their legacy identifiers for compatibility. The installer reuses existing installation directories and accepts older release archive names. Repository and documentation URLs remain unchanged until the repository is renamed.
+
+## Host profiles, shared settings and layouts
+
+Use **HOSTS** to add, select, edit or remove Moonraker connections. Each printer keeps its own macros, cameras, presets, console preferences and dashboard layout. Settings and UX preferences synchronize through that printer's Moonraker database in the application's own `retro_cnc_panel` namespace. Local storage caches settings for offline startup and keeps the browser's connection list. A sync indicator reports unavailable storage or conflicting edits from another browser.
+
+**ARRANGE PANELS** enables drag handles and keyboard-accessible move buttons; **LOCK LAYOUT** hides them. Phone and desktop arrangements are saved separately. **HISTORY** opens recorded Moonraker jobs. File browsing includes filtering, metadata previews, downloads and sequential multiple-file uploads. Slider controls support numeric entry and a reset button. Temperature/fan resets turn the device off; speed/extrusion factors reset to 100%; tuning resets restore Klipper's configured values.
+
+Existing single-printer JSON exports still import. Importing another host adds/selects its profile. **EXPORT CONFIG** exports the active host; **EXPORT ALL HOSTS** backs up the workspace. The old v1 local-storage entry is retained during migration.
+
+### Build defaults and internal themes
+
+Supply a native settings export as first-run defaults:
+
+```sh
+DEFAULT_SETTINGS_FILE=./printer-defaults.json APP_THEME=flight npm run build
+```
+
+`APP_THEME` accepts `retro` (default) or `flight`, a restrained technical interface using the existing green/orange palette. Theme selection is internal and intentionally has no settings toggle. Defaults only fill missing fields in saved profiles; existing values take precedence. A versioned workspace export can also provide defaults for its active host.
+
+For Docker, put the export in the build context:
+
+```sh
+docker build --build-arg DEFAULT_SETTINGS_FILE=printer-defaults.json --build-arg APP_THEME=flight -t retrograde .
+docker run --rm -p 1337:80 retrograde
+```
+
+Build defaults are embedded in public JavaScript; use UI configuration without credentials. No settings export from a developer's Downloads folder is included in the repository.
+
+For read-only acceptance testing against a real printer:
+
+```sh
+VITE_READ_ONLY=true DEFAULT_SETTINGS_FILE=./printer-defaults.json npm run dev
+npm test
+```
+
+This validation mode blocks hardware, file and database writes from the frontend. Run a normal build for everyday control. Review the [audit and validation record](docs/frontend-audit.md) for remaining Mainsail differences and hardware acceptance limits.
 
 ## Initial Setup
 

@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Branding
+- Rename the application to Retrograde; keep existing repository URLs and saved settings compatible.
+
+### Added
+- Multiple host profiles, legacy/workspace import-export and build-time defaults.
+- Moonraker-backed printer and UX settings with local caching and conflict handling.
+- Job history, file filtering/metadata previews/downloads and multiple uploads.
+- Locked dashboard arrangement with drag/keyboard controls and viewport-specific layouts.
+- Internal Flight theme, numeric/reset controls and keyboard dialog navigation.
+- Regression tests, frontend CI and documentation-only Pages publishing.
+
+### Fixed
+- Reconnect after disconnection, focus and resume; bounded RPCs and stale-host isolation.
+- History API navigation, directory deep links and production build metadata.
+- Persistent slicer layer counters, elapsed/remaining/completion estimates and paused finish display.
+- Webcam discovery, configured pin scaling/PWM, actual active extruder selection and preserved G-code modes.
+- Cold-extrusion/unhomed-jog controls, mobile overflow and SAVE_CONFIG guidance.
+
  ## [1.2.2] - 2026-02-20
 
 ### Added
@@ -271,7 +291,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2026-01-24
 
 ### Added
-- Initial release of Retro CNC Panel
+- Initial release of Retrograde
 - Toolhead control panel with XYZ positioning and homing controls
 - Extruder control with load/unload macro buttons
 - Temperature panel for hotend and bed monitoring
