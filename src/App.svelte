@@ -27,6 +27,8 @@
   import HistoryModal from './lib/components/ui/HistoryModal.svelte';
   import Dashboard from './lib/components/modules/Dashboard.svelte';
   import './themes.css';
+  let arrangingPanels = false;
+  $: if ($workspaceStore.activeHostId) arrangingPanels = false;
   onMount(() => {
     const params = new URLSearchParams(window.location.search);
     try { if (params.has('ip') || params.has('port') || params.has('autoconnect')) updateServerConfig(params.get('ip') || $configStore.server.ip, params.get('port') || $configStore.server.port, params.has('autoconnect') ? params.get('autoconnect') === 'true' : $configStore.server.autoConnect); } catch(e) { lastError.set(e.message); }
@@ -59,7 +61,7 @@
 <NotificationArea />
 
 <div class="machine-panel">
-  <Header />
+  <Header bind:editing={arrangingPanels} />
 
-  {#key $workspaceStore.activeHostId}<Dashboard />{/key}
+  {#key $workspaceStore.activeHostId}<Dashboard bind:editing={arrangingPanels} />{/key}
 </div>

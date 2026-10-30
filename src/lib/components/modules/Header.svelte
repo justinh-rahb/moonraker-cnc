@@ -6,6 +6,7 @@
     import { currentPowerDevice, togglePower } from "../../../stores/powerStore.js";
     import { filePickerOpen, settingsOpen, hostsOpen, historyOpen } from "../../../stores/uiStore.js";
     import { connectionState } from "../../../stores/websocket.js";
+    export let editing = false;
     let confirmPowerOpen = false;
     $: if ($connectionState !== "connected") confirmPowerOpen = false;
     let powerAction = "";
@@ -49,6 +50,11 @@
 <div class="panel-header">
     <div class="machine-title">{$configStore.title}</div>
     <div class="header-controls">
+        <button class="settings-btn" class:layout-active={editing} aria-label={editing ? 'Lock panel layout' : 'Arrange panels'} title={editing ? 'Lock panel layout' : 'Arrange panels'} aria-pressed={editing} on:click={() => editing = !editing}>
+            <svg class="icon-layout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+        </button>
         <button class="settings-btn" title="Hosts" on:click={() => $hostsOpen = true}>HOSTS</button>
         <button class="settings-btn" title="History" on:click={() => { $settingsOpen = false; $filePickerOpen = false; $historyOpen = true; }}>HISTORY</button>
         <button
@@ -110,7 +116,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
         padding: 20px;
         background: linear-gradient(180deg, #0a0a0a 0%, #151515 100%);
         border: 3px solid #333;
@@ -316,6 +322,9 @@
         0%, 100% { opacity: 1; transform: scale(1); }
         50% { opacity: 0.8; transform: scale(1.1); }
     }
+
+    .icon-layout { width:24px; height:24px; }
+    .settings-btn.layout-active { color:var(--retro-green); border-color:var(--retro-green); }
 
     .icon-folder {
         width: 24px;

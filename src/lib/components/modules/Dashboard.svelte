@@ -16,7 +16,7 @@
     const modules = { status: PrintStatusPanel, toolhead: ToolheadControl, extruder: ExtruderControl, console: ConsolePanel, camera: CameraPanel, temperature: TemperaturePanel, limits: MachineLimitsPanel, misc: MiscPanel };
     const names = { status:'Print status', toolhead:'Toolhead', extruder:'Extruder', console:'Console', camera:'Camera', temperature:'Temperatures', limits:'Motion limits', misc:'Fans & lights' };
     const defaults = ['status', 'camera', 'toolhead', 'temperature', 'extruder', 'limits', 'console', 'misc'];
-    let editing = false;
+    export let editing = false;
     let compact = false;
     let dragging = '';
     let announcement = '';
@@ -42,15 +42,16 @@
         if (target) move(id, target);
     }
 </script>
-<div class="dashboard-topbar">
-<div class="dashboard-toolbar">
-    <span>{$connectionState === 'connected' ? ($machineState.isReady ? 'LIVE TELEMETRY' : 'SYNCHRONIZING') : $connectionState.toUpperCase()} · {$configStore.server.ip}</span>
-    <button aria-pressed={editing} on:click={() => editing = !editing}>{editing ? 'LOCK LAYOUT' : 'ARRANGE PANELS'}</button>
-    {#if editing}<button on:click={() => configStore.update(c => ({...c, dashboard:{...c.dashboard,[size]:defaults}}))}>RESET LAYOUT</button>{/if}
-</div>
-<div class="settings-sync" role="status">{$settingsSyncState.message}
-{#if $settingsSyncState.status === 'conflict'}<button on:click={() => resolveSettingsConflict('local')}>Keep this browser's copy</button><button on:click={() => resolveSettingsConflict('remote')}>Use Moonraker copy</button>{:else if $settingsSyncState.status === 'local'}<button on:click={() => syncSettings()}>Retry sync</button>{/if}</div>
-</div>
+{#if $connectionState !== 'connected'}
+<div class="dashboard-notice" role="status">{$connectionState === 'connecting' ? 'Connecting to printer…' : 'Printer disconnected.'}</div>
+{/if}
+{#if ['conflict', 'local'].includes($settingsSyncState.status)}
+<div class="dashboard-notice settings-sync" role="status">{$settingsSyncState.message}
+{#if $settingsSyncState.status === 'conflict'}<button on:click={() => resolveSettingsConflict('local')}>Keep this browser's copy</button><button on:click={() => resolveSettingsConflict('remote')}>Use Moonraker copy</button>{:else}<button on:click={() => syncSettings()}>Retry sync</button>{/if}</div>
+{/if}
+{#if editing}
+<div class="dashboard-toolbar"><span>Rearrange panels using the handles or arrows.</span><button on:click={() => configStore.update(c => ({...c, dashboard:{...c.dashboard,[size]:defaults}}))}>RESET LAYOUT</button><button on:click={() => editing = false}>DONE</button></div>
+{/if}
 <div class="sr-only" aria-live="polite">{announcement}</div>
 <div class="dashboard-grid" class:editing>
 {#each order as id (id)}
@@ -70,9 +71,8 @@
 {/each}
 </div>
 <style>
-.dashboard-topbar { display:grid; gap:8px; margin-bottom:20px; }
-.settings-sync { color:#a1aca4; font-size:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:32px; }
-.dashboard-toolbar { display:flex; gap:12px; flex-wrap:wrap; justify-content:flex-end; align-items:center; margin:0; min-height:36px; font-size:12px; }
+.dashboard-notice { color:var(--retro-orange); font-size:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px 10px; margin-bottom:12px; border:1px solid var(--border-color); }
+.dashboard-toolbar { display:flex; gap:12px; flex-wrap:wrap; justify-content:flex-end; align-items:center; margin-bottom:12px; font-size:12px; }
 .dashboard-toolbar span { margin-right:auto; color:#98a89c; }
 button { font:inherit; color:var(--retro-green); background:#0b100d; border:1px solid #3d5243; padding:8px; cursor:pointer; }
 .dashboard-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; align-items:start; }
