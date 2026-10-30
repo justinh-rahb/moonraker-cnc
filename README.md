@@ -77,6 +77,7 @@ A Klipper/Moonraker frontend with a restrained, science-fiction control-interfac
 - **Customizable Macro Panels**: Create, edit, delete, and reorder macro panels
 - **Unlimited Macros**: Add as many macros as needed with custom labels, G-code, and colors
 - **Panel Reordering**: Drag and organize panels to your preference
+- **Navigation**: Back/Forward tracks top-level views; settings tabs and file directories update the current URL without adding extra stops
 - **Heading Fonts**: Choose theme default, system sans/monospace, Orbitron, or Share Tech Mono in Settings → Interface; preferences sync per printer
 - **Custom Panel Title**: Rename the interface for your machine
 - **Persistent Settings**: Per-printer settings and UX preferences in Moonraker, with a local cache for offline startup
@@ -154,7 +155,7 @@ npm run build
 
 Open your browser to `http://localhost:5173`
 
-Retrograde was previously named Retro CNC Panel. Existing settings and Moonraker database keys retain their legacy identifiers for compatibility. The installer reuses existing installation directories and accepts older release archive names. Repository and documentation URLs remain unchanged until the repository is renamed.
+Retrograde was previously named Retro CNC Panel. Existing settings and Moonraker database keys retain their legacy identifiers for compatibility. The installer reuses existing installation directories and accepts older release archive names.
 
 ## Host profiles, shared settings and layouts
 

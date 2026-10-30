@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [2.0.1] - 2026-10-30
 
 ### Fixed
+- Only top-level view navigation adds history entries; settings tabs and file directories update the current entry, and closing an app-opened view consumes its entry.
 - Include Hosts in URL navigation and restore it on browser Back/Forward and reload.
 - Canonicalize legacy Hosts links and invalid settings routes without inserting extra history entries.
 - Keep top-level views exclusive and cancel pending UI navigation when browser history changes.
