@@ -102,10 +102,12 @@
                     </label>
                 </div>
 
-                <button on:click={() => ($hostsOpen = true)}>MANAGE HOSTS</button>
-                <button on:click={() => dismissed = true}>CONTINUE OFFLINE</button>
+                <div class="secondary-actions">
+                    <ControlButton on:click={() => ($hostsOpen = true)}>MANAGE HOSTS</ControlButton>
+                    <ControlButton on:click={() => dismissed = true}>CONTINUE OFFLINE</ControlButton>
+                </div>
                 <div class="actions">
-                    <ControlButton variant="action" on:click={handleConnect}>
+                    <ControlButton variant="action" disabled={state === "connecting"} on:click={handleConnect}>
                         {state === "connecting"
                             ? "CONNECTING..."
                             : "INITIATE UPLINK"}
@@ -133,6 +135,10 @@
 
     .modal-window {
         width: 500px;
+        max-width:calc(100vw - 24px);
+        max-height:calc(100dvh - 24px);
+        overflow-y:auto;
+        box-sizing:border-box;
         background: var(--bg-module);
         border: 4px solid var(--border-color);
         box-shadow:
@@ -157,6 +163,10 @@
         flex-direction: column;
         gap: 20px;
     }
+
+    .secondary-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .secondary-actions :global(.control-button) { height:100%; padding:12px 8px; font-size:12px; line-height:1.4; }
+    @media(max-width:400px) { .secondary-actions { grid-template-columns:minmax(0,1fr); } }
 
     .status-line {
         font-family: "Share Tech Mono", monospace;
