@@ -42,6 +42,7 @@
         if (target) move(id, target);
     }
 </script>
+<div class="dashboard-topbar">
 <div class="dashboard-toolbar">
     <span>{$connectionState === 'connected' ? ($machineState.isReady ? 'LIVE TELEMETRY' : 'SYNCHRONIZING') : $connectionState.toUpperCase()} · {$configStore.server.ip}</span>
     <button aria-pressed={editing} on:click={() => editing = !editing}>{editing ? 'LOCK LAYOUT' : 'ARRANGE PANELS'}</button>
@@ -49,6 +50,7 @@
 </div>
 <div class="settings-sync" role="status">{$settingsSyncState.message}
 {#if $settingsSyncState.status === 'conflict'}<button on:click={() => resolveSettingsConflict('local')}>Keep this browser's copy</button><button on:click={() => resolveSettingsConflict('remote')}>Use Moonraker copy</button>{:else if $settingsSyncState.status === 'local'}<button on:click={() => syncSettings()}>Retry sync</button>{/if}</div>
+</div>
 <div class="sr-only" aria-live="polite">{announcement}</div>
 <div class="dashboard-grid" class:editing>
 {#each order as id (id)}
@@ -68,8 +70,9 @@
 {/each}
 </div>
 <style>
-.settings-sync { color:#a1aca4; font-size:12px; margin-bottom:14px; display:flex; gap:8px; flex-wrap:wrap; }
-.dashboard-toolbar { display:flex; gap:12px; flex-wrap:wrap; justify-content:flex-end; align-items:center; margin:0 0 16px; font-size:12px; }
+.dashboard-topbar { display:grid; gap:8px; margin-bottom:20px; }
+.settings-sync { color:#a1aca4; font-size:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:32px; }
+.dashboard-toolbar { display:flex; gap:12px; flex-wrap:wrap; justify-content:flex-end; align-items:center; margin:0; min-height:36px; font-size:12px; }
 .dashboard-toolbar span { margin-right:auto; color:#98a89c; }
 button { font:inherit; color:var(--retro-green); background:#0b100d; border:1px solid #3d5243; padding:8px; cursor:pointer; }
 .dashboard-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; align-items:start; }

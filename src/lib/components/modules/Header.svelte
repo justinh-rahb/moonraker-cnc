@@ -128,8 +128,17 @@
 
     .header-controls {
         display: flex;
-        gap: 15px;
+        gap: 10px;
         align-items: center;
+    }
+
+    .header-controls > button {
+        height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        padding-block: 0;
     }
 
     .power-btn {

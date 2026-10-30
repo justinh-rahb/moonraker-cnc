@@ -106,8 +106,12 @@
     </div>
 
     <div class="control-section">
-        <label class="section-label">AMOUNT (mm) <input class="value-box" aria-label="Extrusion amount" type="number" min="0.1" max={$machineState.configured[activeExt]?.max_extrude_only_distance ?? 50} step="0.1" value={currentAmount} on:change={e => {if(e.currentTarget.checkValidity() && e.currentTarget.value !== '') setExtrudeAmount(Number(e.currentTarget.value));}} /></label>
-        <button class="adj-btn" aria-label="Reset extrusion amount" on:click={() => setExtrudeAmount(10)}>↺</button>
+        <div class="control-heading">
+            <label class="section-label" for="extrusion-amount">AMOUNT</label>
+            <input id="extrusion-amount" class="value-box" aria-label="Extrusion amount" type="number" min="0.1" max={$machineState.configured[activeExt]?.max_extrude_only_distance ?? 50} step="0.1" value={currentAmount} on:change={e => {if(e.currentTarget.checkValidity() && e.currentTarget.value !== '') setExtrudeAmount(Number(e.currentTarget.value));}} />
+            <span class="control-unit">mm</span>
+            <button class="adj-btn" aria-label="Reset extrusion amount" on:click={() => setExtrudeAmount(10)}>↺</button>
+        </div>
         <div class="selector-grid">
             {#each amounts as amt}
                 <button
@@ -123,8 +127,12 @@
     </div>
 
     <div class="control-section">
-        <label class="section-label">SPEED (mm/s) <input class="value-box" aria-label="Extrusion speed" type="number" min="0.1" max="50" step="0.1" value={currentSpeed} on:change={e => {if(e.currentTarget.checkValidity() && e.currentTarget.value !== '') setExtrudeSpeed(Number(e.currentTarget.value));}} /></label>
-        <button class="adj-btn" aria-label="Reset extrusion speed" on:click={() => setExtrudeSpeed(5)}>↺</button>
+        <div class="control-heading">
+            <label class="section-label" for="extrusion-speed">SPEED</label>
+            <input id="extrusion-speed" class="value-box" aria-label="Extrusion speed" type="number" min="0.1" max="50" step="0.1" value={currentSpeed} on:change={e => {if(e.currentTarget.checkValidity() && e.currentTarget.value !== '') setExtrudeSpeed(Number(e.currentTarget.value));}} />
+            <span class="control-unit">mm/s</span>
+            <button class="adj-btn" aria-label="Reset extrusion speed" on:click={() => setExtrudeSpeed(5)}>↺</button>
+        </div>
         <div class="selector-grid">
             {#each speeds as spd}
                 <button
@@ -158,6 +166,8 @@
         margin-bottom: 12px;
     }
 
+    :global(.extrusion-hint) { margin: 0 0 12px; line-height: 1.5; }
+
     .filament-actions {
         margin-bottom: 0;
     }
@@ -172,6 +182,16 @@
         margin-bottom: 15px;
     }
 
+    .control-heading {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 76px 32px 32px;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+    .control-heading .section-label { margin: 0; }
+    .control-heading .value-box { width: 76px; }
+    .control-unit { font-size: 13px; text-align: center; color: var(--retro-green); }
     .section-label {
         display: block;
         font-family: "Orbitron", sans-serif;
@@ -187,7 +207,8 @@
     }
 
     .select-btn {
-        flex: 1;
+        flex: 1 1 0;
+        min-width: 0;
         background: #1a1a1a;
         border: 2px solid #333;
         color: var(--retro-orange);
@@ -222,7 +243,8 @@
     }
 
     .tool-btn {
-        flex: 1;
+        flex: 1 1 0;
+        min-width: 0;
         background: #000;
         border: 2px solid #333;
         color: #666;
@@ -245,12 +267,13 @@
 
     .tuning-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 12px;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
     }
 
     .tuning-card {
+        min-width: 0;
         background: #000;
         border: 1px solid #222;
         padding: 10px;
@@ -260,7 +283,7 @@
     .tuning-label {
         display: block;
         font-family: "Orbitron", sans-serif;
-        font-size: 8px;
+        font-size: 10px;
         color: #666;
         margin-bottom: 8px;
         letter-spacing: 1px;
@@ -270,7 +293,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
+        gap: 8px;
     }
 
     .value-box {
@@ -281,15 +304,17 @@
         font-family: "Share Tech Mono", monospace;
         font-size: 16px;
         color: var(--retro-orange);
-        min-width: 60px;
+        min-width: 0;
+        height: 32px;
     }
 
     .adj-btn {
         background: #1a1a1a;
         border: 1px solid #333;
         color: #fff;
-        width: 24px;
-        height: 24px;
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
         display: flex;
         align-items: center;
         justify-content: center;

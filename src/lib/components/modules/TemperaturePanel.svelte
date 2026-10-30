@@ -194,7 +194,6 @@
                                             adjustTemp(key, -tempStep)}
                                         >-</button
                                     >
-                                    <div class="target-display"><span class="val-label">TARGET</span><span class="target-val">{temps[key].target.toFixed(0)}°C</span></div>
                                     <button
                                         class="icon-btn"
                                         on:click={() =>
@@ -210,7 +209,7 @@
                             </div>
                         {/if}
                     </div>
-                    {#if isSettable(key)}<RetroSlider label={temps[key].label + ' target'} unit="°C" min={0} max={$machineState.configured[key]?.max_temp || 350} baseline={0} value={temps[key].target} on:change={e => setTemp(key,e.detail.value)} />{/if}
+                    {#if isSettable(key)}<RetroSlider label={temps[key].label + ' target'} caption="TARGET" unit="°C" min={0} max={$machineState.configured[key]?.max_temp || 350} baseline={0} value={temps[key].target} on:change={e => setTemp(key,e.detail.value)} />{/if}
                 </div>
             {/if}
         {/each}
@@ -320,7 +319,7 @@
         display: flex;
         flex-direction: column;
         gap: 10px; /* Reduced gap for compact list */
-        margin-bottom: 20px;
+        margin-bottom: 16px;
     }
 
     .temp-item {
@@ -330,6 +329,8 @@
         padding: 10px 15px;
         box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
     }
+
+    .temp-item :global(.slider-control) { margin: 12px 0 0; }
 
     .temp-header {
         display: flex;
@@ -351,7 +352,8 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        height: 40px; /* Fixed height for consistency */
+        min-height: 44px;
+        gap: 12px;
     }
 
     .readout-group {
@@ -392,7 +394,7 @@
     .control-group {
         display: flex;
         align-items: center;
-        gap: 15px;
+        gap: 8px;
     }
 
     .adjust-controls {
@@ -400,17 +402,17 @@
         align-items: center;
         gap: 8px;
         background: #111;
-        padding: 4px;
-        border-radius: 4px;
-        border: 1px solid #333;
+        padding: 0;
+        border: none;
+        background: transparent;
     }
 
     .icon-btn {
         background: #2a2a2a;
         color: #ddd;
         border: 1px solid #444;
-        width: 28px;
-        height: 28px;
+        width: 32px;
+        height: 32px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -446,27 +448,12 @@
         color: #fff;
     }
 
-    .target-display {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        min-width: 40px;
-    }
-
-    .target-val {
-        font-family: "Share Tech Mono", monospace;
-        font-size: 18px;
-        color: var(--retro-orange);
-        font-weight: bold;
-        line-height: 1;
-    }
-
     /* Panel Controls (Step select, Cool All) */
     .panel-controls {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
         background: #0a0a0a;
         padding: 5px;
         border: 1px solid #333;

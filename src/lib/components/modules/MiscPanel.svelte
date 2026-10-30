@@ -76,7 +76,7 @@
                 </div>
 
                 {#if dev.pwm !== false}
-                <RetroSlider label={dev.label + ' speed'} min={0} max={100} baseline={0} value={Math.round(dev.value / dev.max * 100)} on:change={e => handleSlide(key, dev, e)} />
+                <RetroSlider label={dev.label + ' speed'} caption="SPEED" min={0} max={100} baseline={0} value={Math.round(dev.value / dev.max * 100)} on:change={e => handleSlide(key, dev, e)} />
                 {/if}
             </div>
         {/each}
@@ -104,11 +104,13 @@
         box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
     }
 
+    .device-card :global(.slider-control) { margin: 0; }
+
     .device-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
     }
 
     .device-name {
@@ -118,7 +120,10 @@
         letter-spacing: 1px;
     }
 
+    .device-card:not(:has(.slider-control)) .device-header { margin-bottom: 0; }
+
     .toggle-btn {
+        min-height: 32px;
         background: #111;
         border: 1px solid #333;
         color: #666;

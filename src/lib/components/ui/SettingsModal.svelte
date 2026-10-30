@@ -219,7 +219,7 @@
 
             <div class="modal-content">
                 {#if currentTab === "General"}
-                    <button on:click={() => handleExport(true)}>EXPORT ALL HOSTS</button>
+                    <button class="workspace-export" on:click={() => handleExport(true)}>EXPORT ALL HOSTS</button>
                     <div class="section-title">GENERAL</div>
                     <div class="input-group" style="margin-bottom: 25px;">
                         <label>MACHINE TITLE
@@ -622,7 +622,7 @@
                     <div class="section-title">TEMPERATURE DISPLAY</div>
 
                     <div class="checkbox-group" style="margin-bottom: 25px;">
-                        <label style="margin-bottom: 15px;">
+                        <label >
                             <input
                                 type="checkbox"
                                 checked={$configStore.temperature?.showGraph}
@@ -634,7 +634,7 @@
                             />
                             SHOW GRAPH
                         </label>
-                        <label style="margin-bottom: 15px;">
+                        <label >
                             <input
                                 type="checkbox"
                                 checked={$configStore.temperature?.autoscale}
@@ -763,8 +763,8 @@
                                 </label>
                                 <div class="macro-list">
                                     {#each panel.macros as macro (macro.id)}
-                                        <div class="macro-row">
-                                            <label><input type="checkbox" checked={macro.confirm || false} on:change={e => updateMacro(panel.id,macro.id,{confirm:e.currentTarget.checked})} /> Confirm before running</label>
+                                        <div class="macro-row custom-macro">
+                                            <label class="macro-confirm"><input type="checkbox" checked={macro.confirm || false} on:change={e => updateMacro(panel.id,macro.id,{confirm:e.currentTarget.checked})} /> Confirm before running</label>
                                             <div class="input-col">
                                                 <label>LABEL
                                                 <input
@@ -797,7 +797,7 @@
                                                         )}
                                                 /></label>
                                             </div>
-                                            <div class="input-col">
+                                            <div class="input-col macro-color">
                                                 <span>COLOR</span>
                                                 <ColorPicker
                                                     selectedColor={macro.color}
@@ -1148,7 +1148,9 @@
     }
 
     .modal-window {
-        width: 900px;
+        width: min(900px, calc(100vw - 24px));
+        max-width: calc(100vw - 24px);
+        min-width: 0;
         max-height: calc(100vh - 100px);
         background: var(--bg-module);
         border: 4px solid var(--border-color);
@@ -1215,6 +1217,8 @@
     }
 
     .modal-content {
+        min-height: 0;
+        min-width: 0;
         padding: 30px;
         overflow-y: auto;
     }
@@ -1249,6 +1253,7 @@
     }
 
     .panel-title-input {
+        min-width: 0;
         flex: 1;
         background: #000;
         border: 2px solid var(--retro-orange);
@@ -1285,7 +1290,9 @@
     }
 
     .macro-row {
-        display: flex;
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
         gap: 10px;
         align-items: flex-end;
         background: #151515;
@@ -1293,7 +1300,33 @@
         border: 1px solid #222;
     }
 
+    .macro-row.custom-macro { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) 36px; }
+    .input-col > label, .input-group > label { display: grid; gap: 6px; }
+    select { width: 100%; min-height: 34px; background: #000; color: var(--retro-green); border: 1px solid #333; padding: 8px; font: inherit; }
+    .macro-color { grid-column: 1 / -1; grid-row: 2; }
+    .macro-color > span { font-size:10px; color:#888; }
+    .macro-confirm { grid-column: 1 / -1; grid-row: 3; display: flex; align-items: center; gap: 8px; min-height: 24px; }
+    .macro-confirm input { width: 18px; height: 18px; padding: 0; margin: 0; }
+    .workspace-export { display: block; padding: 10px 14px; margin-bottom: 20px; background: #101b14; color: var(--retro-green); border: 1px solid var(--retro-green-dim); font: inherit; cursor: pointer; }
+    @media (max-width: 650px) {
+        .modal-overlay { padding-top: 12px; }
+        .modal-window { max-height: calc(100dvh - 24px); }
+        .modal-header { gap: 8px; letter-spacing: 1px; }
+        .modal-header > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .header-actions { flex-shrink: 0; gap: 8px; }
+        .preset-row, .camera-row { flex-wrap: wrap; }
+        .preset-row .input-col.main { flex-basis: 100%; }
+        .camera-row .input-col { flex: 1 1 180px; }
+        .macro-row { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr); }
+        .macro-row.custom-macro { grid-template-columns: minmax(0, 1fr) auto; }
+        .macro-row > .input-col { grid-column: 1 / -1; }
+        .macro-confirm { grid-column: 1; grid-row: 4; }
+        .custom-macro .macro-color { grid-row: 3; }
+        .custom-macro > .delete-macro-btn { grid-column: 2; grid-row: 4; }
+    }
+
     .input-col {
+        min-width: 0;
         display: flex;
         flex-direction: column;
         gap: 4px;
@@ -1371,6 +1404,8 @@
     .create-panel-btn:hover {
         background: linear-gradient(180deg, #ff7722 0%, #dd6611 100%);
     }
+
+    .checkbox-group { display: flex; flex-direction: column; gap: 10px; }
 
     .checkbox-group label {
         display: flex;
@@ -1600,6 +1635,9 @@
 
     /* Tab Styles */
     .tabs {
+        min-width: 0;
+        overflow-x: auto;
+        flex-shrink: 0;
         display: flex;
         background: #000;
         border-bottom: 2px solid var(--border-color);
@@ -1607,6 +1645,7 @@
     }
 
     .tab-btn {
+        flex-shrink: 0;
         background: none;
         border: none;
         color: #666;

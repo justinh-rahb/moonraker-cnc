@@ -31,9 +31,14 @@
 
 <style>
     .color-picker {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 8px;
-        flex-wrap: wrap;
+
+    }
+
+    @media (max-width: 650px) {
+        .color-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     .color-option {
@@ -44,7 +49,8 @@
         cursor: pointer;
         transition: all 0.2s;
         flex: 1;
-        min-width: 100px;
+        min-width: 0;
+        min-height: 34px;
     }
 
     .color-option.action {
