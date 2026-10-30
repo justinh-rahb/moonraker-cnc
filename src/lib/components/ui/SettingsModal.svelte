@@ -1,6 +1,6 @@
 <script>
-    import { onDestroy } from "svelte";
-    import {
+    import { dialog } from "../../dialog.js";
+        import {
         configStore,
         updateTitle,
         updateServerConfig,
@@ -30,8 +30,10 @@
         updatePowerConfig,
         // Import/Export
         exportConfig,
+        exportWorkspace,
         importConfig,
     } from "../../../stores/configStore.js";
+    import { machineState } from "../../../stores/machineStore.js";
     import { settingsTab } from "../../../stores/uiStore.js";
     import { availablePowerDevices } from "../../../stores/powerStore.js";
     import CncButton from "./CncButton.svelte";
@@ -42,15 +44,8 @@
     export let isOpen = false;
     export let onClose;
 
-    $: if (typeof document !== "undefined") {
-        document.body.style.overflow = isOpen ? "hidden" : "";
-    }
 
-    onDestroy(() => {
-        if (typeof document !== "undefined") {
-            document.body.style.overflow = "";
-        }
-    });
+
 
     // Build information injected at build time
     const appVersion =
@@ -131,8 +126,8 @@
     let fileInput;
     let importError = "";
 
-    const handleExport = () => {
-        const configJson = exportConfig();
+    const handleExport = (all = false) => {
+        const configJson = all === true ? exportWorkspace() : exportConfig();
         const blob = new Blob([configJson], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -194,7 +189,7 @@
 
 {#if isOpen}
     <div class="modal-overlay">
-        <div class="modal-window">
+        <div class="modal-window" use:dialog={{label: "Settings", close: onClose}}>
             <div class="modal-header">
                 <span>▸ CONFIGURATION</span>
                 <div class="header-actions">
@@ -214,6 +209,7 @@
                     <button
                         class="tab-btn"
                         class:active={currentTab === tab}
+                        aria-current={currentTab === tab ? "page" : undefined}
                         on:click={() => setTab(tab)}
                     >
                         {tab.toUpperCase()}
@@ -223,14 +219,15 @@
 
             <div class="modal-content">
                 {#if currentTab === "General"}
+                    <button on:click={() => handleExport(true)}>EXPORT ALL HOSTS</button>
                     <div class="section-title">GENERAL</div>
                     <div class="input-group" style="margin-bottom: 25px;">
-                        <label>MACHINE TITLE</label>
+                        <label>MACHINE TITLE
                         <input
                             type="text"
                             value={$configStore.title}
                             on:input={(e) => updateTitle(e.target.value)}
-                        />
+                        /></label>
                     </div>
 
                     <div class="checkbox-group" style="margin-bottom: 25px;">
@@ -263,7 +260,7 @@
                         <button class="import-btn" on:click={handleImportClick}>
                             IMPORT CONFIG
                         </button>
-                        <button class="export-btn" on:click={handleExport}>
+                        <button class="export-btn" on:click={() => handleExport()}>
                             EXPORT CONFIG
                         </button>
                         {#if importError}
@@ -277,7 +274,7 @@
                     <div class="presets-container" style="margin-bottom: 25px;">
                         <div class="macro-row">
                             <div class="input-col main">
-                                <label>PAUSE MACRO</label>
+                                <label>PAUSE MACRO
                                 <input
                                     type="text"
                                     value={$configStore.printControl
@@ -286,10 +283,10 @@
                                         updatePrintControlConfig({
                                             pauseMacro: e.target.value,
                                         })}
-                                />
+                                /></label>
                             </div>
                             <div class="input-col main">
-                                <label>RESUME MACRO</label>
+                                <label>RESUME MACRO
                                 <input
                                     type="text"
                                     value={$configStore.printControl
@@ -298,10 +295,10 @@
                                         updatePrintControlConfig({
                                             resumeMacro: e.target.value,
                                         })}
-                                />
+                                /></label>
                             </div>
                             <div class="input-col main">
-                                <label>CANCEL MACRO</label>
+                                <label>CANCEL MACRO
                                 <input
                                     type="text"
                                     value={$configStore.printControl
@@ -310,7 +307,7 @@
                                         updatePrintControlConfig({
                                             cancelMacro: e.target.value,
                                         })}
-                                />
+                                /></label>
                             </div>
                         </div>
                         <div class="checkbox-group" style="margin-top: 15px;">
@@ -359,7 +356,7 @@
                     <div class="presets-container" style="margin-bottom: 25px;">
                         <div class="macro-row">
                             <div class="input-col main">
-                                <label>SELECTED DEVICE</label>
+                                <label>SELECTED DEVICE
                                 <select
                                     value={$configStore.power?.selectedDevice ||
                                         "OFF"}
@@ -377,7 +374,7 @@
                                             >{deviceName}</option
                                         >
                                     {/each}
-                                </select>
+                                </select></label>
                             </div>
                         </div>
                         <div class="checkbox-group" style="margin-top: 15px;">
@@ -402,7 +399,7 @@
                     <div class="presets-container" style="margin-bottom: 25px;">
                         <div class="macro-row">
                             <div class="input-col main">
-                                <label>LOAD MACRO</label>
+                                <label>LOAD MACRO
                                 <input
                                     type="text"
                                     value={$configStore.filament?.loadMacro ||
@@ -411,10 +408,10 @@
                                         updateFilamentConfig({
                                             loadMacro: e.target.value,
                                         })}
-                                />
+                                /></label>
                             </div>
                             <div class="input-col main">
-                                <label>UNLOAD MACRO</label>
+                                <label>UNLOAD MACRO
                                 <input
                                     type="text"
                                     value={$configStore.filament?.unloadMacro ||
@@ -423,12 +420,12 @@
                                         updateFilamentConfig({
                                             unloadMacro: e.target.value,
                                         })}
-                                />
+                                /></label>
                             </div>
                         </div>
                         <div class="macro-row">
                             <div class="input-col">
-                                <label>DISTANCE PARAM</label>
+                                <label>DISTANCE PARAM
                                 <input
                                     type="text"
                                     value={$configStore.filament
@@ -437,10 +434,10 @@
                                         updateFilamentConfig({
                                             distanceParam: e.target.value,
                                         })}
-                                />
+                                /></label>
                             </div>
                             <div class="input-col">
-                                <label>SPEED PARAM</label>
+                                <label>SPEED PARAM
                                 <input
                                     type="text"
                                     value={$configStore.filament?.speedParam ||
@@ -449,10 +446,10 @@
                                         updateFilamentConfig({
                                             speedParam: e.target.value,
                                         })}
-                                />
+                                /></label>
                             </div>
                             <div class="input-col">
-                                <label>TEMP PARAM</label>
+                                <label>TEMP PARAM
                                 <input
                                     type="text"
                                     value={$configStore.filament?.tempParam ||
@@ -461,7 +458,7 @@
                                         updateFilamentConfig({
                                             tempParam: e.target.value,
                                         })}
-                                />
+                                /></label>
                             </div>
                         </div>
                     </div>
@@ -472,7 +469,7 @@
                     <div class="presets-container" style="margin-bottom: 25px;">
                         <div class="macro-row">
                             <div class="input-col">
-                                <label>MAX FLOW RATE (mm³/s)</label>
+                                <label>MAX FLOW RATE (mm³/s)
                                 <input
                                     type="number"
                                     min="1"
@@ -486,13 +483,13 @@
                                                 parseFloat(e.target.value) ||
                                                 30,
                                         })}
-                                />
+                                /></label>
                                 <div class="help-text">
                                     Maximum value for flow gauge scale
                                 </div>
                             </div>
                             <div class="input-col">
-                                <label>FLOW REDLINE (mm³/s)</label>
+                                <label>FLOW REDLINE (mm³/s)
                                 <input
                                     type="number"
                                     min="1"
@@ -506,7 +503,7 @@
                                                 parseFloat(e.target.value) ||
                                                 20,
                                         })}
-                                />
+                                /></label>
                                 <div class="help-text">
                                     Warning threshold for flow gauge
                                 </div>
@@ -514,7 +511,7 @@
                         </div>
                         <div class="macro-row" style="margin-top: 15px;">
                             <div class="input-col">
-                                <label>MAX SPEED OVERRIDE (mm/s)</label>
+                                <label>MAX SPEED OVERRIDE (mm/s)
                                 <input
                                     type="number"
                                     min="1"
@@ -529,13 +526,13 @@
                                                 ? parseFloat(e.target.value)
                                                 : null,
                                         })}
-                                />
+                                /></label>
                                 <div class="help-text">
                                     Leave empty to use machine max velocity
                                 </div>
                             </div>
                             <div class="input-col">
-                                <label>SPEED REDLINE (%)</label>
+                                <label>SPEED REDLINE (%)
                                 <input
                                     type="number"
                                     min="50"
@@ -549,7 +546,7 @@
                                                 parseFloat(e.target.value) ||
                                                 90,
                                         })}
-                                />
+                                /></label>
                                 <div class="help-text">
                                     Redline as % of max speed
                                 </div>
@@ -602,7 +599,7 @@
                             </div>
                         </div>
                         <div class="input-group" style="margin-top: 15px;">
-                            <label>MAX CONSOLE HISTORY</label>
+                            <label>MAX CONSOLE HISTORY
                             <input
                                 type="number"
                                 min="100"
@@ -613,7 +610,7 @@
                                         maxHistory:
                                             parseInt(e.target.value) || 500,
                                     })}
-                            />
+                            /></label>
                             <div class="help-text">
                                 Number of messages to keep (100-1000)
                             </div>
@@ -669,7 +666,7 @@
                         {#each $configStore.tempPresets || [] as preset (preset.id)}
                             <div class="preset-row">
                                 <div class="input-col main">
-                                    <label>PRESET NAME</label>
+                                    <label>PRESET NAME
                                     <input
                                         type="text"
                                         value={preset.name}
@@ -677,10 +674,10 @@
                                             updatePreset(preset.id, {
                                                 name: e.target.value,
                                             })}
-                                    />
+                                    /></label>
                                 </div>
                                 <div class="input-col small">
-                                    <label>BED °C</label>
+                                    <label>BED °C
                                     <input
                                         type="number"
                                         value={preset.bed}
@@ -690,10 +687,10 @@
                                                     parseInt(e.target.value) ||
                                                     0,
                                             })}
-                                    />
+                                    /></label>
                                 </div>
                                 <div class="input-col small">
-                                    <label>EXT. °C</label>
+                                    <label>EXT. °C
                                     <input
                                         type="number"
                                         value={preset.extruder}
@@ -703,7 +700,7 @@
                                                     parseInt(e.target.value) ||
                                                     0,
                                             })}
-                                    />
+                                    /></label>
                                 </div>
                                 <button
                                     type="button"
@@ -758,11 +755,18 @@
                                     </button>
                                 </div>
 
+                                <label>Add available printer macro
+                                    <select aria-label={'Add available macro to ' + panel.title} on:change={e => {if(e.currentTarget.value) {addMacroToPanel(panel.id,{label:e.currentTarget.value,gcode:e.currentTarget.value}); e.currentTarget.value = '';}}}>
+                                        <option value="">Choose a macro…</option>
+                                        {#each $machineState.availableMacros as name}<option value={name}>{name}</option>{/each}
+                                    </select>
+                                </label>
                                 <div class="macro-list">
                                     {#each panel.macros as macro (macro.id)}
                                         <div class="macro-row">
+                                            <label><input type="checkbox" checked={macro.confirm || false} on:change={e => updateMacro(panel.id,macro.id,{confirm:e.currentTarget.checked})} /> Confirm before running</label>
                                             <div class="input-col">
-                                                <label>LABEL</label>
+                                                <label>LABEL
                                                 <input
                                                     type="text"
                                                     value={macro.label}
@@ -775,10 +779,10 @@
                                                                     .value,
                                                             },
                                                         )}
-                                                />
+                                                /></label>
                                             </div>
                                             <div class="input-col main">
-                                                <label>G-CODE COMMAND</label>
+                                                <label>G-CODE COMMAND
                                                 <input
                                                     type="text"
                                                     value={macro.gcode}
@@ -791,10 +795,10 @@
                                                                     .value,
                                                             },
                                                         )}
-                                                />
+                                                /></label>
                                             </div>
                                             <div class="input-col">
-                                                <label>COLOR</label>
+                                                <span>COLOR</span>
                                                 <ColorPicker
                                                     selectedColor={macro.color}
                                                     onChange={(color) =>
@@ -883,7 +887,7 @@
                                 <div class="camera-config">
                                     <div class="camera-row">
                                         <div class="input-col main">
-                                            <label>STREAM TYPE</label>
+                                            <label>STREAM TYPE
                                             <select
                                                 value={camera.streamType ||
                                                     "mjpeg"}
@@ -902,12 +906,12 @@
                                                 <option value="camera-streamer"
                                                     >WebRTC (camera-streamer)</option
                                                 >
-                                            </select>
+                                            </select></label>
                                         </div>
                                     </div>
 
                                     <div class="input-group">
-                                        <label>STREAM URL</label>
+                                        <label>STREAM URL
                                         <input
                                             type="text"
                                             value={camera.streamUrl}
@@ -922,11 +926,11 @@
                                                     "camera-streamer"
                                                   ? "http://192.168.1.100:8080/webrtc"
                                                   : "http://192.168.1.100/webcam/?action=stream"}
-                                        />
+                                        /></label>
                                     </div>
 
                                     <div class="input-group">
-                                        <label>SNAPSHOT URL</label>
+                                        <label>SNAPSHOT URL
                                         <input
                                             type="text"
                                             value={camera.snapshotUrl}
@@ -935,12 +939,12 @@
                                                     snapshotUrl: e.target.value,
                                                 })}
                                             placeholder="http://192.168.1.100/webcam/?action=snapshot"
-                                        />
+                                        /></label>
                                     </div>
 
                                     <div class="camera-row">
                                         <div class="input-col">
-                                            <label>ASPECT RATIO</label>
+                                            <label>ASPECT RATIO
                                             <select
                                                 value={camera.aspectRatio}
                                                 on:change={(e) =>
@@ -957,11 +961,11 @@
                                                 <option value="21:9"
                                                     >21:9</option
                                                 >
-                                            </select>
+                                            </select></label>
                                         </div>
 
                                         <div class="input-col">
-                                            <label>ROTATION</label>
+                                            <label>ROTATION
                                             <select
                                                 value={camera.rotation}
                                                 on:change={(e) =>
@@ -977,20 +981,19 @@
                                                 >
                                                 <option value="270">270°</option
                                                 >
-                                            </select>
+                                            </select></label>
                                         </div>
                                     </div>
 
                                     <div class="camera-row">
                                         {#if !camera.streamType || camera.streamType === "mjpeg"}
                                             <div class="input-col">
-                                                <label
-                                                    >TARGET REFRESH RATE (FPS)</label
-                                                >
+                                                <span>TARGET REFRESH RATE (FPS)</span>
                                                 <input
                                                     type="number"
                                                     min="1"
                                                     max="30"
+                                                    aria-label="Target refresh rate in FPS"
                                                     value={camera.targetRefreshRate ||
                                                         5}
                                                     on:input={(e) =>
@@ -1081,7 +1084,7 @@
                                     </a>
                                 </span>
                             </div>
-                            {#if gitCommit !== displayVersion && gitCommit !== "dev"}
+                            {#if import.meta.env.DEV && gitCommit !== displayVersion && gitCommit !== "dev"}
                                 <div class="info-row">
                                     <span class="info-label">COMMIT:</span>
                                     <span class="info-value">
@@ -1470,18 +1473,7 @@
     }
 
     /* Camera Settings Styles */
-    .camera-actions {
-        display: flex;
-        gap: 15px;
-        align-items: center;
-        margin-bottom: 20px;
-    }
 
-    .camera-count {
-        color: var(--retro-green);
-        font-family: "Share Tech Mono", monospace;
-        font-size: 12px;
-    }
 
     .cameras-container {
         display: flex;

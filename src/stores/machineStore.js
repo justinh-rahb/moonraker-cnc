@@ -1,41 +1,28 @@
 import { writable, get } from 'svelte/store';
-import { send, onNotification, connectionState } from './websocket.js';
+import { send, onNotification, connectionState, getConnectionGeneration } from './websocket.js';
 import { configStore } from './configStore.js';
 import { notificationStore } from './notificationStore.js';
 
 // Debug logging (only in dev mode)
-const DEBUG = import.meta.env.DEV;
+const DEBUG = import.meta.env?.DEV;
 
-// localStorage key for step increments
-const STORAGE_KEY_INCREMENTS = 'retro_cnc_increments_v1';
-
-// Load saved increments from localStorage
-const loadIncrements = () => {
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY_INCREMENTS);
-        if (stored) {
-            return JSON.parse(stored);
-        }
-    } catch (e) {
-        console.error('Failed to load step increments from localStorage', e);
-    }
-    return null;
-};
-
-// Save increments to localStorage
-const saveIncrements = (increments) => {
-    try {
-        localStorage.setItem(STORAGE_KEY_INCREMENTS, JSON.stringify(increments));
-    } catch (e) {
-        console.error('Failed to save step increments to localStorage', e);
-    }
-};
-
-// Load saved values
+// Increment choices belong to the selected host, alongside other printer preferences.
+const loadIncrements = () => get(configStore).increments || {};
+const saveIncrements = increments => configStore.update(c => ({ ...c, increments }));
 const savedIncrements = loadIncrements();
 
 // Initial state
-export const machineState = writable({
+const INITIAL_STATE = {
+    isReady: false,
+    stateMessage: '',
+    homedAxes: '',
+    configured: {},
+    availableMacros: [],
+    slicerCurrentLayer: null,
+    slicerTotalLayers: null,
+    estimatedTime: null,
+    totalDuration: 0,
+    statusUpdatedAt: 0,
     status: 'STANDBY',
     isEmergencyStop: false,
 
@@ -49,6 +36,7 @@ export const machineState = writable({
     // Fans and Output Pins
     // format: { [name]: { type: 'fan'|'pin', value: 0.0, max: 1.0, label: 'Friendly Name' } }
     miscDevices: {},
+    monitorDevices: {},
 
     // History for graphing
     // format: [ { timestamp: 12345, sensors: { [name]: temp } } ]
@@ -107,7 +95,8 @@ export const machineState = writable({
 
     // Raw print stats state (for deriving display status)
     printStatsState: 'standby',
-});
+};
+export const machineState = writable(structuredClone(INITIAL_STATE));
 
 const HISTORY_points = 300; // Keep last ~5-10 mins depending on update rate
 
@@ -165,7 +154,9 @@ export const setZOffsetIncrement = (increment) => {
 };
 
 export const setActiveExtruder = (extruderName) => {
-    machineState.update(s => ({ ...s, activeExtruder: extruderName }));
+    const s = get(machineState);
+    if (!s.isReady || !s.availableExtruders.includes(extruderName)) return;
+    return send('printer.gcode.script', { script: `ACTIVATE_EXTRUDER EXTRUDER=${extruderName}` });
 };
 
 // Speed and Extrusion Factor Control
@@ -193,18 +184,19 @@ export const updateSmoothTime = (val) => {
     send('printer.gcode.script', { script: `SET_PRESSURE_ADVANCE EXTRUDER=${extruder} SMOOTH_TIME=${val.toFixed(4)}` });
 };
 
-// WebSocket Integration
-connectionState.subscribe((state) => {
-    if (state === 'connected') {
-        initializeConnection();
-    }
-});
-
 const initializeConnection = async () => {
+    const generation = getConnectionGeneration();
+    const query = async (...args) => {
+        if (generation !== getConnectionGeneration()) throw new Error('Connection changed');
+        const result = await send(...args);
+        if (generation !== getConnectionGeneration()) throw new Error('Connection changed');
+        return result;
+    };
     try {
+        machineState.update(s => ({ ...s, isReady:false, status:'SYNCHRONIZING' }));
         // 0. Check Printer Info for initial system state
         try {
-            const info = await send('printer.info');
+            const info = await query('printer.info');
             if (info && info.state) {
                 if (info.state === 'shutdown' || info.state === 'error') {
                     notificationStore.setSystemStatus(info.state);
@@ -213,16 +205,20 @@ const initializeConnection = async () => {
                 }
             }
         } catch (e) {
+            if (generation !== getConnectionGeneration()) return;
             console.warn('Could not get printer info', e);
         }
 
         // 1. List all objects to find EVERYTHING temperature/fan/pin related
-        const listResponse = await send('printer.objects.list');
+        const listResponse = await query('printer.objects.list');
         const allObjects = listResponse.objects;
+        const configResult = await query('printer.objects.query', { objects: { configfile: ['settings'] } });
+        const configured = configResult.status?.configfile?.settings || {};
+        machineState.update(s => ({ ...s, configured, availableMacros: Object.keys(configured).filter(k => k.startsWith('gcode_macro ') && !k.slice(12).startsWith('_')).map(k => k.slice(12)).sort() }));
 
         // Find all interesting temperature objects
         const tempObjects = allObjects.filter(obj =>
-            obj.startsWith('extruder') ||
+            /^extruder\d*$/.test(obj) ||
             obj.startsWith('heater_bed') ||
             obj.startsWith('temperature_sensor') ||
             obj.startsWith('temperature_fan') ||
@@ -236,12 +232,15 @@ const initializeConnection = async () => {
             obj.startsWith('output_pin')
         );
 
+        const monitorObjects = allObjects.filter(obj => obj.startsWith('heater_fan ') || obj.startsWith('controller_fan ') || obj.startsWith('filament_switch_sensor ') || obj.startsWith('filament_motion_sensor '));
+        machineState.update(s => ({...s,monitorDevices:Object.fromEntries(monitorObjects.map(name => [name,{label:formatSensorName(name),type:name.startsWith('filament_') ? 'filament' : 'fan',value:null,enabled:false}]))}));
+
         // Found extruders for multi-extruder support
-        const foundExtruders = allObjects.filter(obj => obj.startsWith('extruder'));
+        const foundExtruders = allObjects.filter(obj => /^extruder\d*$/.test(obj));
 
         // Update state with found objects
         machineState.update(s => {
-            const temps = { ...s.temperatures };
+            const temps = {};
             tempObjects.forEach(obj => {
                 if (!temps[obj]) {
                     temps[obj] = {
@@ -253,20 +252,19 @@ const initializeConnection = async () => {
                 }
             });
 
-            const misc = { ...s.miscDevices };
+            const misc = {};
             miscObjects.forEach(obj => {
                 const type = obj.startsWith('output_pin') ? 'pin' : 'fan';
-                // Heuristic: If it's an output_pin configured as a fan (has 'fan' in name), 
-                // it likely uses 0-255 scale (often used for mainboard fans on some configs)
-                // Otherwise assume 0-1 for standard pins/LEDs
-                const isFanPin = type === 'pin' && obj.toLowerCase().includes('fan');
-                const max = isFanPin ? 255.0 : 1.0;
+                // Klipper scale and pwm settings define the device controls.
+                const max = Number(configured[obj]?.scale) || 1;
+                const pwm = type !== 'pin' || !!configured[obj]?.pwm;
 
                 if (!misc[obj]) {
                     misc[obj] = {
                         type,
                         value: 0.0,
                         max,
+                        pwm,
                         label: formatSensorName(obj)
                     };
                 }
@@ -285,9 +283,10 @@ const initializeConnection = async () => {
 
         // 2. Build subscription map
         const subscriptions = {
-            toolhead: ['position', 'status', 'print_time', 'homed_axes', 'max_velocity', 'max_accel', 'square_corner_velocity', 'max_accel_to_decel', 'minimum_cruise_ratio'],
+            toolhead: ['position', 'extruder', 'status', 'print_time', 'homed_axes', 'max_velocity', 'max_accel', 'square_corner_velocity', 'max_accel_to_decel', 'minimum_cruise_ratio'],
             'gcode_move': ['speed_factor', 'extrude_factor', 'homing_origin'],
-            'print_stats': ['state', 'filename', 'total_duration', 'print_duration', 'filament_used', 'info'],
+            webhooks: ['state', 'state_message'],
+            'print_stats': ['state', 'message', 'filename', 'total_duration', 'print_duration', 'filament_used', 'info'],
             'virtual_sdcard': ['progress', 'file_path'],
             'motion_report': ['live_velocity', 'live_extruder_velocity'],
             'idle_timeout': ['state'],
@@ -298,7 +297,7 @@ const initializeConnection = async () => {
         tempObjects.forEach(obj => {
             subscriptions[obj] = ['temperature', 'target'];
             // If it's an extruder, also track tuning
-            if (obj.startsWith('extruder')) {
+            if (/^extruder\d*$/.test(obj)) {
                 subscriptions[obj].push('pressure_advance', 'smooth_time');
             }
         });
@@ -306,31 +305,29 @@ const initializeConnection = async () => {
         // Add fans and pins
         miscObjects.forEach(obj => {
             if (obj === 'fan' || obj.startsWith('fan_generic')) {
-                subscriptions[obj] = ['speed'];
+                subscriptions[obj] = ['speed','rpm'];
             } else if (obj.startsWith('output_pin')) {
                 subscriptions[obj] = ['value'];
             }
         });
 
+        monitorObjects.forEach(obj => subscriptions[obj] = obj.startsWith('filament_') ? ['enabled','filament_detected'] : ['speed','rpm']);
+        Object.keys(subscriptions).forEach(key => { if (!allObjects.includes(key)) delete subscriptions[key]; });
+
         // 3. Subscribe
-        await send('printer.objects.subscribe', { objects: subscriptions });
+        await query('printer.objects.subscribe', { objects: subscriptions });
 
         // 4. Initial Query
         const initialQuery = {};
         Object.keys(subscriptions).forEach(key => initialQuery[key] = null);
 
-        const status = await send('printer.objects.query', { objects: initialQuery });
+        const status = await query('printer.objects.query', { objects: initialQuery });
         updateStateFromStatus(status.status);
+        machineState.update(s => ({ ...s, isReady: status.status.webhooks?.state === 'ready' }));
 
-        // If already printing, fetch metadata immediately
-        const currentState = get(machineState);
-        if (currentState.printStatsState === 'printing' && currentState.printFilename) {
-            if (DEBUG) console.log('[DEBUG] Print already in progress, fetching metadata');
-            fetchFileMetadata(currentState.printFilename);
-        }
 
     } catch (e) {
-        console.error('Failed to initialize printer connection:', e);
+        if (generation === getConnectionGeneration()) console.error('Failed to initialize printer connection:', e);
     }
 };
 
@@ -359,6 +356,7 @@ const formatSensorName = (rawName) => {
     if (name.startsWith('fan_generic')) name = name.replace('fan_generic_', '');
     if (name.startsWith('output_pin')) name = name.replace('output_pin_', '');
 
+    name = name.replace(/^(heater_fan|controller_fan|filament_switch_sensor|filament_motion_sensor)_/, '');
     return name.toUpperCase().replace(/_/g, ' ');
 };
 
@@ -378,9 +376,16 @@ const calculateCurrentLayer = (currentZ, layerHeight, firstLayerHeight) => {
 
 const updateStateFromStatus = (status) => {
     machineState.update(s => {
-        const newState = { ...s };
+        const newState = { ...s, temperatures: structuredClone(s.temperatures), miscDevices: structuredClone(s.miscDevices), monitorDevices:structuredClone(s.monitorDevices) };
+        if (status.webhooks?.state_message !== undefined) newState.stateMessage = status.webhooks.state_message;
+        if (status.webhooks?.state !== undefined) {
+            newState.isReady = status.webhooks.state === 'ready';
+            if (!newState.isReady) notificationStore.setSystemStatus(status.webhooks.state === 'shutdown' ? 'shutdown' : 'error');
+        }
 
         if (status.toolhead) {
+            if (status.toolhead.homed_axes !== undefined) newState.homedAxes = status.toolhead.homed_axes;
+            if (status.toolhead.extruder) newState.activeExtruder = status.toolhead.extruder;
             const pos = status.toolhead.position;
             if (pos && pos.length >= 4) {
                 newState.position = {
@@ -432,6 +437,8 @@ const updateStateFromStatus = (status) => {
                     sensor.target = status[key].target;
                 }
 
+                if (status[key].pressure_advance !== undefined) sensor.pressureAdvance = status[key].pressure_advance;
+                if (status[key].smooth_time !== undefined) sensor.smoothTime = status[key].smooth_time;
                 // Track tuning for active extruder
                 if (key === newState.activeExtruder) {
                     if (status[key].pressure_advance !== undefined) {
@@ -443,10 +450,18 @@ const updateStateFromStatus = (status) => {
                 }
             }
 
+            if (newState.monitorDevices[key]) {
+                const monitor = newState.monitorDevices[key], data = status[key];
+                if (data.filament_detected !== undefined) monitor.value = data.filament_detected;
+                if (data.enabled !== undefined) monitor.enabled = data.enabled;
+                if (data.speed !== undefined) monitor.value = data.speed;
+                if (data.rpm !== undefined) monitor.rpm = data.rpm;
+            }
             // Check if it's a misc device (fan/pin)
             if (newState.miscDevices[key]) {
                 const dev = newState.miscDevices[key];
 
+                if (status[key].rpm !== undefined) dev.rpm = status[key].rpm;
                 // Fan speed
                 if (status[key].speed !== undefined) {
                     dev.value = status[key].speed;
@@ -458,6 +473,10 @@ const updateStateFromStatus = (status) => {
                 }
             }
         });
+
+        const selectedExtruder = newState.temperatures[newState.activeExtruder];
+        if (selectedExtruder?.pressureAdvance !== undefined) newState.pressureAdvance = selectedExtruder.pressureAdvance;
+        if (selectedExtruder?.smoothTime !== undefined) newState.smoothTime = selectedExtruder.smoothTime;
 
         // Update History Buffer
         if (hasTempUpdate) {
@@ -500,19 +519,21 @@ const updateStateFromStatus = (status) => {
 
         if (status.print_stats) {
             if (DEBUG) console.log('[DEBUG] print_stats received:', JSON.stringify(status.print_stats));
-            if (status.print_stats.state !== undefined) {
-                const oldState = newState.printStatsState;
-                newState.printStatsState = status.print_stats.state;
-
-                // Detect print start transition to fetch file metadata
-                if (oldState !== 'printing' && status.print_stats.state === 'printing' && newState.printFilename) {
-                    if (DEBUG) console.log('[DEBUG] Print starting, fetching metadata for:', newState.printFilename);
-                    fetchFileMetadata(newState.printFilename);
-                }
+            if (status.print_stats.message !== undefined && status.print_stats.state === 'error') newState.stateMessage = status.print_stats.message;
+            const previousFilename = newState.printFilename;
+            const previousState = newState.printStatsState;
+            if (status.print_stats.filename !== undefined) newState.printFilename = status.print_stats.filename;
+            if (status.print_stats.state !== undefined) newState.printStatsState = status.print_stats.state;
+            if (newState.printFilename !== previousFilename || (newState.printStatsState === 'printing' && !['printing','paused'].includes(previousState))) {
+                newState.estimatedTime = null;
+                newState.printProgress = newState.printDuration = newState.totalDuration = newState.filamentUsed = 0;
+                newState.slicerCurrentLayer = newState.slicerTotalLayers = null;
+                newState.currentLayer = newState.totalLayers = 0;
+                newState.layerHeight = newState.firstLayerHeight = newState.objectHeight = null;
+                if (newState.printFilename && ['printing','paused'].includes(newState.printStatsState)) queueMicrotask(() => fetchFileMetadata(newState.printFilename));
             }
-            if (status.print_stats.filename !== undefined) {
-                newState.printFilename = status.print_stats.filename;
-            }
+            if (status.print_stats.total_duration !== undefined) newState.totalDuration = status.print_stats.total_duration;
+            newState.statusUpdatedAt = Date.now();
             if (status.print_stats.print_duration !== undefined) {
                 newState.printDuration = status.print_stats.print_duration;
             }
@@ -525,11 +546,13 @@ const updateStateFromStatus = (status) => {
             if (status.print_stats.info) {
                 if (DEBUG) console.log('[DEBUG] print_stats.info found:', JSON.stringify(status.print_stats.info));
                 if (status.print_stats.info.current_layer !== undefined) {
-                    newState.currentLayer = status.print_stats.info.current_layer;
+                    newState.slicerCurrentLayer = status.print_stats.info.current_layer || null;
+                    newState.currentLayer = newState.slicerCurrentLayer || 0;
                     if (DEBUG) console.log('[DEBUG] Using slicer-provided current_layer:', newState.currentLayer);
                 }
                 if (status.print_stats.info.total_layer !== undefined) {
-                    newState.totalLayers = status.print_stats.info.total_layer;
+                    newState.slicerTotalLayers = status.print_stats.info.total_layer || null;
+                    newState.totalLayers = newState.slicerTotalLayers || newState.totalLayers;
                     if (DEBUG) console.log('[DEBUG] Using slicer-provided total_layer:', newState.totalLayers);
                 }
             }
@@ -554,6 +577,8 @@ const updateStateFromStatus = (status) => {
             newState.status = rawStatus;
         }
 
+        if (!newState.isReady) newState.status = 'UNAVAILABLE';
+
         // Store the filename when a print completes or is cancelled for reprint functionality
         if ((rawStatus === 'COMPLETE' || rawStatus === 'CANCELLED') && newState.printFilename) {
             newState.lastCompletedFilename = newState.printFilename;
@@ -569,6 +594,8 @@ const updateStateFromStatus = (status) => {
                 newState.printFilename = status.virtual_sdcard.file_path;
             }
         }
+
+        if (status.display_status?.progress != null) newState.printProgress = Math.max(0, Math.min(1,status.display_status.progress));
 
         if (status.gcode_move) {
             if (status.gcode_move.speed_factor !== undefined) {
@@ -612,7 +639,7 @@ const updateStateFromStatus = (status) => {
         } else if (newState.status === 'PRINTING') {
             // Fallback: Calculate current layer from Z position if slicer didn't provide it
             // Only calculate if we don't already have a current layer from slicer
-            const hasSlicerLayer = status.print_stats?.info?.current_layer !== undefined;
+            const hasSlicerLayer = newState.slicerCurrentLayer !== null;
             if (!hasSlicerLayer && newState._currentZ && newState.layerHeight) {
                 const calculatedLayer = calculateCurrentLayer(
                     newState._currentZ,
@@ -620,7 +647,7 @@ const updateStateFromStatus = (status) => {
                     newState.firstLayerHeight
                 );
                 if (calculatedLayer !== null) {
-                    newState.currentLayer = calculatedLayer;
+                    newState.currentLayer = newState.totalLayers ? Math.min(calculatedLayer, newState.totalLayers) : calculatedLayer;
                     if (DEBUG) console.log('[DEBUG] Calculated current layer from Z (fallback):', calculatedLayer, 'at Z:', newState._currentZ.toFixed(2));
                 }
             }
@@ -642,6 +669,10 @@ onNotification((method, params) => {
     if (method === 'notify_status_update') {
         const status = params[0]; // params is an array like [ { ...data }, timestamp ]
         updateStateFromStatus(status);
+    } else if (method === 'notify_klippy_ready') {
+        initializeConnection();
+    } else if (method === 'notify_klippy_shutdown' || method === 'notify_klippy_disconnected') {
+        machineState.update(s => ({ ...s, isReady: false, status: 'UNAVAILABLE' }));
     } else if (method === 'notify_gcode_response') {
         // console.log('GCODE:', params[0]);
     }
@@ -680,12 +711,13 @@ export const unloadFilament = () => {
 
 // Fetch file metadata to get layer information
 const fetchFileMetadata = async (filename) => {
+    const generation = getConnectionGeneration();
     try {
         if (DEBUG) console.log('[DEBUG] Fetching metadata for file:', filename);
         const response = await send('server.files.metadata', { filename });
         if (DEBUG) console.log('[DEBUG] File metadata received:', JSON.stringify(response));
 
-        if (response) {
+        if (response && generation === getConnectionGeneration() && get(machineState).printFilename === filename) {
             // Extract layer calculation parameters
             let layerHeight = response.layer_height;
             let firstLayerHeight = response.first_layer_height;
@@ -714,8 +746,9 @@ const fetchFileMetadata = async (filename) => {
                 layerHeight,
                 firstLayerHeight,
                 objectHeight,
-                totalLayers: totalLayers || s.totalLayers,
-                currentLayer: 0 // Reset to 0 when starting new print
+                estimatedTime: response.estimated_time || null,
+                totalLayers: s.slicerTotalLayers || totalLayers || s.totalLayers,
+                currentLayer: s.currentLayer // Reset to 0 when starting new print
             }));
 
             if (DEBUG) console.log('[DEBUG] Layer metadata stored - layerHeight:', layerHeight, 'firstLayerHeight:', firstLayerHeight, 'objectHeight:', objectHeight, 'totalLayers:', totalLayers);
@@ -728,11 +761,13 @@ const fetchFileMetadata = async (filename) => {
 // Commands
 export const jog = (axis, direction) => {
     const s = get(machineState);
+    if (!s.isReady || ['printing','paused'].includes(s.printStatsState) || !s.homedAxes.includes(axis.toLowerCase())) { notificationStore.addError('Home this axis before jogging; manual jogging is disabled during a job.'); return; }
     const dist = s.jogDistance;
-    const feedrate = 3000; // mm/min
+    const limits = s.configured.printer || {};
+    const feedrate = Math.min(axis.toLowerCase() === 'z' ? (limits.max_z_velocity || 10) : (limits.max_velocity || 50), axis.toLowerCase() === 'z' ? 10 : 50) * 60;
 
     // Simpler Relative Move
-    const gcode = `G91\nG1 ${axis.toUpperCase()}${direction * dist} F${feedrate}\nG90`;
+    const gcode = `SAVE_GCODE_STATE NAME=retro_jog\nG91\nG1 ${axis.toUpperCase()}${direction * dist} F${feedrate}\nRESTORE_GCODE_STATE NAME=retro_jog`;
     send('printer.gcode.script', { script: gcode });
 };
 
@@ -758,10 +793,11 @@ export const motorsOff = async () => send('printer.gcode.script', { script: "M84
 
 export const extrude = (direction = 1) => {
     const s = get(machineState);
+    if (!s.isReady || ['printing','paused'].includes(s.printStatsState) || (s.temperatures[s.activeExtruder]?.current || 0) < (s.configured[s.activeExtruder]?.min_extrude_temp ?? 170)) { notificationStore.addError('Heat the active extruder before manual extrusion, and finish the current job first.'); return; }
     const amount = s.extrudeAmount;
-    const speed = s.extrudeSpeed * 60; // mm/s to mm/min
-
-    const gcode = `M83\nG1 E${direction * amount} F${speed}\nM82`;
+    const speed = s.extrudeSpeed * 60;
+    if (amount > (s.configured[s.activeExtruder]?.max_extrude_only_distance ?? 50)) { notificationStore.addError('Extrusion amount exceeds the configured extrusion-only distance limit.'); return; }
+    const gcode = `SAVE_GCODE_STATE NAME=retro_extrude\nM83\nG1 E${direction * amount} F${speed}\nRESTORE_GCODE_STATE NAME=retro_extrude`;
     send('printer.gcode.script', { script: gcode });
 };
 
@@ -814,3 +850,12 @@ export const setVelocityLimit = (params) => {
         send('printer.gcode.script', { script: gcode });
     }
 };
+
+// WebSocket Integration
+connectionState.subscribe((state) => {
+    if (state === 'connected') {
+        initializeConnection();
+    } else {
+        machineState.set({ ...structuredClone(INITIAL_STATE), ...loadIncrements(), status: 'OFFLINE' });
+    }
+});

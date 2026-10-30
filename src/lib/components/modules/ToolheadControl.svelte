@@ -1,4 +1,5 @@
 <script>
+    $: jobActive = ["printing","paused"].includes($machineState.printStatsState);
     import PanelModule from "../ui/PanelModule.svelte";
     import CncButton from "../ui/CncButton.svelte";
     import RetroSlider from "../ui/RetroSlider.svelte";
@@ -57,23 +58,23 @@
 
     <!-- Jog Controls -->
     <div class="control-pad">
-        <CncButton variant="action" on:click={homeX}>X</CncButton>
-        <CncButton variant="arrow" on:click={() => jog("y", 1)}>Y+</CncButton>
-        <CncButton variant="action" on:click={homeY}>Y</CncButton>
+        <CncButton variant="action" disabled={jobActive} on:click={homeX}>X</CncButton>
+        <CncButton variant="arrow" disabled={jobActive || !$machineState.homedAxes.includes("y")} on:click={() => jog("y", 1)}>Y+</CncButton>
+        <CncButton variant="action" disabled={jobActive} on:click={homeY}>Y</CncButton>
 
-        <CncButton variant="arrow" on:click={() => jog("x", -1)}>X-</CncButton>
-        <CncButton variant="home" on:click={home}>ALL</CncButton>
-        <CncButton variant="arrow" on:click={() => jog("x", 1)}>X+</CncButton>
+        <CncButton variant="arrow" disabled={jobActive || !$machineState.homedAxes.includes("x")} on:click={() => jog("x", -1)}>X-</CncButton>
+        <CncButton variant="home" disabled={jobActive} on:click={home}>ALL</CncButton>
+        <CncButton variant="arrow" disabled={jobActive || !$machineState.homedAxes.includes("x")} on:click={() => jog("x", 1)}>X+</CncButton>
 
-        <CncButton variant="action" on:click={homeZ}>Z</CncButton>
-        <CncButton variant="arrow" on:click={() => jog("y", -1)}>Y-</CncButton>
-        <CncButton variant="danger" on:click={motorsOff}>M-OFF</CncButton>
+        <CncButton variant="action" disabled={jobActive} on:click={homeZ}>Z</CncButton>
+        <CncButton variant="arrow" disabled={jobActive || !$machineState.homedAxes.includes("y")} on:click={() => jog("y", -1)}>Y-</CncButton>
+        <CncButton variant="danger" disabled={jobActive} on:click={motorsOff}>M-OFF</CncButton>
     </div>
 
     <!-- Z Controls -->
     <div class="z-controls">
-        <CncButton variant="z-up" on:click={() => jog("z", 1)}>Z+</CncButton>
-        <CncButton variant="z-down" on:click={() => jog("z", -1)}>Z-</CncButton>
+        <CncButton variant="z-up" disabled={jobActive || !$machineState.homedAxes.includes("z")} on:click={() => jog("z", 1)}>Z+</CncButton>
+        <CncButton variant="z-down" disabled={jobActive || !$machineState.homedAxes.includes("z")} on:click={() => jog("z", -1)}>Z-</CncButton>
     </div>
 
     <!-- Distance Select -->

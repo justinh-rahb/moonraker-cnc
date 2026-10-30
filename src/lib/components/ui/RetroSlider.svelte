@@ -1,85 +1,36 @@
 <script>
-    import { createEventDispatcher } from "svelte";
-
+    import { createEventDispatcher } from 'svelte';
     export let value = 100;
-    export let min = 0;
+    export let min = 1;
     export let max = 200;
-    export let label = "VALUE";
-
+    export let step = 1;
+    export let label = 'VALUE';
+    export let unit = '%';
+    export let baseline = 100;
     const dispatch = createEventDispatcher();
-
-    // Local value for smooth slider interaction
     let localValue = value;
-
-    // Sync local value when prop changes from outside
-    $: localValue = value;
-
-    const handleInput = (e) => {
-        localValue = parseInt(e.target.value, 10);
-    };
-
-    const handleChange = (e) => {
-        const newValue = parseInt(e.target.value, 10);
-        dispatch("change", { value: newValue, target: e.target });
-    };
+    let editing = false;
+    $: if (!editing) localValue = value;
+    function commit(raw) {
+        const next = Number(raw);
+        if (raw === '' || !Number.isFinite(next) || next < min || next > max) { localValue = value; editing = false; return; }
+        localValue = next;
+        editing = false;
+        dispatch('change', { value: next });
+    }
 </script>
-
 <div class="slider-control">
-    <div class="slider-label">
-        <span>{label}</span>
-        <span>{localValue}%</span>
-    </div>
-    <input
-        type="range"
-        class="slider"
-        {min}
-        {max}
-        bind:value={localValue}
-        on:input={handleInput}
-        on:change={handleChange}
-    />
+    <div class="slider-label"><span>{label}</span><div class="numeric-control">
+        <input aria-label={label} type="number" {min} {max} {step} bind:value={localValue} on:focus={() => editing = true} on:change={e => commit(e.currentTarget.value)} on:blur={() => {editing = false; localValue = value;}} on:keydown={e => {if (e.key === 'Enter') {commit(e.currentTarget.value); e.currentTarget.blur();} if(e.key === 'Escape') {editing = false; localValue = value; e.currentTarget.blur();}}} /><span>{unit}</span>
+        <button title={`Reset ${label} to ${baseline}${unit}`} aria-label={`Reset ${label}`} on:click={() => commit(baseline)}>↺</button>
+    </div></div>
+    <input aria-label={label + ' slider'} type="range" class="slider" {min} {max} {step} bind:value={localValue} on:input={() => editing = true} on:change={e => commit(e.currentTarget.value)} />
 </div>
-
 <style>
-    .slider-control {
-        margin-bottom: 20px;
-        width: 100%;
-    }
-
-    .slider-label {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 10px;
-        color: var(--retro-green);
-        font-size: 14px;
-        text-transform: uppercase;
-    }
-
-    .slider {
-        width: 100%;
-        height: 8px;
-        background: #0a0a0a;
-        border: 2px solid #333;
-        outline: none;
-        -webkit-appearance: none;
-        appearance: none;
-    }
-
-    .slider::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 24px;
-        height: 24px;
-        background: var(--retro-green);
-        border: 3px solid var(--retro-green-dim);
-        cursor: pointer;
-    }
-
-    .slider::-moz-range-thumb {
-        width: 24px;
-        height: 24px;
-        background: var(--retro-green);
-        border: 3px solid var(--retro-green-dim);
-        cursor: pointer;
-    }
+.slider-control { margin-bottom:16px; width:100%; }.slider-label { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; color:var(--retro-green); font-size:13px; }
+.numeric-control { display:flex; align-items:center; gap:6px; } input[type=number] { width:76px; background:#080c09; color:var(--retro-green); border:1px solid #405447; font:inherit; font-variant-numeric:tabular-nums; padding:6px; }
+button { background:#0a100c; border:1px solid #405447; color:var(--retro-green); padding:5px 9px; font-size:18px; cursor:pointer; }
+.slider { width:100%; height:8px; background:#0a0a0a; border:1px solid #405447; appearance:none; }
+.slider::-webkit-slider-thumb { appearance:none; width:22px; height:22px; background:var(--retro-green); border:2px solid var(--retro-green-dim); cursor:pointer; }
+.slider::-moz-range-thumb { width:22px; height:22px; background:var(--retro-green); border:2px solid var(--retro-green-dim); cursor:pointer; }
 </style>

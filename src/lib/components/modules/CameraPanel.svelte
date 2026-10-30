@@ -1,4 +1,5 @@
 <script>
+  import { serverUrl } from "../../config.js";
   import PanelModule from "../ui/PanelModule.svelte";
   import CncButton from "../ui/CncButton.svelte";
   import WebRTCPlayer from "../ui/WebRTCPlayer.svelte";
@@ -26,6 +27,7 @@
 
   // Get enabled cameras
   $: enabledCameras = ($configStore.cameras || []).filter(c => c.enabled);
+  $: if ($configStore.selectedCameraId) selectedCameraId = $configStore.selectedCameraId;
   $: selectedCamera = enabledCameras.find(c => c.id === selectedCameraId) || enabledCameras[0];
   $: hasMultipleCameras = enabledCameras.length > 1;
 
@@ -33,7 +35,7 @@
   $: aspectRatioPadding = (() => {
     if (!selectedCamera?.aspectRatio) return '56.25%'; // Default 16:9
     const [w, h] = selectedCamera.aspectRatio.split(':').map(Number);
-    return `${(h / w) * 100}%`;
+    return Number.isFinite(h/w) && h > 0 && w > 0 ? `${(h / w) * 100}%` : '56.25%';
   })();
 
   // Calculate transform CSS
@@ -48,12 +50,14 @@
 
   // Update stream URL with timestamp for refresh
   // Decoupled to prevent reactive chain re-evaluation every interval
-  $: baseStreamUrl = selectedCamera?.streamUrl || '';
+  $: cameraOrigin = new URL(serverUrl($configStore.server)).origin.replace(/:7125$/, '');
+  const resolveCamera = (url, origin) => { try { const parsed = new URL(url,origin); return url && ['http:','https:'].includes(parsed.protocol) ? parsed.href : ''; } catch { return ''; } };
+  $: baseStreamUrl = resolveCamera(selectedCamera?.streamUrl || '', cameraOrigin);
   $: streamType = selectedCamera?.streamType || 'mjpeg';
   $: streamUrl = (() => {
     // If hidden and snapshot URL available, show static snapshot to close connection
     if (!isVisible && selectedCamera?.snapshotUrl) {
-      return selectedCamera.snapshotUrl;
+      return resolveCamera(selectedCamera.snapshotUrl, cameraOrigin);
     }
     
     // For WebRTC, just return base URL, don't append timestamp
@@ -175,7 +179,7 @@
 
     // Load saved camera selection from localStorage
     try {
-      const savedCameraId = localStorage.getItem(CAMERA_SELECTION_KEY);
+      const savedCameraId = $configStore.selectedCameraId || localStorage.getItem(CAMERA_SELECTION_KEY);
       if (savedCameraId && enabledCameras.some(c => c.id === savedCameraId)) {
         selectedCameraId = savedCameraId;
       }
@@ -206,7 +210,7 @@
     
     // Persist selection to localStorage
     try {
-      localStorage.setItem(CAMERA_SELECTION_KEY, cameraId);
+      configStore.update(c => ({ ...c, selectedCameraId: cameraId }));
     } catch (e) {
       console.error('Failed to save camera selection', e);
     }

@@ -7,6 +7,7 @@ function createNotificationStore() {
 
     return {
         subscribe,
+        reset: () => set([]),
         addError: (error) => {
             const id = ++nextId;
             let title = 'Error';

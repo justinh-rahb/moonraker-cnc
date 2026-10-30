@@ -1,0 +1,49 @@
+/* Internal theme contract: semantic surfaces, accents and type; select at build time. */
+:root { --numeric-font: ui-monospace, 'SFMono-Regular', Consolas, monospace; --focus-ring: #9affb4; }
+input[type=number], .temp-current, .target-val, .value-display, .status-text, .info-value, .time-value { font-family:var(--numeric-font); font-variant-numeric:tabular-nums slashed-zero; }
+button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible { outline:2px solid var(--focus-ring); outline-offset:3px; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+[inert] { opacity:.5; }
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
+@media(max-width:650px) { body { padding:6px; } .machine-panel { padding:10px; border-width:2px; } .panel-header { flex-wrap:wrap; gap:12px; padding:10px!important; } .header-controls { flex-wrap:wrap; } .machine-title { font-size:20px!important; } .module { padding:12px!important; } }
+:root[data-theme=flight] { --retro-green:#85e7a3; --retro-green-dim:#3d8054; --retro-green-hover:#b0f1c1; --retro-orange:#e2944e; --retro-orange-dim:#aa6e37; --retro-red:#f56c65; --retro-red-dim:#9c433e; --bg-dark:#080d0b; --bg-panel:#101914; --bg-module:#101914; --border-color:#33483b; --border-light:#57715f; }
+[data-theme=flight] body { background:var(--bg-dark); }
+[data-theme=flight] .machine-panel { max-width:1600px; background:var(--bg-panel); border-width:1px; padding:22px; box-shadow:none; }
+[data-theme=flight] .module { border:1px solid var(--border-color); box-shadow:none; padding:16px; }
+[data-theme=flight] .module-header { font-family:var(--numeric-font); font-size:13px; letter-spacing:1.5px; margin-bottom:16px; padding:8px 10px; background:#0a110d; border-left-width:2px; border-bottom:1px solid var(--border-color); }
+[data-theme=flight] .panel-header { box-shadow:none; border-width:1px; background:#0a110d; padding:16px; }
+[data-theme=flight] .machine-title { font-family:var(--numeric-font); font-weight:600; font-size:25px; letter-spacing:3px; text-shadow:none; }
+[data-theme=flight] button { text-shadow:none; box-shadow:none; border-width:1px; }
+[data-theme=flight] .scanline,[data-theme=flight] .scanlines { display:none; }
+[data-theme=flight] .temp-current { font-size:25px; text-shadow:none; }
+[data-theme=flight] .status-text { font-size:21px; letter-spacing:2px; text-shadow:none; }
+[data-theme=flight] .gauge-svg { max-height:130px; }
+[data-theme=flight] .gauge-value,[data-theme=flight] .value-number,[data-theme=flight] .segment-value { font-family:var(--numeric-font); text-shadow:none; filter:none; font-variant-numeric:tabular-nums; }
+[data-theme=flight] .segment-value { font-size:32px; letter-spacing:1px; }
+[data-theme=flight] .gauge-container { box-shadow:none; border-width:1px; }
+[data-theme=flight] .active-arc,[data-theme=flight] .needle { filter:none; }
+.estimate-source,.extrusion-hint { color:#a1aca4; font-size:12px; margin-top:8px; }
+
+[data-theme=flight] .readout-value { font-family:var(--numeric-font); font-variant-numeric:tabular-nums; text-shadow:none; font-size:28px; }
+[data-theme=flight] .cnc-button { padding:12px; font-family:var(--numeric-font); font-size:15px; background:#17251c; border-color:#3d5747; }
+[data-theme=flight] .gauge-label { font-family:var(--numeric-font); color:#afc4b6; }
+.value-box { background:#080c09; border:1px solid #405447; padding:6px; width:84px; min-width:0; }
+@media(max-width:650px) {
+  .axis-readout { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+  .axis-value { font-family:var(--numeric-font); font-size:22px; letter-spacing:0; }
+  .segment-display { padding:12px; }
+  .tuning-grid { grid-template-columns:minmax(0,1fr); }
+  .panel-controls,.step-selector { flex-wrap:wrap; gap:6px; }
+  .temp-current { font-size:24px; }
+  .file-list-header,.file-item { grid-template-columns:22px minmax(0,1fr) 64px!important; gap:6px!important; }
+  .file-date,.sort-btn.date { display:none; }
+  .file-list-header { padding-right:12px!important; }
+  .file-item { padding:9px 6px!important; }
+  .file-details img { width:64px; height:64px; }
+  .actions { gap:6px!important; }
+  .actions button { padding:8px 4px!important; font-size:11px!important; }
+  .modal-header { font-size:15px!important; padding:12px!important; }
+  .modal-content { padding:12px!important; }
+}
+
+.machine-error { color:var(--retro-red); border:1px solid var(--retro-red-dim); padding:10px; margin-bottom:12px; white-space:pre-wrap; overflow-wrap:anywhere; }

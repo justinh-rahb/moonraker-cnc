@@ -1,4 +1,5 @@
 <script>
+    import { dialog } from "../../dialog.js";
     import { onDestroy } from "svelte";
 
     export let isOpen = false;
@@ -8,14 +9,10 @@
     export let onConfirm = () => {};
     export let onCancel = () => {};
 
-    $: if (typeof document !== "undefined") {
-        document.body.style.overflow = isOpen ? "hidden" : "";
-    }
+
 
     onDestroy(() => {
-        if (typeof document !== "undefined") {
-            document.body.style.overflow = "";
-        }
+
     });
 
     const handleConfirm = () => {
@@ -46,8 +43,9 @@
 <svelte:window on:keydown={handleKeydown} />
 
 {#if isOpen}
+    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
     <div class="confirm-overlay" on:click={handleOverlayClick}>
-        <div class="confirm-dialog">
+        <div class="confirm-dialog" use:dialog={{label:title,close:handleCancel}}>
             <div class="confirm-header">
                 <span>▸ {title}</span>
             </div>

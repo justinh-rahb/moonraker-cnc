@@ -1,11 +1,11 @@
 import { writable } from 'svelte/store';
-import { send, connectionState } from './websocket.js';
+import { send, connectionState, getConnectionGeneration } from './websocket.js';
 
 // Debug logging (only in dev mode)
-const DEBUG = import.meta.env.DEV;
+const DEBUG = import.meta.env?.DEV;
 
 // Initial state
-export const systemInfo = writable({
+const initialInfo = {
     host: {
         cpu: {
             model: null,
@@ -30,23 +30,11 @@ export const systemInfo = writable({
     mcus: {}, // Dynamic map of MCU objects
     isLoading: true,
     error: null
-});
-
-// WebSocket Integration
-connectionState.subscribe((state) => {
-    if (state === 'connected') {
-        initializeSystemInfo();
-    } else if (state === 'disconnected') {
-        // Reset to loading state on disconnect
-        systemInfo.update(s => ({
-            ...s,
-            isLoading: true,
-            error: null
-        }));
-    }
-});
+};
+export const systemInfo = writable(structuredClone(initialInfo));
 
 const initializeSystemInfo = async () => {
+    const generation = getConnectionGeneration();
     if (DEBUG) console.log('[SystemInfo] Initializing system info...');
 
     systemInfo.update(s => ({ ...s, isLoading: true, error: null }));
@@ -62,6 +50,7 @@ const initializeSystemInfo = async () => {
             fetchMCUInfo(firmwareName)
         ]);
 
+        if (generation !== getConnectionGeneration()) return;
         systemInfo.update(s => {
             const newState = { ...s, isLoading: false };
 
@@ -90,6 +79,7 @@ const initializeSystemInfo = async () => {
 
         if (DEBUG) console.log('[SystemInfo] System info initialized successfully');
     } catch (e) {
+        if (generation !== getConnectionGeneration()) return;
         console.error('[SystemInfo] Failed to initialize system info:', e);
         systemInfo.update(s => ({
             ...s,
@@ -253,3 +243,12 @@ export const formatMemory = (value, units) => {
 
     return `${value} ${units}`;
 };
+
+// WebSocket Integration
+connectionState.subscribe((state) => {
+    if (state === 'connected') {
+        initializeSystemInfo();
+    } else {
+        systemInfo.set(structuredClone(initialInfo));
+    }
+});

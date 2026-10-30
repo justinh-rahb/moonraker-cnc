@@ -1,7 +1,9 @@
 <script>
+    import RetroSlider from "../ui/RetroSlider.svelte";
     import PanelModule from "../ui/PanelModule.svelte";
     import { machineState } from "../../../stores/machineStore.js";
     import { configStore } from "../../../stores/configStore.js";
+    import { notificationStore } from "../../../stores/notificationStore.js";
     import { send } from "../../../stores/websocket.js";
 
     // Dynamic temperature access
@@ -23,6 +25,7 @@
         return (
             key === "heater_bed" ||
             key.startsWith("extruder") ||
+            key.startsWith("temperature_fan") ||
             key.startsWith("heater_generic")
         );
     };
@@ -45,21 +48,14 @@
 
     // Helper Commands
     const setTemp = (key, target) => {
-        // Clamp to 0
-        const val = Math.max(0, target);
-
-        if (key === "heater_bed") {
-            send("printer.gcode.script", { script: `M140 S${val}` });
-        } else if (key.startsWith("extruder")) {
-            send("printer.gcode.script", {
-                script: `SET_HEATER_TEMPERATURE HEATER=${key} TARGET=${val}`,
-            });
-        } else {
-            // Generic
-            send("printer.gcode.script", {
-                script: `SET_HEATER_TEMPERATURE HEATER=${key} TARGET=${val}`,
-            });
+        const max = $machineState.configured[key]?.max_temp;
+        if (!Number.isFinite(target) || target < 0 || (max && target > max)) { notificationStore.addError(`Target for ${temps[key]?.label || key} must be between 0 and ${max || 350} °C`); return; }
+        if (key.startsWith("temperature_fan ")) {
+            send("printer.gcode.script", {script:`SET_TEMPERATURE_FAN_TARGET TEMPERATURE_FAN=${key.slice(16)} TARGET=${target}`});
+            return;
         }
+        const heater = key.replace(/^heater_generic\s+/, '');
+        send("printer.gcode.script", { script: `SET_HEATER_TEMPERATURE HEATER=${heater} TARGET=${target}` });
     };
 
     const adjustTemp = (key, delta) => {
@@ -71,18 +67,10 @@
         send("printer.gcode.script", { script: "TURN_OFF_HEATERS" });
     };
 
-    const applyPreset = (preset) => {
-        // Set Bed
-        if (preset.bed >= 0) {
-            send("printer.gcode.script", { script: `M140 S${preset.bed}` });
-        }
-
-        // Set Extruder (simplified: just sets the main/first extruder found or defaults to M104 active)
-        if (preset.extruder >= 0) {
-            send("printer.gcode.script", {
-                script: `M104 S${preset.extruder}`,
-            });
-        }
+    const applyPreset = preset => {
+        if (temps.heater_bed && preset.bed >= 0) setTemp('heater_bed',preset.bed);
+        const active = $machineState.activeExtruder;
+        if (temps[active] && preset.extruder >= 0) setTemp(active,preset.extruder);
     };
 
     // Color mapping based on type
@@ -206,14 +194,7 @@
                                             adjustTemp(key, -tempStep)}
                                         >-</button
                                     >
-                                    <div class="target-display">
-                                        <span class="val-label">TARGET</span>
-                                        <span class="target-val"
-                                            >{temps[key].target.toFixed(
-                                                0,
-                                            )}</span
-                                        >
-                                    </div>
+                                    <div class="target-display"><span class="val-label">TARGET</span><span class="target-val">{temps[key].target.toFixed(0)}°C</span></div>
                                     <button
                                         class="icon-btn"
                                         on:click={() =>
@@ -229,6 +210,7 @@
                             </div>
                         {/if}
                     </div>
+                    {#if isSettable(key)}<RetroSlider label={temps[key].label + ' target'} unit="°C" min={0} max={$machineState.configured[key]?.max_temp || 350} baseline={0} value={temps[key].target} on:change={e => setTemp(key,e.detail.value)} />{/if}
                 </div>
             {/if}
         {/each}
@@ -266,7 +248,7 @@
 
     {#if showGraph}
         <div
-            class="graph"
+            class="graph" role="img" aria-label="Temperature history chart"
             on:mousemove={handleGraphMouseMove}
             on:mouseleave={handleGraphMouseLeave}
         >
