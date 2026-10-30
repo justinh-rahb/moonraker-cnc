@@ -184,3 +184,13 @@ test('absolute move checks fresh state, waits for acknowledgement, and cancels a
     assert.equal(socket.sent.filter(r => r.method === 'printer.gcode.script').length,before);
     ws.disconnect();
 });
+
+test('heading font preference stays isolated per host', () => {
+    const first=get(config.workspaceStore).activeHostId;
+    config.configStore.update(c=>({...c,appearance:{headingFont:'sans'}}));
+    const second=config.addHost('Font isolation',{ip:'font-printer',port:'7125',autoConnect:false});
+    config.configStore.update(c=>({...c,appearance:{headingFont:'mono'}}));
+    config.switchHost(first);assert.equal(get(config.configStore).appearance.headingFont,'sans');
+    config.switchHost(second);assert.equal(get(config.configStore).appearance.headingFont,'mono');
+    config.switchHost(first);config.removeHost(second);
+});

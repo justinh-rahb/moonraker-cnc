@@ -1,4 +1,6 @@
 <script>
+    import { SETTINGS_TABS } from "../../navigation.js";
+    import { HEADING_FONTS } from "../../fonts.js";
     import { dialog } from "../../dialog.js";
         import {
         configStore,
@@ -171,14 +173,7 @@
     };
 
     // Tabs
-    const tabs = [
-        "General",
-        "Interface",
-        "Macros",
-        "Panels",
-        "Cameras",
-        "Sysinfo",
-    ];
+    const tabs = SETTINGS_TABS;
 
     // Sync currentTab with store
     $: currentTab = $settingsTab;
@@ -465,6 +460,18 @@
                 {/if}
 
                 {#if currentTab === "Interface"}
+                    <div class="section-title">TYPOGRAPHY</div>
+                    <div class="font-settings">
+                        <label for="heading-font">HEADING FONT</label>
+                        <div class="font-choice">
+                            <select id="heading-font" value={$configStore.appearance?.headingFont || 'theme'}
+                                on:change={e => configStore.update(config => ({...config,appearance:{...config.appearance,headingFont:e.target.value}}))}>
+                                {#each HEADING_FONTS as font}<option value={font.id}>{font.label}</option>{/each}
+                            </select>
+                            <button title="Reset heading font" aria-label="Reset heading font" on:click={() => configStore.update(config => ({...config,appearance:{...config.appearance,headingFont:'theme'}}))}>↺</button>
+                        </div>
+                        <p>Applies to titles and section headings. Numeric readouts keep their current font.</p>
+                    </div>
                     <div class="section-title">GAUGE SETTINGS</div>
                     <div class="presets-container" style="margin-bottom: 25px;">
                         <div class="macro-row">
@@ -1134,6 +1141,13 @@
 />
 
 <style>
+    .font-settings { margin-bottom:24px; }
+    .font-settings>label { display:block; color:var(--retro-green); font-size:12px; margin-bottom:8px; }
+    .font-choice { display:flex; gap:8px; }
+    .font-choice select { flex:1; min-width:0; }
+    .font-choice button { min-width:38px; background:#101b14; color:var(--retro-green); border:1px solid #405447; font:inherit; cursor:pointer; }
+    .font-settings p { color:#a1aca4; font-size:12px; line-height:1.5; margin-top:8px; }
+
     .modal-overlay {
         position: fixed;
         top: 0;

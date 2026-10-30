@@ -1,4 +1,4 @@
-export const SETTINGS_TABS = ['General', 'Interface', 'Macros', 'Panels', 'Cameras', 'Sysinfo', 'Hosts'];
+export const SETTINGS_TABS = ['General', 'Interface', 'Macros', 'Panels', 'Cameras', 'Sysinfo'];
 export function parseRoute(hash) {
     try {
         const [head, ...parts] = hash.replace(/^#\/?/, '').split('/');
@@ -7,13 +7,15 @@ export function parseRoute(hash) {
             if (segments.some(s => s === '..' || s === '.' || s.includes('/'))) return { view: 'dashboard' };
             return { view: 'files', path: segments.join('/') };
         }
+        if (head === 'hosts' || (head === 'settings' && parts[0]?.toLowerCase() === 'hosts')) return {view:'hosts'};
         if (head === 'history') return { view: 'history' };
         if (head === 'settings') return { view: 'settings', tab: SETTINGS_TABS.find(t => t.toLowerCase() === (parts[0] || '').toLowerCase()) || 'General' };
     } catch { /* Invalid URL encoding falls back safely. */ }
     return { view: 'dashboard' };
 }
-export function routeHash({ files, path, settings, tab, history }) {
-    if (settings) return `#/settings/${encodeURIComponent(tab.toLowerCase())}`;
+export function routeHash({ files, path, settings, tab = 'General', history, hosts }) {
+    if (hosts) return '#/hosts';
+    if (settings) return `#/settings/${encodeURIComponent((SETTINGS_TABS.includes(tab) ? tab : 'General').toLowerCase())}`;
     if (history) return '#/history';
     if (files) return '#/files' + (path ? '/' + path.split('/').map(encodeURIComponent).join('/') : '');
     return '';

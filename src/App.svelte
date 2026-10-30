@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { headingFontFamily } from './lib/fonts.js';
   import Scanline from "./lib/components/ui/Scanline.svelte";
   import Header from "./lib/components/modules/Header.svelte";
   import ConnectionModal from "./lib/components/ui/ConnectionModal.svelte";
@@ -51,6 +52,13 @@
     return () => { stopNavigation(); stopConfig(); disconnect(); };
   });
   $: if (typeof document !== 'undefined') document.documentElement.dataset.theme = typeof __APP_THEME__ === 'undefined' ? 'flight' : __APP_THEME__;
+  $: if (typeof document !== 'undefined') {
+    const selected = $configStore.appearance?.headingFont || 'theme';
+    document.documentElement.dataset.headingFont = selected;
+    const family = headingFontFamily(selected);
+    if (family) document.documentElement.style.setProperty('--heading-font',family);
+    else document.documentElement.style.removeProperty('--heading-font');
+  }
 </script>
 
 <Scanline />

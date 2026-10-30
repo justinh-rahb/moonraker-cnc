@@ -107,3 +107,14 @@ test('hiding host and MCU monitors keeps chamber and other passive sensors visib
     assert.equal(isSystemTemperature('temperature_mcu board'),true);
     for (const key of ['temperature_sensor chamber','temperature_sensor enclosure','heater_bed','extruder','temperature_fan chamber']) assert.equal(isSystemTemperature(key,configured),false);
 });
+
+test('heading font preferences validate and round-trip through Moonraker settings', async () => {
+    const {HEADING_FONTS,headingFontFamily}=await import('../src/lib/fonts.js');
+    for (const font of HEADING_FONTS) {
+        const settings={appearance:{headingFont:font.id}};
+        assert.deepEqual(validateRemote({version:1,settings:databaseSettings(settings)}),settings);
+    }
+    assert.doesNotThrow(()=>validateConfig({title:'Legacy settings without font preferences'}));
+    for (const appearance of [null,[],{headingFont:'not-a-font'},{headingFont:'url(https://invalid/)'}]) assert.throws(()=>validateConfig({appearance}));
+    assert.equal(headingFontFamily('unknown'),'');
+});

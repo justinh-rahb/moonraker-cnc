@@ -1,12 +1,12 @@
 /* Internal theme contract: semantic surfaces, accents and type; select at build time. */
-:root { --numeric-font: ui-monospace, 'SFMono-Regular', Consolas, monospace; --focus-ring: #9affb4; }
+:root { --heading-font:"Orbitron", monospace; --numeric-font: ui-monospace, 'SFMono-Regular', Consolas, monospace; --focus-ring: #9affb4; }
 input[type=number], .temp-current, .target-val, .value-display, .status-text, .info-value, .time-value { font-family:var(--numeric-font); font-variant-numeric:tabular-nums slashed-zero; }
 button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible { outline:2px solid var(--focus-ring); outline-offset:3px; }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 [inert] { opacity:.5; }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
 @media(max-width:650px) { body { padding:6px; } .machine-panel { padding:10px; border-width:2px; } .panel-header { flex-wrap:wrap; gap:12px; padding:10px!important; } .header-controls { flex-wrap:wrap; } .machine-title { font-size:20px!important; } .module { padding:12px!important; } }
-:root[data-theme=flight] { --retro-green:#85e7a3; --retro-green-dim:#3d8054; --retro-green-hover:#b0f1c1; --retro-orange:#e2944e; --retro-orange-dim:#aa6e37; --retro-red:#f56c65; --retro-red-dim:#9c433e; --bg-dark:#080d0b; --bg-panel:#101914; --bg-module:#101914; --border-color:#33483b; --border-light:#57715f; }
+:root[data-theme=flight] { --heading-font:var(--numeric-font); --retro-green:#85e7a3; --retro-green-dim:#3d8054; --retro-green-hover:#b0f1c1; --retro-orange:#e2944e; --retro-orange-dim:#aa6e37; --retro-red:#f56c65; --retro-red-dim:#9c433e; --bg-dark:#080d0b; --bg-panel:#101914; --bg-module:#101914; --border-color:#33483b; --border-light:#57715f; }
 [data-theme=flight] body { background:var(--bg-dark); }
 [data-theme=flight] .machine-panel { max-width:1600px; background:var(--bg-panel); border-width:1px; padding:22px; box-shadow:none; }
 [data-theme=flight] .module { border:1px solid var(--border-color); box-shadow:none; padding:16px; }
@@ -49,3 +49,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
 .machine-error { color:var(--retro-red); border:1px solid var(--retro-red-dim); padding:10px; margin-bottom:12px; white-space:pre-wrap; overflow-wrap:anywhere; }
 
 [data-theme=flight] .module.collapsed .module-header { margin-bottom:0; }
+
+/* Heading selection applies consistently across component-scoped theme styles. */
+:root[data-heading-font]:not([data-heading-font=theme]) :is(h1,h2,h3,.machine-title,.module-header,.modal-header,.confirm-header,.section-title,.section-label,.tab-btn,.limit-label,.info-label,.gauge-label,.axis-label,.z-offset-label) { font-family:var(--heading-font); }

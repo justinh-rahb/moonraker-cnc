@@ -21,7 +21,7 @@
     const dispatch = createEventDispatcher();
 
     // State
-    let currentPath = $filePickerPath;
+    $: currentPath = $filePickerPath;
     let files = [];
     let diskUsage;
     let directories = [];
@@ -97,8 +97,6 @@
         if (!isConnected) return;
 
         const request = ++directoryRequest, generation = getConnectionGeneration();
-        currentPath = path;
-        $filePickerPath = path;
         lastDirectoryKey = generation + ':' + path;
         loading = true; error = null; selectedItem = null; fileDetails = null; detailRequest++;
 
@@ -111,7 +109,7 @@
                 extended: true,
             });
 
-            if (request !== directoryRequest || generation !== getConnectionGeneration()) return;
+            if (request !== directoryRequest || generation !== getConnectionGeneration() || path !== $filePickerPath) return;
             // The API returns { dirs: [...], files: [...], disk_usage: {...}, root_info: {...} }
             // Filter files to only show gcode files
             files = (result.files || []).filter((item) => {
@@ -122,11 +120,8 @@
 
             directories = result.dirs || [];
             diskUsage = result.disk_usage;
-            currentPath = path;
-                // Keep the shared store in sync when navigating locally
-                $filePickerPath = currentPath;
         } catch (e) {
-            if (request !== directoryRequest || generation !== getConnectionGeneration()) return;
+            if (request !== directoryRequest || generation !== getConnectionGeneration() || path !== $filePickerPath) return;
             console.error("Failed to fetch directory:", e);
             error = e.message || "Failed to load files";
             files = [];
@@ -139,7 +134,7 @@
     // Navigate to a subdirectory
     const navigateToDir = (dirName) => {
         const newPath = currentPath ? `${currentPath}/${dirName}` : dirName;
-        fetchDirectory(newPath);
+        $filePickerPath = newPath;
     };
 
     // Navigate to parent directory
@@ -147,16 +142,16 @@
         if (!currentPath) return;
         const parts = currentPath.split("/");
         parts.pop();
-        fetchDirectory(parts.join("/"));
+        $filePickerPath = parts.join("/");
     };
 
     // Navigate to a specific breadcrumb segment
     const navigateToBreadcrumb = (index) => {
         if (index < 0) {
-            fetchDirectory("");
+            $filePickerPath = '';
         } else {
             const newPath = pathSegments.slice(0, index + 1).join("/");
-            fetchDirectory(newPath);
+            $filePickerPath = newPath;
         }
     };
 
