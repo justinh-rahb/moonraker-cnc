@@ -7,25 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Branding
-- Rename the application to Retrograde; keep existing repository URLs and saved settings compatible.
+## [2.0.0] - 2026-10-30
+
+### Changed
+- Rename the application to **Retrograde** with a new favicon and refreshed documentation site.
+- Make **Flight v2** the default interface; retain the original v1 theme with `APP_THEME=retro`.
+- Store printer and interface preferences per Moonraker host, with local caching and explicit conflict resolution.
+- Replace repeated camera image requests with a persistent MJPEG stream parsed and decoded in a worker. Bound pending frames to avoid accumulated latency.
 
 ### Added
-- Multiple host profiles, legacy/workspace import-export and build-time defaults.
-- Moonraker-backed printer and UX settings with local caching and conflict handling.
-- Job history, file filtering/metadata previews/downloads and multiple uploads.
-- Locked dashboard arrangement with drag/keyboard controls and viewport-specific layouts.
-- Internal Flight theme, numeric/reset controls and keyboard dialog navigation.
-- Regression tests, frontend CI and documentation-only Pages publishing.
+- Add, edit, switch and remove multiple Moonraker host profiles.
+- Moonraker-backed settings, legacy and workspace import/export, and build-time settings defaults.
+- Collapsible panels with saved state and explicit drag/keyboard layout controls, including separate arrangements for compact and wide screens.
+- Direct numeric temperature/fan controls and reset actions, plus absolute X/Y/Z entry with fresh state, homing, travel-limit and coordinate-offset checks.
+- Live motor-enable and homing indicators, with nozzle/bed direction pictograms for Z jogging.
+- File filtering, metadata and thumbnail previews, downloads, sequential uploads and print history.
+- Optional per-camera scanlines and configurable display-rate limits.
+- Regression tests, frontend CI, and documentation-only GitHub Pages deployment.
 
 ### Fixed
-- Reconnect after disconnection, focus and resume; bounded RPCs and stale-host isolation.
-- History API navigation, directory deep links and production build metadata.
-- Persistent slicer layer counters, elapsed/remaining/completion estimates and paused finish display.
-- Webcam discovery, configured pin scaling/PWM, actual active extruder selection and preserved G-code modes.
-- Cold-extrusion/unhomed-jog controls, mobile overflow and SAVE_CONFIG guidance.
+- Reconnect after disconnection, focus changes and device resume; bound RPC lifetimes and isolate stale connections across hosts.
+- Keep camera traffic stopped when collapsed, offscreen, in a hidden tab or removed; cancel pending retries on shutdown and ignore stale player callbacks.
+- Integrate browser navigation with URL updates, back/forward, reload restoration and directory deep links.
+- Retain slicer layer counts and improve elapsed, remaining and completion-time estimates.
+- Preserve G-code modes during manual movement and extrusion; reject cold extrusion and unhomed jogging.
+- Keep chamber sensors visible when hiding host/MCU monitors, including case-insensitive Klipper configuration lookup.
+- Respect configured output scaling/PWM and the active extruder; show additional fan and filament state.
+- Improve dialog focus, small-screen layouts, file-browser density, control alignment and connection dialog buttons.
+- Keep build diagnostics out of the normal production interface.
 
- ## [1.2.2] - 2026-02-20
+### Upgrade notes
+- Existing settings exports remain supported. Host connection lists stay in the browser; printer and UX settings sync through the existing `retro_cnc_panel` Moonraker database namespace.
+- The installer reuses existing `retro-cnc-panel` directories and nginx configuration. New installations use `retrograde`.
+- MJPEG worker rendering requires fetch access to the camera. Unsupported browsers or cross-origin cameras without CORS use a persistent native MJPEG image; display-rate limiting and FPS reporting are unavailable in that fallback.
+- See [the frontend audit](https://github.com/justinh-rahb/retrograde/blob/v2.0.0/docs/frontend-audit.md) for remaining advanced parity gaps.
+
+## [1.2.2] - 2026-02-20
 
 ### Added
 - **Camera System**:

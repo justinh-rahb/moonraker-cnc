@@ -56,7 +56,7 @@
 
     // Determine display version (priority: tag > version > commit)
     const displayVersion = gitTag || appVersion || gitCommit;
-    const repoUrl = "https://github.com/justinh-rahb/moonraker-cnc";
+    const repoUrl = "https://github.com/justinh-rahb/retrograde";
     const versionUrl = gitTag
         ? `${repoUrl}/releases/tag/${gitTag}`
         : `${repoUrl}/commit/${gitCommit}`;

@@ -2,30 +2,39 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+    paths:
+      - 'CHANGELOG.md'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
 
-# Prevent concurrent releases
 concurrency:
   group: release
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   release:
+    if: github.ref == 'refs/heads/main'
     name: Build and Create Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
-      - name: Checkout repository
+      - name: Checkout release commit
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: '22'
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -33,63 +42,71 @@ jobs:
       - name: Test project
         run: npm test
 
-      - name: Build project
-        run: npm run build
-
-      - name: Extract version and release notes from CHANGELOG
+      - name: Validate version and extract release notes
         id: changelog
         run: |
-          # Extract the first version section (latest release)
-          # This matches ## [X.Y.Z] - YYYY-MM-DD format
-          VERSION=$(grep -m 1 -oP '## \[\K[0-9]+\.[0-9]+\.[0-9]+(?=\])' CHANGELOG.md)
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+          const heading = /^## \[(\d+\.\d+\.\d+)\].*$/m.exec(changelog);
+          if (!heading || heading[1] !== pkg.version || lock.version !== pkg.version || lock.packages[''].version !== pkg.version) throw new Error('Package, lockfile and changelog versions must match');
+          const notes = changelog.slice(heading.index + heading[0].length).split(/^## \[/m)[0].trim();
+          if (!notes) throw new Error('Release notes are empty');
+          fs.writeFileSync('release_notes.md', notes + '\n');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `version=${pkg.version}\ntag=v${pkg.version}\n`);
+          JS
 
-          if [ -z "$VERSION" ]; then
-            echo "Error: Could not extract version from CHANGELOG.md"
-            exit 1
-          fi
-
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-
-          # Extract release notes for this version
-          # Get content between the first ## [x.x.x] and the next ## [x.x.x] or end of file
-          NOTES=$(awk '/^## \['"$VERSION"'\]/{flag=1; next} /^## \[[0-9]+\.[0-9]+\.[0-9]+\]/{flag=0} flag' CHANGELOG.md)
-
-          # Write notes to file to preserve formatting
-          echo "$NOTES" > release_notes.md
-
-          echo "Extracted version: $VERSION"
-          echo "Release notes:"
-          cat release_notes.md
-
-      - name: Check if release already exists
+      - name: Check whether release already exists
         id: check_release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.changelog.outputs.tag }}
         run: |
-          TAG="v${{ steps.changelog.outputs.version }}"
-          if gh release view "$TAG" > /dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Release $TAG already exists, skipping..."
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "Release $TAG does not exist, will create..."
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Stamp release tag into build checkout
+        if: steps.check_release.outputs.exists == 'false'
+        env:
+          RELEASE_TAG: ${{ steps.changelog.outputs.tag }}
+        run: |
+          if git rev-parse --verify "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            test "$(git rev-parse "$RELEASE_TAG^{commit}")" = "$GITHUB_SHA"
+          else
+            git tag "$RELEASE_TAG" "$GITHUB_SHA"
+          fi
+
+      - name: Build Flight release
+        if: steps.check_release.outputs.exists == 'false'
+        run: npm run build
+        env:
+          APP_THEME: flight
+          VITE_READ_ONLY: 'false'
 
       - name: Create release artifact
         if: steps.check_release.outputs.exists == 'false'
+        env:
+          RELEASE_VERSION: ${{ steps.changelog.outputs.version }}
         run: |
           cd dist
-          zip -r ../retrograde-${{ steps.changelog.outputs.version }}.zip .
+          zip -r "../retrograde-${RELEASE_VERSION}.zip" .
 
-      - name: Create draft release
+      - name: Create draft release at this main commit
         if: steps.check_release.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.changelog.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.changelog.outputs.version }}
         run: |
-          gh release create "v${{ steps.changelog.outputs.version }}" \
-            --title "Retrograde v${{ steps.changelog.outputs.version }}" \
+          gh release create "$RELEASE_TAG" \
+            --target "$GITHUB_SHA" \
+            --title "Retrograde ${RELEASE_TAG}" \
             --notes-file release_notes.md \
             --draft \
-            retrograde-${{ steps.changelog.outputs.version }}.zip \
+            "retrograde-${RELEASE_VERSION}.zip" \
             docs/install.sh
