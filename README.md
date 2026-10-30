@@ -77,6 +77,7 @@ A Klipper/Moonraker frontend with a restrained, science-fiction control-interfac
 - **Customizable Macro Panels**: Create, edit, delete, and reorder macro panels
 - **Unlimited Macros**: Add as many macros as needed with custom labels, G-code, and colors
 - **Panel Reordering**: Drag and organize panels to your preference
+- **Heading Fonts**: Choose theme default, system sans/monospace, Orbitron, or Share Tech Mono in Settings → Interface; preferences sync per printer
 - **Custom Panel Title**: Rename the interface for your machine
 - **Persistent Settings**: Per-printer settings and UX preferences in Moonraker, with a local cache for offline startup
 - **Settings Import/Export**: Backup and restore all settings via JSON file

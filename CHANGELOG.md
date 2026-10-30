@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-10-30
+
+### Fixed
+- Include Hosts in URL navigation and restore it on browser Back/Forward and reload.
+- Canonicalize legacy Hosts links and invalid settings routes without inserting extra history entries.
+- Keep top-level views exclusive and cancel pending UI navigation when browser history changes.
+- Make the file directory route authoritative so asynchronous directory responses cannot rewrite a restored URL or path.
+
+### Added
+- Per-printer heading-font selection in Settings → Interface: theme default, system sans, system monospace, Orbitron and Share Tech Mono.
+- Persist heading-font preferences through existing settings import/export and Moonraker synchronization while keeping numeric readout typography separate.
+
 ## [2.0.0] - 2026-10-30
 
 ### Changed
