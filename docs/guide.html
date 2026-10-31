@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080d0b">
+  <meta name="description" content="Install Retrograde, connect to Moonraker, configure cameras and manage per-printer settings.">
+  <title>Retrograde documentation</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="site.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="brand" href="./" aria-label="Retrograde home"><img src="favicon.svg" alt="" width="34" height="34">RETROGRADE</a>
+    <nav aria-label="Main navigation"><a href="./">Home</a><a href="#installation">Install</a><a href="https://github.com/justinh-rahb/retrograde">GitHub ↗</a></nav>
+  </header>
+  <main id="main" class="wrap guide">
+    <h1>Documentation</h1>
+    <p class="lead">Installation, connection settings and common tasks.</p>
+    <nav class="guide-contents" aria-label="Documentation sections"><a href="#installation">Installation</a><a href="#connection">Connect a printer</a><a href="#using-retrograde">Using Retrograde</a><a href="#updates">Updates</a><a href="#build-options">Build options</a></nav>
+    <section id="installation">
+      <h2>Installation</h2>
+      <p>Run this command in a terminal on the machine where you want to host Retrograde, usually the machine running Moonraker:</p>
+      <div class="code-box"><div class="code-heading"><span>TERMINAL · PRINTER HOST</span><button type="button" data-copy="install-command" aria-label="Copy installation command">Copy ⧉</button></div><pre><code id="install-command">curl -sSL https://justinh-rahb.github.io/retrograde/install.sh | bash</code></pre></div>
+      <p id="copy-status" class="copy-status" role="status" aria-live="polite"></p>
+      <p>The installer downloads the latest release and offers nginx setup. Follow its prompts and open the address it reports.</p>
+      <h3>Manual installation</h3>
+      <p>Download the ZIP from the <a href="https://github.com/justinh-rahb/retrograde/releases/latest">latest release</a>, extract it and serve the extracted files with a web server. For a local trial:</p>
+      <pre><code>cd /path/to/extracted/retrograde
+python3 -m http.server 8080</code></pre>
+      <p>Open <code>http://localhost:8080</code>. The frontend and Moonraker can run on separate machines, provided your browser can reach both and Moonraker allows the frontend's origin.</p>
+    </section>
+    <section id="connection">
+      <h2>Connect a printer</h2>
+      <p>Enter the Moonraker host address and port in the connection dialog. The usual Moonraker port is <code>7125</code>. Enable autoconnect to reconnect when the page opens.</p>
+      <p>Use <strong>Hosts</strong> to add, switch, edit or remove printers. Each host has separate settings, camera definitions, macros and dashboard preferences. Retrograde stores preferences in that host's Moonraker database and keeps a local cache for offline startup.</p>
+      <p>If settings conflict with changes made in another browser, the dashboard offers a choice between the browser copy and the Moonraker copy.</p>
+    </section>
+    <section id="using-retrograde">
+      <h2>Using Retrograde</h2>
+      <h3>Dashboard and controls</h3>
+      <p>Click a panel heading to collapse it. Enable <strong>Arrange panels</strong> to move panels using drag handles or arrows, then turn it off when finished. Wide and compact layouts are saved separately.</p>
+      <p>Home axes before manual movement. Click an axis position to enter an absolute target. Temperature and fan controls accept numeric values alongside sliders; reset controls restore their defined baseline values.</p>
+      <h3>Files and print history</h3>
+      <p>Use <strong>Files</strong> to browse directories, upload G-code and inspect thumbnails and slicer metadata before starting a print. <strong>History</strong> shows previous jobs. Browser Back/Forward tracks top-level views; changing settings tabs or file directories updates the current URL.</p>
+      <h3>Cameras</h3>
+      <p>Configure camera URLs and stream types under <strong>Settings → Cameras</strong>. The panel supports MJPEG and WebRTC players, rotation, flips, aspect ratio and optional scanlines. Camera playback stops when its panel is collapsed, off-screen or in a hidden tab.</p>
+      <h3>Settings and backups</h3>
+      <p>Use <strong>Settings → General</strong> to export the selected printer's configuration or all host profiles. Import a settings export to restore it. <strong>Settings → Interface</strong> includes heading-font selection and display options.</p>
+      <p>Features added on <code>dev</code> may not be in the latest published release. Check the <a href="https://github.com/justinh-rahb/retrograde/releases">release notes</a> for your installed version.</p>
+    </section>
+    <section id="updates">
+      <h2>Updates and removal</h2>
+      <p>Run the installation command again to update. The installer backs up the existing installation and downloads the latest release. It also recognizes installations under the former <code>retro-cnc-panel</code> name.</p>
+      <p>To remove an installer-managed installation:</p>
+      <pre><code>curl -sSL https://justinh-rahb.github.io/retrograde/install.sh | bash -s -- --uninstall</code></pre>
+    </section>
+    <section id="build-options">
+      <h2>Build from source</h2>
+      <p>Use Node.js 22 or newer. The <code>dev</code> branch includes changes that have not yet been released:</p>
+      <pre><code>git clone --branch dev https://github.com/justinh-rahb/retrograde.git
+cd retrograde
+npm ci
+npm run build</code></pre>
+      <p>Serve <code>dist/</code> with your web server. Flight v2 is the default theme; use <code>APP_THEME=retro npm run build</code> for the original theme.</p>
+      <h3>Build-time settings</h3>
+      <p>A settings export can provide defaults for new hosts. Existing user preferences take precedence:</p>
+      <pre><code>DEFAULT_SETTINGS_FILE=printer-defaults.json npm run build</code></pre>
+      <p>For Docker, place the export in the build context:</p>
+      <pre><code>docker build --build-arg DEFAULT_SETTINGS_FILE=printer-defaults.json -t retrograde .</code></pre>
+    </section>
+  </main>
+  <footer class="site-footer wrap"><a class="brand" href="./">RETROGRADE</a><p><a href="https://github.com/justinh-rahb/retrograde/issues">Report an issue ↗</a></p></footer>
+</body>
+</html>
