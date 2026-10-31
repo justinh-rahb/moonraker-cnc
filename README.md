@@ -1,18 +1,31 @@
 # Retrograde
 
-A Klipper/Moonraker frontend with a restrained, science-fiction control-interface aesthetic. The v2 Flight theme is the default: clear numeric readouts, compact controls, and a green/orange palette. Built with Svelte.
+A web interface for Klipper and Moonraker with AFC filament management, printer controls, cameras, temperature graphs and file management. Built with Svelte; Flight v2 is the default theme.
+
+[Read the docs](https://justinh-rahb.github.io/retrograde/guide.html) · [Install Retrograde](https://justinh-rahb.github.io/retrograde/#quick-install)
 
 ## Screenshots
 
-### Dashboard · v2 Flight
+### AFC filament management · v2.1
 
-![Retrograde v2 Flight dashboard with live camera, printer controls and temperatures](docs/screenshot-1.jpg)
+![Retrograde AFC panel showing live U1 lanes, tool mappings, filament materials and sensor state](docs/screenshot-afc-u1.jpg)
+
+Captured read-only from the Snapmaker U1's AFC-Lite status. AFC appears automatically on supported printers and can be disabled per printer.
 
 ### Files and print previews
 
 ![Retrograde file browser with G-code metadata and thumbnail preview](docs/screenshot-2.jpg)
 
 ## Features
+
+### 🧵 AFC Filament Changer
+- **Automatic Detection**: Appears only when the connected printer exposes AFC; supports real AFC and AFC-Lite compatibility status
+- **Lane Overview**: Grouped units, filament colours/materials, active lane, tool mappings, sensors, hubs and buffers
+- **Capability-Aware Controls**: Load/select, unload, eject, filament data, tool mappings and runout backups where the printer advertises support
+- **Per-Printer Toggle**: Disable the panel under Settings → Panels; collapse and rearrange it like other dashboard panels
+- **Fresh-State Checks**: Confirm movement actions and recheck printer/AFC state before sending commands; never replay a failed operation
+
+See [AFC panel details and validation limits](docs/afc.md).
 
 ### 🎮 Real-Time Control
 - **Live Position Tracking**: WebSocket connection displays real-time X/Y/Z coordinates
@@ -65,6 +78,8 @@ A Klipper/Moonraker frontend with a restrained, science-fiction control-interfac
 - **Output Pin Control**: Toggle and adjust output pins
 
 ### 📷 Camera Integration
+- **HTML Camera Pages**: Embed camera-player pages with the `iframe` stream type; unload when collapsed, off-screen or in a hidden tab
+- **Moonraker Camera Import**: Add supported webcam definitions from Settings → Cameras while preserving existing camera preferences
 - **MJPEG Stream Support**: Display live camera feeds from ustreamer/camera-streamer
 - **Multiple Cameras**: Configure and switch between multiple cameras with compact buttons
 - **Orientation Controls**: Flip horizontal/vertical and rotate (0°, 90°, 180°, 270°)
@@ -86,6 +101,7 @@ A Klipper/Moonraker frontend with a restrained, science-fiction control-interfac
 - **Version Information**: Build version and commit hash displayed in Settings with GitHub links
 
 ### 🔔 Notifications & Safety
+- **Klipper Recovery**: Restart and firmware-restart controls remain available when Klipper is stopped; ordinary macros stay disabled until it is ready
 - **Error Handling**: Display and track API errors
 - **System Status Monitoring**: Detects Klipper shutdown/error states
 - **Status LED Integration**: Visual indicators for RUN/ERR states
@@ -101,7 +117,7 @@ A Klipper/Moonraker frontend with a restrained, science-fiction control-interfac
 
 ### One-Line Install (Recommended)
 
-The classic Klipper ecosystem approach - pipe curl to bash:
+Run on the printer host:
 
 ```bash
 curl -sSL https://justinh-rahb.github.io/retrograde/install.sh | bash

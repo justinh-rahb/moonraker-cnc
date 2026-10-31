@@ -1,3 +1,4 @@
+import { requestTimeout, isReadRequest } from '../lib/rpc.js';
 import { writable } from 'svelte/store';
 import { notificationStore } from './notificationStore.js';
 import { consoleStore } from './consoleStore.js';
@@ -102,9 +103,9 @@ export function disconnect() {
     cleanup();
     connectionState.set('disconnected');
 }
-export function send(method, params = {}, { timeout = 15000, silent = false } = {}) {
+export function send(method, params = {}, { timeout = requestTimeout(method), silent = false } = {}) {
     const promise = new Promise((resolve, reject) => {
-        if (import.meta.env?.VITE_READ_ONLY === 'true' && !/^(server\.(info|files\.(get_directory|metadata|list)|history\.(list|totals)|database\.(list|get_item)|webcams\.list)|printer\.(info|objects\.(list|query|subscribe))|machine\.(system_info|device_power\.(devices|status)))$/.test(method)) { reject(new Error('Hardware writes are disabled in this validation build')); return; }
+        if (import.meta.env?.VITE_READ_ONLY === 'true' && !isReadRequest(method)) { reject(new Error('Hardware writes are disabled in this validation build')); return; }
         if (!socket || socket.readyState !== 1) {
             const error = new Error('Moonraker is disconnected. Reconnect before sending commands.');
             if (!silent) notificationStore.addError(error);
@@ -114,7 +115,9 @@ export function send(method, params = {}, { timeout = 15000, silent = false } = 
         const id = ++requestId;
         const timer = setTimeout(() => {
             pending.delete(id);
-            const error = new Error(`${method} timed out. Its outcome is unknown; refresh state before retrying.`);
+            const error = new Error(isReadRequest(method) ? `${method} timed out. Moonraker did not respond; check the connection.` : `${method} timed out. It may still be running; check printer state before retrying.`);
+            error.code = 'RPC_TIMEOUT';
+            error.method = method;
             if (!silent) notificationStore.addError(error);
             reject(error);
         }, timeout);

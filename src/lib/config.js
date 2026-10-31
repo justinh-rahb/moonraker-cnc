@@ -57,6 +57,7 @@ export function validateConfig(config) {
     for (const [key,value] of Object.entries(config.increments || {})) if (!Number.isFinite(value) || value <= 0 || (key === 'zOffsetIncrement' && value > 1)) throw new Error('Invalid control increment');
     if (config.console?.maxHistory !== undefined && (!Number.isInteger(config.console.maxHistory) || config.console.maxHistory < 1 || config.console.maxHistory > 10000)) throw new Error('Invalid console history limit');
     if (config.appearance?.headingFont !== undefined && !HEADING_FONTS.some(font => font.id === config.appearance.headingFont)) throw new Error('Invalid heading font');
+    if (config.afc?.enabled !== undefined && typeof config.afc.enabled !== 'boolean') throw new Error('Invalid AFC enabled preference');
     if (config.title !== undefined && typeof config.title !== 'string') throw new Error('Title must be text');
-    for (const key of ['appearance', 'temperature', 'filament', 'printControl', 'console', 'gauges', 'power', 'dashboard', 'increments']) if (config[key] !== undefined && (!config[key] || typeof config[key] !== 'object' || Array.isArray(config[key]))) throw new Error(`${key} must be an object`);
+    for (const key of ['afc', 'appearance', 'temperature', 'filament', 'printControl', 'console', 'gauges', 'power', 'dashboard', 'increments']) if (config[key] !== undefined && (!config[key] || typeof config[key] !== 'object' || Array.isArray(config[key]))) throw new Error(`${key} must be an object`);
 }

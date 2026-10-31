@@ -1,8 +1,10 @@
 <script>
     import { onMount, onDestroy, afterUpdate } from "svelte";
     import PanelModule from "../ui/PanelModule.svelte";
-    import { send, onNotification, connectionState } from "../../../stores/websocket.js";
+    import { send, onNotification, connectionState, getConnectionGeneration } from "../../../stores/websocket.js";
     import { configStore, updateConsoleConfig } from "../../../stores/configStore.js";
+    import { restartMethod } from '../../rpc.js';
+    import { restartKlipper } from '../../../stores/recoveryStore.js';
     import { consoleStore } from "../../../stores/consoleStore.js";
 
     // Console messages from store
@@ -74,11 +76,13 @@
         // Clear input
         commandInput = "";
 
+        const generation = getConnectionGeneration();
         // Send to Klipper (websocket will log the command)
         try {
-            await send("printer.gcode.script", { script: cmd });
+            if (restartMethod(cmd)) await restartKlipper(cmd);
+            else await send("printer.gcode.script", { script: cmd });
         } catch (err) {
-            consoleStore.addError(`Error: ${err.message || err}`);
+            if (generation === getConnectionGeneration()) consoleStore.addError(`Error: ${err.message || err}`);
         }
 
         // Refocus input

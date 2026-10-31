@@ -1,3 +1,4 @@
+import { afcObjectNames, mergeAfcStatus } from '../lib/afc.js';
 import { absoluteMoveScript } from '../lib/motion.js';
 import { writable, get } from 'svelte/store';
 import { send, onNotification, connectionState, getConnectionGeneration } from './websocket.js';
@@ -15,6 +16,7 @@ const savedIncrements = loadIncrements();
 // Initial state
 const INITIAL_STATE = {
     isReady: false,
+    klippyState: 'unknown',
     stateMessage: '',
     homedAxes: '',
     stepperStates: null,
@@ -22,6 +24,8 @@ const INITIAL_STATE = {
     axisMaximum: null,
     configured: {},
     availableMacros: [],
+    afcObjects: {},
+    availableCommands: {},
     slicerCurrentLayer: null,
     slicerTotalLayers: null,
     estimatedTime: null,
@@ -99,6 +103,8 @@ const INITIAL_STATE = {
 
     // Raw print stats state (for deriving display status)
     printStatsState: 'standby',
+    virtualSdActive: null,
+    isPaused: null,
 };
 export const machineState = writable(structuredClone(INITIAL_STATE));
 
@@ -188,29 +194,33 @@ export const updateSmoothTime = (val) => {
     send('printer.gcode.script', { script: `SET_PRESSURE_ADVANCE EXTRUDER=${extruder} SMOOTH_TIME=${val.toFixed(4)}` });
 };
 
-const initializeConnection = async () => {
+let initializationRevision = 0;
+export const initializeConnection = async () => {
+    const revision = ++initializationRevision;
     const generation = getConnectionGeneration();
     const query = async (...args) => {
-        if (generation !== getConnectionGeneration()) throw new Error('Connection changed');
+        if (generation !== getConnectionGeneration() || revision !== initializationRevision) throw new Error('Connection changed');
         const result = await send(...args);
-        if (generation !== getConnectionGeneration()) throw new Error('Connection changed');
+        if (generation !== getConnectionGeneration() || revision !== initializationRevision) throw new Error('Connection changed');
         return result;
     };
     try {
         machineState.update(s => ({ ...s, isReady:false, status:'SYNCHRONIZING' }));
-        // 0. Check Printer Info for initial system state
-        try {
-            const info = await query('printer.info');
-            if (info && info.state) {
-                if (info.state === 'shutdown' || info.state === 'error') {
-                    notificationStore.setSystemStatus(info.state);
-                } else {
-                    notificationStore.setSystemStatus('ready');
-                }
-            }
-        } catch (e) {
-            if (generation !== getConnectionGeneration()) return;
-            console.warn('Could not get printer info', e);
+        // printer.info is available even when normal Klipper object APIs are not.
+        let info;
+        try { info = await query('printer.info',{}, {silent:true}); }
+        catch(error) {
+            const server = await query('server.info',{}, {silent:true});
+            const state = server.klippy_state || (server.klippy_connected === false ? 'disconnected' : null);
+            if (!['error','shutdown','disconnected','startup'].includes(state)) throw error;
+            info = {state,state_message:error.message || 'Klipper is unavailable'};
+        }
+        if (!info?.state) throw new Error('Klipper did not report its state');
+        machineState.update(s => ({...s,klippyState:info.state,stateMessage:info.state_message || '',status:info.state === 'ready' ? 'SYNCHRONIZING' : info.state.toUpperCase()}));
+        notificationStore.setSystemStatus(info.state);
+        if (info.state !== 'ready') {
+            machineState.update(s => ({...s,afcObjects:{},availableCommands:{}}));
+            return;
         }
 
         // 1. List all objects to find EVERYTHING temperature/fan/pin related
@@ -285,6 +295,9 @@ const initializeConnection = async () => {
             };
         });
 
+        const afcObjects = Object.fromEntries(afcObjectNames(allObjects).map(name => [name, {}]));
+        machineState.update(s => ({...s, afcObjects}));
+
         // 2. Build subscription map
         const subscriptions = {
             toolhead: ['position', 'extruder', 'status', 'print_time', 'homed_axes', 'max_velocity', 'max_accel', 'square_corner_velocity', 'max_accel_to_decel', 'minimum_cruise_ratio', 'axis_minimum', 'axis_maximum'],
@@ -316,6 +329,11 @@ const initializeConnection = async () => {
             }
         });
 
+        Object.keys(afcObjects).forEach(name => subscriptions[name] = null);
+        if (Object.keys(afcObjects).length) subscriptions.gcode = ['commands'];
+        subscriptions.pause_resume = ['is_paused'];
+        subscriptions.virtual_sdcard.push('is_active');
+
         monitorObjects.forEach(obj => subscriptions[obj] = obj.startsWith('filament_') ? ['enabled','filament_detected'] : ['speed','rpm']);
         Object.keys(subscriptions).forEach(key => { if (!allObjects.includes(key)) delete subscriptions[key]; });
 
@@ -332,7 +350,10 @@ const initializeConnection = async () => {
 
 
     } catch (e) {
-        if (generation === getConnectionGeneration()) console.error('Failed to initialize printer connection:', e);
+        if (generation === getConnectionGeneration() && revision === initializationRevision) {
+            machineState.update(s => ({...s,isReady:false,status:'UNAVAILABLE',stateMessage:e.message || 'Unable to synchronize Klipper state'}));
+            console.error('Failed to initialize printer connection:', e);
+        }
     }
 };
 
@@ -379,12 +400,17 @@ const calculateCurrentLayer = (currentZ, layerHeight, firstLayerHeight) => {
     return Math.max(1, calculatedLayer);
 };
 
-const updateStateFromStatus = (status) => {
+export const updateStateFromStatus = (status) => {
     machineState.update(s => {
         const newState = { ...s, temperatures: structuredClone(s.temperatures), miscDevices: structuredClone(s.miscDevices), monitorDevices:structuredClone(s.monitorDevices) };
+        if (status.virtual_sdcard?.is_active !== undefined) newState.virtualSdActive = status.virtual_sdcard.is_active;
+        if (status.pause_resume?.is_paused !== undefined) newState.isPaused = status.pause_resume.is_paused;
+        newState.afcObjects = mergeAfcStatus(s.afcObjects, status);
+        if (status.gcode?.commands) newState.availableCommands = status.gcode.commands;
         if (status.webhooks?.state_message !== undefined) newState.stateMessage = status.webhooks.state_message;
         if (status.webhooks?.state !== undefined) {
             newState.isReady = status.webhooks.state === 'ready';
+            newState.klippyState = status.webhooks.state;
             if (!newState.isReady) notificationStore.setSystemStatus(status.webhooks.state === 'shutdown' ? 'shutdown' : 'error');
         }
 
@@ -680,7 +706,8 @@ onNotification((method, params) => {
     } else if (method === 'notify_klippy_ready') {
         initializeConnection();
     } else if (method === 'notify_klippy_shutdown' || method === 'notify_klippy_disconnected') {
-        machineState.update(s => ({ ...s, isReady: false, status: 'UNAVAILABLE' }));
+        machineState.update(s => ({ ...s, isReady: false, klippyState:method === 'notify_klippy_shutdown' ? 'shutdown' : 'disconnected', stateMessage:'', status: 'UNAVAILABLE', afcObjects:{}, availableCommands:{} }));
+        initializeConnection();
     } else if (method === 'notify_gcode_response') {
         // console.log('GCODE:', params[0]);
     }
@@ -889,6 +916,7 @@ connectionState.subscribe((state) => {
     if (state === 'connected') {
         initializeConnection();
     } else {
+        initializationRevision++;
         machineState.set({ ...structuredClone(INITIAL_STATE), ...loadIncrements(), status: 'OFFLINE' });
     }
 });

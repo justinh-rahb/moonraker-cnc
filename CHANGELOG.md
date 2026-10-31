@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-31
+
+### Added
+- **AFC filament management:** automatically detected, collapsible and rearrangeable dashboard panel with grouped units/lanes, filament colours and materials, tool mappings, active-lane and sensor state, hubs, buffers and toolchanger status. Disable it per printer in Settings → Panels.
+- Capability-aware AFC load/select/unload/eject, filament editing, tool mapping, runout backup, toolchanger selection/docking, lights and message clearing. Movement actions require confirmation and fresh idle/ready checks.
+- HTML iframe cameras and Moonraker webcam import, retaining per-camera settings and unloading embedded players when hidden, collapsed or off-screen.
+- Klipper recovery prompt with Restart and Firmware Restart while Klipper is stopped, plus dedicated restart API routing for standalone macros and console commands.
+
+### Fixed
+- Show only filament lanes advertised in `AFC.lanes`; exclude internal drive/selector mechanisms and empty units from the panel and lane command targets.
+- Preserve literal AFC mapping validation so valid entries such as `T1` can be submitted.
+- Give long G-code and AFC scripts up to ten minutes to acknowledge; keep reads bounded, refresh AFC state after a failure and never replay uncertain commands.
+- Keep ordinary controls disabled until Klipper reports ready; avoid unavailable object queries on startup errors and ignore stale initialization responses.
+- Serialize power-status polling and suppress repeated background timeout notifications.
+
+### Documentation
+- Lead with AFC features and a fresh panel screenshot captured read-only from the U1's live AFC-Lite status.
+- Put the release install command at the top of the website, simplify copy and add hosted documentation, including separate build and development-server instructions.
+
+### Upgrade notes
+- Existing settings exports and Moonraker preferences remain compatible. No printer configuration changes are required.
+- AFC controls appear only for commands advertised by the connected printer. The U1 screenshot uses its AFC-Lite compatibility layer; real AFC hardware behavior has not been exercised by this release's automated or read-only validation. Advanced AFC calibration/configuration, Spoolman catalogue browsing and print-start material assignment remain outside the panel's current scope.
+- Validation: 75 automated tests, both themes, live read-only U1 status and iframe cameras, plus Klipper recovery against a loopback simulator. No live movement, heating or restart was performed during validation.
+
 ## [2.0.1] - 2026-10-30
 
 ### Fixed

@@ -41,10 +41,10 @@ for (const link of document.querySelectorAll('[data-preview]')) {
     preview.querySelector('.preview-scroll').scrollTop = 0;
   });
 }
-document.getElementById('close-preview').addEventListener('click', () => preview.close());
-preview.addEventListener('click', event => {
+document.getElementById('close-preview')?.addEventListener('click', () => preview.close());
+preview?.addEventListener('click', event => {
   if (event.target !== preview) return;
   const rect = preview.getBoundingClientRect();
   if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) preview.close();
 });
-preview.addEventListener('close', () => { document.body.style.overflow = previousOverflow; });
+preview?.addEventListener('close', () => { document.body.style.overflow = previousOverflow; });
