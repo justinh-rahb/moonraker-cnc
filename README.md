@@ -1,6 +1,8 @@
 # Retrograde
 
-A Klipper/Moonraker frontend with a restrained, science-fiction control-interface aesthetic. The v2 Flight theme is the default: clear numeric readouts, compact controls, and a green/orange palette. Built with Svelte.
+A web interface for Klipper and Moonraker, built with Svelte. Includes printer controls, cameras, temperature graphs, file management and per-printer settings. Flight v2 is the default theme.
+
+[Read the docs](https://justinh-rahb.github.io/retrograde/guide.html) · [Install Retrograde](https://justinh-rahb.github.io/retrograde/#quick-install)
 
 ## Screenshots
 
@@ -112,7 +114,7 @@ See [AFC panel details and validation limits](docs/afc.md).
 
 ### One-Line Install (Recommended)
 
-The classic Klipper ecosystem approach - pipe curl to bash:
+Run on the printer host:
 
 ```bash
 curl -sSL https://justinh-rahb.github.io/retrograde/install.sh | bash
