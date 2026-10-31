@@ -95,13 +95,13 @@
       </div>
       <div class="install-grid">
         <article class="install-card current-build">
-          <div class="card-heading"><h3>Build from source</h3><span class="tag">DEVELOPMENT</span></div>
-          <p>Build the current dev branch for the latest changes. Flight is the default; no theme flag needed.</p>
+          <div class="card-heading"><h3>Build from source</h3><span class="tag">STATIC BUILD</span></div>
+          <p>Build deployable files from the dev branch. This command creates <code>dist/</code>; it does not start a server.</p>
           <div class="code-box"><div class="code-heading"><span>TERMINAL · NODE.JS 22+</span><button type="button" data-copy="build-command" aria-label="Copy v2 build commands">Copy <span aria-hidden="true">⧉</span></button></div><pre><code id="build-command">git clone --branch dev https://github.com/justinh-rahb/retrograde.git
 cd retrograde
 npm ci
 npm run build</code></pre></div>
-          <p class="install-note">Serve <code>dist/</code> with your web server, then add your Moonraker host. <a href="guide.html#installation">Full installation guide ↗</a></p>
+          <p class="install-note">For local development, run <code>npm run dev</code> after <code>npm ci</code> and open the URL printed in the terminal. For deployment, serve <code>dist/</code> with your web server. <a href="guide.html#installation">Full installation guide ↗</a></p>
         </article>
         <article class="install-card">
           <div class="card-heading"><h3>Download a release</h3><span class="tag neutral">RELEASE CHANNEL</span></div>

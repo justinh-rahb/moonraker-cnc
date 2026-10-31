@@ -6,7 +6,7 @@ Under **Settings → Panels**, turn off **Enable AFC panel** to hide it for the 
 
 ## Display
 
-- Units and lanes, including both `AFC_lane` and older `AFC_stepper` object names.
+- Only filament lanes listed in `AFC.lanes` are displayed, using either `AFC_lane` or older `AFC_stepper` status objects. Internal drive/selector objects are excluded even if a unit lists them; units without visible filament lanes are hidden.
 - Current/next lane, AFC state, messages, bypass and tool-change progress when reported.
 - Filament colour, name, material, remaining weight and spool ID when supplied. Unknown weights stay unknown.
 - String and array tool mappings, preparation/load/tool/hub sensors, runout backup and buffer status.

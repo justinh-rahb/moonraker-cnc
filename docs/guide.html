@@ -65,6 +65,10 @@ cd retrograde
 npm ci
 npm run build</code></pre>
       <p>Serve <code>dist/</code> with your web server. Flight v2 is the default theme; use <code>APP_THEME=retro npm run build</code> for the original theme.</p>
+      <h3>Local development</h3>
+      <p>After <code>npm ci</code>, start the development server instead of building static files:</p>
+      <pre><code>npm run dev</code></pre>
+      <p>Open the URL printed in the terminal. The development server reloads changes while you work. <code>npm run build</code> creates files in <code>dist/</code> for deployment and does not start a server.</p>
       <h3>Build-time settings</h3>
       <p>A settings export can provide defaults for new hosts. Existing user preferences take precedence:</p>
       <pre><code>DEFAULT_SETTINGS_FILE=printer-defaults.json npm run build</code></pre>

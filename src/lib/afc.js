@@ -13,7 +13,9 @@ export function afcModel(objects = {}) {
     const afc = objects.AFC;
     if (!afc || !Object.keys(afc).length) return null;
     const current = afc.current_load ?? afc.current_lane;
-    const names = [...new Set([...strings(afc.lanes), ...Object.keys(objects).filter(k => /^AFC_(lane|stepper) /.test(k)).map(k => k.slice(k.indexOf(' ') + 1))])];
+    // Only AFC.lanes identifies user-facing filament lanes. Registered steppers
+    // may also include internal drive/selector mechanisms (e.g. ViViD).
+    const names = [...new Set(strings(afc.lanes))];
     const lanes = names.map(name => {
         const raw = objects['AFC_stepper ' + name] || objects['AFC_lane ' + name];
         if (!raw) return null;
@@ -29,7 +31,7 @@ export function afcModel(objects = {}) {
         const members = lanes.filter(l => strings(objects[key]?.lanes).includes(l.name) || l.unit === name);
         members.forEach(l => assigned.add(l.name));
         return {name, type:unit.split(' ')[0], lanes:members};
-    });
+    }).filter(unit => unit.lanes.length);
     const remaining = lanes.filter(l => !assigned.has(l.name));
     if (remaining.length) units.push({name:'Lanes', type:'', lanes:remaining});
     const devices = kind => Object.entries(objects).filter(([k]) => k.startsWith('AFC_' + kind + ' ')).map(([k,v]) => ({...v,name:k.slice(k.indexOf(' ') + 1)}));

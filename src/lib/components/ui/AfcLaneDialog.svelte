@@ -51,7 +51,7 @@
         {#if has('SET_MAP')}
         <form on:submit|preventDefault={() => submit('map',{tool})}>
             <fieldset disabled={!!$afcDisabledReason}>
-                <label>ASSIGN TOOL <small>Current: {lane.tools.join(', ') || 'Unmapped'}</small><input placeholder="T0" pattern="T[0-9]{1,3}" required bind:value={tool} /></label>
+                <label>ASSIGN TOOL <small>Current: {lane.tools.join(', ') || 'Unmapped'}</small><input placeholder="T0" pattern={'T[0-9]{1,3}'} title="Use a tool name such as T0 or T1" aria-label="Tool mapping" required bind:value={tool} /></label>
                 <button type="submit">SET MAPPING</button>
             </fieldset>
         </form>

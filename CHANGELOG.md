@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Preserve the literal AFC tool-mapping validation pattern so valid entries such as `T1` can be submitted.
+- Display only filament lanes advertised in `AFC.lanes`, excluding internal drive/selector objects and empty units from the AFC panel and lane controls.
+
 ### Added
 - HTML iframe camera playback with shared visibility lifecycle, transforms and scanlines, plus Moonraker camera import that recognizes the `iframe` service without overwriting existing preferences.
 - AFC dashboard panel with automatic detection, per-printer disable preference, saved collapse/layout, grouped lanes, filament information, tool mappings and sensor state.
