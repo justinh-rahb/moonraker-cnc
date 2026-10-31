@@ -160,3 +160,7 @@ dialog::backdrop { background:#030705ed; }
   .guide { padding-top:32px; }
   .guide h1 { font-size:38px; letter-spacing:-1.5px; }
 }
+
+.afc-caption { margin-top:18px; color:var(--muted); font-size:12px; }
+.afc-feature .feature-card h3 { margin-top:0; }
+.guide-afc { margin-top:22px; }

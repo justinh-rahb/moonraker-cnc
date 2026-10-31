@@ -18,8 +18,18 @@
   </header>
   <main id="main" class="wrap guide">
     <h1>Documentation</h1>
-    <p class="lead">Installation, connection settings and common tasks.</p>
-    <nav class="guide-contents" aria-label="Documentation sections"><a href="#installation">Installation</a><a href="#connection">Connect a printer</a><a href="#using-retrograde">Using Retrograde</a><a href="#updates">Updates</a><a href="#build-options">Build options</a></nav>
+    <p class="lead">AFC filament management, installation, connection settings and common tasks.</p>
+    <nav class="guide-contents" aria-label="Documentation sections"><a href="#afc">AFC</a><a href="#installation">Installation</a><a href="#connection">Connect a printer</a><a href="#using-retrograde">Using Retrograde</a><a href="#updates">Updates</a><a href="#build-options">Build options</a></nav>
+    <section id="afc">
+      <h2>AFC filament management</h2>
+      <p>Available in Retrograde 2.1 and newer. The dashboard detects the <code>AFC</code> Klipper object and displays the filament lanes listed in <code>AFC.lanes</code>, grouped by unit. It supports both real AFC status and the U1's AFC-Lite compatibility layer.</p>
+      <figure class="product-frame guide-afc"><a href="screenshot-afc-u1.jpg"><img src="screenshot-afc-u1.jpg" alt="AFC panel with live U1 filament lanes, mappings and sensors" width="767" height="372"></a><figcaption class="frame-label">Live Snapmaker U1 AFC-Lite status · read-only capture</figcaption></figure>
+      <p>Lane cards show colour, material, filament name, tool mapping, active lane and preparation/load/tool/hub sensors. Remaining weight, spool ID and runout backup appear when reported. Internal drive/selector objects are excluded. The panel also shows AFC extruders, hubs and buffers.</p>
+      <p>Controls appear only for commands advertised by the printer: load/select, tool unload, lane eject, filament data, tool mapping, runout backup, toolchanger selection/docking, lights and message clearing. Movement actions require confirmation. Before sending, Retrograde rechecks readiness, active/paused jobs and AFC state; failed commands are never replayed.</p>
+      <p>Use the edit icon on a lane to change supported filament fields or assign a tool such as <code>T1</code>. Unload a lane from its tool before ejecting it. A timeout does not cancel an ongoing macro; inspect current state before retrying.</p>
+      <p>Disable the panel in <strong>Settings → Panels → Enable AFC panel</strong>, or collapse/rearrange it like other panels. These preferences are stored per printer.</p>
+      <p>The U1 capture demonstrates compatibility status. Real AFC hardware has not been exercised by this release's read-only validation. Advanced hardware calibration/configuration, Spoolman catalogue browsing and print-start material assignment are outside the current panel's scope.</p>
+    </section>
     <section id="installation">
       <h2>Installation</h2>
       <p>Run this command in a terminal on the machine where you want to host Retrograde, usually the machine running Moonraker:</p>
@@ -49,7 +59,7 @@ python3 -m http.server 8080</code></pre>
       <h3>Files and print history</h3>
       <p>Use <strong>Files</strong> to browse directories, upload G-code and inspect thumbnails and slicer metadata before starting a print. <strong>History</strong> shows previous jobs. Browser Back/Forward tracks top-level views; changing settings tabs or file directories updates the current URL.</p>
       <h3>Cameras</h3>
-      <p>Configure camera URLs and stream types under <strong>Settings → Cameras</strong>. The panel supports MJPEG and WebRTC players, rotation, flips, aspect ratio and optional scanlines. Camera playback stops when its panel is collapsed, off-screen or in a hidden tab.</p>
+      <p>Configure camera URLs and stream types under <strong>Settings → Cameras</strong>. Choose MJPEG, WebRTC or an HTML page (iframe). Add from Moonraker imports supported webcam definitions without replacing existing preferences. Relative iframe URLs such as <code>/helixscreen/screen</code> resolve against the printer’s web host. Rotation, flips, aspect ratio and optional scanlines are supported. Camera playback stops when its panel is collapsed, off-screen or in a hidden tab.</p>
       <h3>Settings and backups</h3>
       <p>Use <strong>Settings → General</strong> to export the selected printer's configuration or all host profiles. Import a settings export to restore it. <strong>Settings → Interface</strong> includes heading-font selection and display options.</p>
       <p>Features added on <code>dev</code> may not be in the latest published release. Check the <a href="https://github.com/justinh-rahb/retrograde/releases">release notes</a> for your installed version.</p>

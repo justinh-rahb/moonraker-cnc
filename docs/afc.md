@@ -1,5 +1,9 @@
 # AFC panel
 
+![AFC panel with live U1 AFC-Lite lane and sensor status](screenshot-afc-u1.jpg)
+
+Read-only capture from the Snapmaker U1 AFC-Lite compatibility layer.
+
 Retrograde detects the `AFC` Klipper object and subscribes to the printer's advertised `AFC_*` objects through its existing Moonraker WebSocket. Printers without `AFC` have no panel. Detection resets on disconnect, Klipper restart and host changes.
 
 Under **Settings → Panels**, turn off **Enable AFC panel** to hide it for the selected printer. The preference uses the existing per-host settings cache, Moonraker synchronization and import/export. No new settings database or printer configuration is required. The panel also supports saved collapse and dashboard arrangement on wide and compact layouts.

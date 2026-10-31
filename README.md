@@ -1,20 +1,31 @@
 # Retrograde
 
-A web interface for Klipper and Moonraker, built with Svelte. Includes printer controls, cameras, temperature graphs, file management and per-printer settings. Flight v2 is the default theme.
+A web interface for Klipper and Moonraker with AFC filament management, printer controls, cameras, temperature graphs and file management. Built with Svelte; Flight v2 is the default theme.
 
 [Read the docs](https://justinh-rahb.github.io/retrograde/guide.html) · [Install Retrograde](https://justinh-rahb.github.io/retrograde/#quick-install)
 
 ## Screenshots
 
-### Dashboard · v2 Flight
+### AFC filament management · v2.1
 
-![Retrograde v2 Flight dashboard with live camera, printer controls and temperatures](docs/screenshot-1.jpg)
+![Retrograde AFC panel showing live U1 lanes, tool mappings, filament materials and sensor state](docs/screenshot-afc-u1.jpg)
+
+Captured read-only from the Snapmaker U1's AFC-Lite status. AFC appears automatically on supported printers and can be disabled per printer.
 
 ### Files and print previews
 
 ![Retrograde file browser with G-code metadata and thumbnail preview](docs/screenshot-2.jpg)
 
 ## Features
+
+### 🧵 AFC Filament Changer
+- **Automatic Detection**: Appears only when the connected printer exposes AFC; supports real AFC and AFC-Lite compatibility status
+- **Lane Overview**: Grouped units, filament colours/materials, active lane, tool mappings, sensors, hubs and buffers
+- **Capability-Aware Controls**: Load/select, unload, eject, filament data, tool mappings and runout backups where the printer advertises support
+- **Per-Printer Toggle**: Disable the panel under Settings → Panels; collapse and rearrange it like other dashboard panels
+- **Fresh-State Checks**: Confirm movement actions and recheck printer/AFC state before sending commands; never replay a failed operation
+
+See [AFC panel details and validation limits](docs/afc.md).
 
 ### 🎮 Real-Time Control
 - **Live Position Tracking**: WebSocket connection displays real-time X/Y/Z coordinates
@@ -48,15 +59,6 @@ A web interface for Klipper and Moonraker, built with Svelte. Includes printer c
 - **Filament Management**: Configurable load/unload macros with distance and speed parameters
 - **Pressure Advance Tuning**: Real-time adjustment in 0.005 increments
 - **Smooth Time Tuning**: Fine-tune extruder smooth time
-
-### 🧵 AFC Filament Changer
-- **Automatic Detection**: Appears only when the connected printer exposes AFC; supports real AFC and AFC-Lite compatibility status
-- **Lane Overview**: Grouped units, filament colours/materials, active lane, tool mappings, sensors, hubs and buffers
-- **Capability-Aware Controls**: Load/select, unload, eject, filament data, tool mappings and runout backups where the printer advertises support
-- **Per-Printer Toggle**: Disable the panel under Settings → Panels; collapse and rearrange it like other dashboard panels
-- **Fresh-State Checks**: Confirm movement actions and recheck printer/AFC state before sending commands; never replay a failed operation
-
-See [AFC panel details and validation limits](docs/afc.md).
 
 ### ⚡ Machine Limits
 - **Velocity Control**: Configure max velocity (mm/s)
