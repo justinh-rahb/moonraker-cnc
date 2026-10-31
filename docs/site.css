@@ -164,3 +164,5 @@ dialog::backdrop { background:#030705ed; }
 .afc-caption { margin-top:18px; color:var(--muted); font-size:12px; }
 .afc-feature .feature-card h3 { margin-top:0; }
 .guide-afc { margin-top:22px; }
+
+.afc-panel-preview { max-width:767px; margin:0 auto 24px; }
