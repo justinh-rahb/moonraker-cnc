@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- HTML iframe camera playback with shared visibility lifecycle, transforms and scanlines, plus Moonraker camera import that recognizes the `iframe` service without overwriting existing preferences.
 - AFC dashboard panel with automatic detection, per-printer disable preference, saved collapse/layout, grouped lanes, filament information, tool mappings and sensor state.
 - Capability-aware AFC load/select/unload/eject, filament editing, mapping and backup controls, plus extruder/toolchanger, hub and buffer status. Motion actions require confirmation and fresh idle/ready checks; commands are never replayed across reconnects or hosts.
 

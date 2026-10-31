@@ -27,7 +27,10 @@ export async function fetchMoonrakerCameras() {
                 flip_horizontal: cam.flip_horizontal || false,
                 flip_vertical: cam.flip_vertical || false,
                 rotation: cam.rotation || 0,
-                service: cam.service || 'unknown'
+                service: cam.service || 'mjpegstreamer',
+                enabled: cam.enabled !== false,
+                aspect_ratio: cam.aspect_ratio || '16:9',
+                target_fps: cam.target_fps
             }));
             
             availableCameras.set(cameras);

@@ -271,3 +271,25 @@ test('AFC action rejects disabled preferences and firmware errors without replay
     assert.equal(get(afc.afcPending),null);assert.equal(socket.sent.filter(r=>r.method==='printer.gcode.script').length,1);
     ws.disconnect();
 });
+
+test('Moonraker camera discovery preserves iframe service and ignores stale host responses', async () => {
+    const camera=await import('../src/stores/cameraStore.js');
+    ws.connect('iframe-host:7125');const socket=FakeSocket.sockets.at(-1);socket.open();
+    const loading=camera.fetchMoonrakerCameras();
+    socket.respond(socket.sent.findLast(r=>r.method==='server.webcams.list').id,{webcams:[{uid:'screen',name:'Screen',service:'iframe',stream_url:'/webcam/player',enabled:false,aspect_ratio:'4:3',rotation:90}]});
+    const [found]=await loading;assert.equal(found.service,'iframe');assert.equal(found.enabled,false);assert.equal(found.aspect_ratio,'4:3');assert.equal(found.rotation,90);
+    const stale=camera.fetchMoonrakerCameras();ws.connect('another-camera-host:7125');
+    assert.deepEqual(await stale,[]);assert.deepEqual(get(camera.availableCameras),[]);assert.equal(get(camera.isFetchingCameras),false);
+    ws.disconnect();
+});
+
+test('iframe camera configuration survives workspace import and remains isolated per host', () => {
+    const first=get(config.workspaceStore).activeHostId;
+    const camera={id:'iframe-roundtrip',name:'Screen',enabled:true,streamType:'iframe',streamUrl:'/screen',aspectRatio:'4:3',rotation:90,flipH:true,scanlines:true};
+    config.configStore.update(c=>({...c,cameras:[camera]}));
+    const exported=config.exportWorkspace();assert.equal(config.importConfig(exported).success,true);
+    assert.deepEqual(get(config.configStore).cameras,[camera]);
+    const other=config.addHost('Iframe isolation',{ip:'iframe-other',port:'7125',autoConnect:false});
+    assert.equal(get(config.configStore).cameras.some(c=>c.id===camera.id),false);
+    config.switchHost(first);assert.deepEqual(get(config.configStore).cameras,[camera]);config.removeHost(other);
+});

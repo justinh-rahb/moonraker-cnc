@@ -1,4 +1,5 @@
 <script>
+  import { cameraStreamType, resolveCameraUrl } from '../../cameras.js';
   import Scanline from "../ui/Scanline.svelte";
   import { serverUrl } from "../../config.js";
   import PanelModule from "../ui/PanelModule.svelte";
@@ -28,18 +29,8 @@
     if (selectedCamera?.rotation) transforms.push(`rotate(${selectedCamera.rotation}deg)`);
     return transforms.length ? transforms.join(' ') : 'none';
   })();
-  // Prefer this installation's camera proxy when it shares the printer's host.
-  // This keeps worker fetches same-origin on the port-1337 installation.
-  $: printerOrigin = new URL(serverUrl($configStore.server)).origin.replace(/:7125$/, '');
-  $: cameraOrigin = typeof location !== 'undefined' && new URL(printerOrigin).hostname === location.hostname ? location.origin : printerOrigin;
-  $: streamUrl = (() => {
-    try {
-      if (!selectedCamera?.streamUrl) return '';
-      const url = new URL(selectedCamera.streamUrl,cameraOrigin);
-      return ['http:','https:'].includes(url.protocol) ? url.href : '';
-    } catch { return ''; }
-  })();
-  $: streamType = selectedCamera?.streamType || 'mjpeg';
+  $: streamUrl = resolveCameraUrl(selectedCamera?.streamUrl, serverUrl($configStore.server), typeof location !== 'undefined' ? location.href : '', cameraStreamType(selectedCamera));
+  $: streamType = cameraStreamType(selectedCamera);
   $: isMjpeg = streamType === 'mjpeg';
   function observeVisibility(element) {
     const observer = new IntersectionObserver(entries => {
@@ -74,6 +65,11 @@
                 {#key selectedCamera.id}
                   <MjpegPlayer url={streamUrl} active={isVisible} maxFps={selectedCamera.targetRefreshRate || 30}
                     label={selectedCamera.name} {transformStyle} onFps={fps => currentFps = fps} />
+                {/key}
+            {:else if streamType === 'iframe' && isVisible}
+                {#key selectedCamera.id + streamUrl}
+                    <iframe class="camera-feed camera-iframe" src={streamUrl} title={selectedCamera.name || 'Camera'}
+                        allow="autoplay; fullscreen" allowfullscreen style:transform={transformStyle}></iframe>
                 {/key}
             {:else if (streamType === 'go2rtc' || streamType === 'camera-streamer') && isVisible}
                 <div class="camera-feed">
@@ -160,6 +156,8 @@
     object-fit: contain;
     display: block;
   }
+
+  .camera-iframe { border:0; }
 
   .no-stream {
     position: absolute;

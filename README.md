@@ -74,6 +74,8 @@ See [AFC panel details and validation limits](docs/afc.md).
 - **Output Pin Control**: Toggle and adjust output pins
 
 ### 📷 Camera Integration
+- **HTML Camera Pages**: Embed camera-player pages with the `iframe` stream type; unload when collapsed, off-screen or in a hidden tab
+- **Moonraker Camera Import**: Add supported webcam definitions from Settings → Cameras while preserving existing camera preferences
 - **MJPEG Stream Support**: Display live camera feeds from ustreamer/camera-streamer
 - **Multiple Cameras**: Configure and switch between multiple cameras with compact buttons
 - **Orientation Controls**: Flip horizontal/vertical and rotate (0°, 90°, 180°, 270°)
