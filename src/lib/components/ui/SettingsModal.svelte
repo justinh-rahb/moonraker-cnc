@@ -1,4 +1,7 @@
 <script>
+    import { fetchMoonrakerCameras, isFetchingCameras } from '../../../stores/cameraStore.js';
+    import { connectionState, getConnectionGeneration } from '../../../stores/websocket.js';
+    import { importMoonrakerCameras, cameraStreamType } from '../../cameras.js';
     import { SETTINGS_TABS } from "../../navigation.js";
     import { HEADING_FONTS } from "../../fonts.js";
     import { dialog } from "../../dialog.js";
@@ -171,6 +174,21 @@
         };
         reader.readAsText(file);
     };
+
+    let cameraImportMessage = '';
+    async function importCameras() {
+        const generation = getConnectionGeneration();
+        cameraImportMessage = '';
+        const cameras = await fetchMoonrakerCameras();
+        if (generation !== getConnectionGeneration()) return;
+        let added = 0;
+        configStore.update(c => {
+            const next = importMoonrakerCameras(c.cameras || [],cameras);
+            added = next.length - (c.cameras || []).length;
+            return {...c,cameras:next};
+        });
+        cameraImportMessage = added ? `Added ${added} camera${added === 1 ? '' : 's'} from Moonraker.` : 'No new supported cameras to add.';
+    }
 
     // Tabs
     const tabs = SETTINGS_TABS;
@@ -859,6 +877,8 @@
 
                 {#if currentTab === "Cameras"}
                     <div class="section-title">CAMERA SETTINGS</div>
+                    <button type="button" class="create-panel-btn" disabled={$connectionState !== 'connected' || $isFetchingCameras} on:click={importCameras}>{$isFetchingCameras ? 'LOADING CAMERAS…' : 'ADD FROM MOONRAKER'}</button>
+                    {#if cameraImportMessage}<p class="help-text" role="status">{cameraImportMessage}</p>{/if}
 
                     <div class="cameras-container">
                         {#each $configStore.cameras || [] as camera (camera.id)}
@@ -901,14 +921,14 @@
                                         <div class="input-col main">
                                             <label>STREAM TYPE
                                             <select
-                                                value={camera.streamType ||
-                                                    "mjpeg"}
+                                                value={cameraStreamType(camera)}
                                                 on:change={(e) =>
                                                     updateCamera(camera.id, {
                                                         streamType:
                                                             e.target.value,
                                                     })}
                                             >
+                                                <option value="iframe">HTML page (iframe)</option>
                                                 <option value="mjpeg"
                                                     >MJPEG (Default)</option
                                                 >
@@ -931,16 +951,19 @@
                                                 updateCamera(camera.id, {
                                                     streamUrl: e.target.value,
                                                 })}
-                                            placeholder={camera.streamType ===
+                                            placeholder={cameraStreamType(camera) === "iframe" ? "http://192.168.1.100/webcam/player" : cameraStreamType(camera) ===
                                             "go2rtc"
                                                 ? "http://192.168.1.100:1984/api/webrtc?src=camera1"
-                                                : camera.streamType ===
+                                                : cameraStreamType(camera) ===
                                                     "camera-streamer"
                                                   ? "http://192.168.1.100:8080/webrtc"
                                                   : "http://192.168.1.100/webcam/?action=stream"}
                                         /></label>
                                     </div>
 
+                                    {#if cameraStreamType(camera) === 'iframe'}
+                                        <p class="help-text">Use an embeddable HTML camera-player page. Its server must allow embedding. The player controls its own frame rate.</p>
+                                    {:else}
                                     <div class="input-group">
                                         <label>SNAPSHOT URL
                                         <input
@@ -953,6 +976,7 @@
                                             placeholder="http://192.168.1.100/webcam/?action=snapshot"
                                         /></label>
                                     </div>
+                                    {/if}
 
                                     <div class="camera-row">
                                         <div class="input-col">
@@ -965,6 +989,7 @@
                                                             e.target.value,
                                                     })}
                                             >
+                                                {#if camera.aspectRatio && !['16:9','4:3','1:1','21:9'].includes(camera.aspectRatio)}<option value={camera.aspectRatio}>{camera.aspectRatio}</option>{/if}
                                                 <option value="16:9"
                                                     >16:9</option
                                                 >
@@ -998,7 +1023,7 @@
                                     </div>
 
                                     <div class="camera-row">
-                                        {#if !camera.streamType || camera.streamType === "mjpeg"}
+                                        {#if cameraStreamType(camera) === "mjpeg"}
                                             <div class="input-col">
                                                 <span>MAX DISPLAY RATE (FPS)</span>
                                                 <input
@@ -1044,7 +1069,7 @@
                                             />
                                             FLIP VERTICAL
                                         </label>
-                                        {#if !camera.streamType || camera.streamType === "mjpeg"}
+                                        {#if cameraStreamType(camera) === "mjpeg"}
                                             <label>
                                                 <input
                                                     type="checkbox"
