@@ -731,6 +731,11 @@
                 {/if}
 
                 {#if currentTab === "Panels"}
+                    <div class="section-title">PRINTER PANELS</div>
+                    <div class="setting-item">
+                        <label class="checkbox-label"><input type="checkbox" checked={$configStore.afc?.enabled !== false} on:change={e => configStore.update(c => ({...c,afc:{...c.afc,enabled:e.target.checked}}))} /> ENABLE AFC PANEL</label>
+                        <div class="help-text">Shown automatically when this printer exposes AFC. Saved per printer.</div>
+                    </div>
                     <div class="section-title">MACRO PANELS</div>
 
                     <div class="panels-container">

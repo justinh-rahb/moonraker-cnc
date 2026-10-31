@@ -1,3 +1,4 @@
+import { afcObjectNames, mergeAfcStatus } from '../lib/afc.js';
 import { absoluteMoveScript } from '../lib/motion.js';
 import { writable, get } from 'svelte/store';
 import { send, onNotification, connectionState, getConnectionGeneration } from './websocket.js';
@@ -22,6 +23,8 @@ const INITIAL_STATE = {
     axisMaximum: null,
     configured: {},
     availableMacros: [],
+    afcObjects: {},
+    availableCommands: {},
     slicerCurrentLayer: null,
     slicerTotalLayers: null,
     estimatedTime: null,
@@ -99,6 +102,8 @@ const INITIAL_STATE = {
 
     // Raw print stats state (for deriving display status)
     printStatsState: 'standby',
+    virtualSdActive: null,
+    isPaused: null,
 };
 export const machineState = writable(structuredClone(INITIAL_STATE));
 
@@ -285,6 +290,9 @@ const initializeConnection = async () => {
             };
         });
 
+        const afcObjects = Object.fromEntries(afcObjectNames(allObjects).map(name => [name, {}]));
+        machineState.update(s => ({...s, afcObjects}));
+
         // 2. Build subscription map
         const subscriptions = {
             toolhead: ['position', 'extruder', 'status', 'print_time', 'homed_axes', 'max_velocity', 'max_accel', 'square_corner_velocity', 'max_accel_to_decel', 'minimum_cruise_ratio', 'axis_minimum', 'axis_maximum'],
@@ -315,6 +323,11 @@ const initializeConnection = async () => {
                 subscriptions[obj] = ['value'];
             }
         });
+
+        Object.keys(afcObjects).forEach(name => subscriptions[name] = null);
+        if (Object.keys(afcObjects).length) subscriptions.gcode = ['commands'];
+        subscriptions.pause_resume = ['is_paused'];
+        subscriptions.virtual_sdcard.push('is_active');
 
         monitorObjects.forEach(obj => subscriptions[obj] = obj.startsWith('filament_') ? ['enabled','filament_detected'] : ['speed','rpm']);
         Object.keys(subscriptions).forEach(key => { if (!allObjects.includes(key)) delete subscriptions[key]; });
@@ -382,6 +395,10 @@ const calculateCurrentLayer = (currentZ, layerHeight, firstLayerHeight) => {
 const updateStateFromStatus = (status) => {
     machineState.update(s => {
         const newState = { ...s, temperatures: structuredClone(s.temperatures), miscDevices: structuredClone(s.miscDevices), monitorDevices:structuredClone(s.monitorDevices) };
+        if (status.virtual_sdcard?.is_active !== undefined) newState.virtualSdActive = status.virtual_sdcard.is_active;
+        if (status.pause_resume?.is_paused !== undefined) newState.isPaused = status.pause_resume.is_paused;
+        newState.afcObjects = mergeAfcStatus(s.afcObjects, status);
+        if (status.gcode?.commands) newState.availableCommands = status.gcode.commands;
         if (status.webhooks?.state_message !== undefined) newState.stateMessage = status.webhooks.state_message;
         if (status.webhooks?.state !== undefined) {
             newState.isReady = status.webhooks.state === 'ready';
@@ -680,7 +697,7 @@ onNotification((method, params) => {
     } else if (method === 'notify_klippy_ready') {
         initializeConnection();
     } else if (method === 'notify_klippy_shutdown' || method === 'notify_klippy_disconnected') {
-        machineState.update(s => ({ ...s, isReady: false, status: 'UNAVAILABLE' }));
+        machineState.update(s => ({ ...s, isReady: false, status: 'UNAVAILABLE', afcObjects:{}, availableCommands:{} }));
     } else if (method === 'notify_gcode_response') {
         // console.log('GCODE:', params[0]);
     }
