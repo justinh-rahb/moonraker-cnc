@@ -267,6 +267,8 @@ test('AFC action rejects disabled preferences and firmware errors without replay
     socket.respond(socket.sent.findLast(r=>r.method==='printer.objects.query').id,{status:ready});await new Promise(resolve=>setImmediate(resolve));
     const command=socket.sent.findLast(r=>r.method==='printer.gcode.script');
     socket.onmessage({data:JSON.stringify({id:command.id,error:{code:400,message:'AFC load failed'}})});
+    await new Promise(resolve=>setImmediate(resolve));
+    socket.respond(socket.sent.findLast(r=>r.method==='printer.objects.query').id,{status:ready});
     await assert.rejects(action,e=>e.message==='AFC load failed');
     assert.equal(get(afc.afcPending),null);assert.equal(socket.sent.filter(r=>r.method==='printer.gcode.script').length,1);
     ws.disconnect();

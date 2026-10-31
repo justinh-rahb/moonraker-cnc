@@ -71,3 +71,41 @@ test('toolchanger selection checks available AFC extruders and mounted state', (
     assert.equal(afcScript(s,'unselect'),'AFC_UNSELECT_TOOL');
     assert.throws(()=>afcScript(s,'select',{tool:'extruder'}));
 });
+
+test('AFC.lanes is authoritative even when ViViD drive and selector objects are registered and grouped', () => {
+    const s={
+        AFC:{lanes:['lane5','lane6'],units:['ViViD ViViD_1','unit Internal']},
+        'AFC_ViViD ViViD_1':{lanes:['lane5','lane6','ViViD_1_drive','ViViD_1_selector']},
+        'AFC_unit Internal':{lanes:['extra_drive']},
+        'AFC_lane lane5':{unit:'ViViD_1',prep:true,load:true},
+        'AFC_stepper lane6':{unit:'ViViD_1',prep:true,load:true},
+        'AFC_stepper ViViD_1_drive':{unit:'ViViD_1',prep:true,load:true},
+        'AFC_lane ViViD_1_selector':{unit:'ViViD_1',prep:true,load:true},
+        'AFC_stepper extra_drive':{unit:'Internal',prep:true,load:true},
+        gcode:{commands:{CHANGE_TOOL:{},SET_RUNOUT:{}}}
+    };
+    const m=afcModel(s);
+    assert.deepEqual(m.lanes.map(l=>l.name),['lane5','lane6']);
+    assert.deepEqual(m.units.map(u=>[u.name,u.lanes.map(l=>l.name)]),[['ViViD_1',['lane5','lane6']]]);
+    assert.throws(()=>afcScript(s,'load',{lane:'ViViD_1_drive'}),/no longer available/);
+    assert.throws(()=>afcScript(s,'runout',{lane:'lane5',runout:'ViViD_1_selector'}),/another prepared lane/);
+});
+
+test('missing, malformed or emptied advertised lane lists never fall back to all registered steppers', () => {
+    const s={AFC:{units:['unit Test']},'AFC_unit Test':{lanes:['lane1']},'AFC_stepper lane1':{unit:'Test'}};
+    for(const list of [undefined,null,'lane1',[],[null,1]]) {
+        const m=afcModel({...s,AFC:{...s.AFC,lanes:list}});
+        assert.deepEqual(m.lanes,[]);assert.deepEqual(m.units,[]);
+    }
+    const old={...s,AFC:{...s.AFC,lanes:['lane1']}};
+    const removed=mergeAfcStatus(old,{AFC:{lanes:[]}});
+    assert.deepEqual(afcModel(removed).lanes,[]);
+    assert.equal(afcModel(old).lanes.length,1);
+});
+
+test('advertised lane order, deduplication and dynamic membership are preserved without name heuristics', () => {
+    const s={AFC:{lanes:['selector_filament','lane2','selector_filament','missing']},'AFC_lane selector_filament':{},'AFC_stepper lane2':{},'AFC_lane hidden':{}};
+    assert.deepEqual(afcModel(s).lanes.map(l=>l.name),['selector_filament','lane2']);
+    const changed=mergeAfcStatus(s,{AFC:{lanes:['hidden','lane2']}});
+    assert.deepEqual(afcModel(changed).lanes.map(l=>l.name),['hidden','lane2']);
+});

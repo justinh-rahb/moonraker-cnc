@@ -5,6 +5,7 @@
     import { connectionState } from '../../../stores/websocket.js';
     import { machineState } from '../../../stores/machineStore.js';
     import { afcPanelVisible } from '../../afc.js';
+    import KlipperRecovery from './KlipperRecovery.svelte';
     import AfcPanel from './AfcPanel.svelte';
     import PrintStatusPanel from './PrintStatusPanel.svelte';
     import ToolheadControl from './ToolheadControl.svelte';
@@ -44,6 +45,7 @@
         if (target) move(id, target);
     }
 </script>
+<KlipperRecovery />
 {#if $connectionState !== 'connected'}
 <div class="dashboard-notice" role="status">{$connectionState === 'connecting' ? 'Connecting to printer…' : 'Printer disconnected.'}</div>
 {/if}

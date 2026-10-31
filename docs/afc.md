@@ -6,7 +6,7 @@ Under **Settings → Panels**, turn off **Enable AFC panel** to hide it for the 
 
 ## Display
 
-- Units and lanes, including both `AFC_lane` and older `AFC_stepper` object names.
+- Only filament lanes listed in `AFC.lanes` are displayed, using either `AFC_lane` or older `AFC_stepper` status objects. Internal drive/selector objects are excluded even if a unit lists them; units without visible filament lanes are hidden.
 - Current/next lane, AFC state, messages, bypass and tool-change progress when reported.
 - Filament colour, name, material, remaining weight and spool ID when supplied. Unknown weights stay unknown.
 - String and array tool mappings, preparation/load/tool/hub sensors, runout backup and buffer status.
@@ -31,7 +31,7 @@ Controls are exposed only when the printer advertises the corresponding command 
 
 Movement actions require confirmation. All updates query fresh readiness, job/paused/SD activity, idle state, AFC status, lane data and command availability before sending. Printing, paused, busy, unknown and unavailable states block updates. AFC errors block normal controls; clearing a message is allowed while AFC reports an error, provided the printer is idle. Ejection is blocked until the lane is unloaded from its tool.
 
-Requests are bound to the connection generation, and pending operations disable other AFC controls. A reconnect or host change cancels a pending operation. Failed commands are never replayed. A firmware error can occur after a multi-field edit partially succeeds; check the reported values before retrying. Spool ID `0` clears the assignment using AFC's empty `SPOOL_ID=` parameter.
+Requests are bound to the connection generation, and pending operations disable other AFC controls. A reconnect or host change cancels a pending operation. Loading, unloading, ejection and toolchanger selection/docking allow up to ten minutes for command acknowledgement; read queries and metadata edits retain the normal request deadline. A failed command response triggers a best-effort status refresh, so the panel can reflect a tool that changed state even when its response was lost. Failed commands are never replayed, and a timeout does not cancel a running macro. A firmware error can occur after a multi-field edit partially succeeds; check the reported values before retrying. Spool ID `0` clears the assignment using AFC's empty `SPOOL_ID=` parameter.
 
 ## Reference and validation
 
