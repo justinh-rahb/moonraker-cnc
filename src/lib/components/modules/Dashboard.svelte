@@ -3,6 +3,9 @@
     import { onMount } from 'svelte';
     import { configStore } from '../../../stores/configStore.js';
     import { connectionState } from '../../../stores/websocket.js';
+    import { machineState } from '../../../stores/machineStore.js';
+    import { afcPanelVisible } from '../../afc.js';
+    import AfcPanel from './AfcPanel.svelte';
     import PrintStatusPanel from './PrintStatusPanel.svelte';
     import ToolheadControl from './ToolheadControl.svelte';
     import ExtruderControl from './ExtruderControl.svelte';
@@ -12,9 +15,9 @@
     import MachineLimitsPanel from './MachineLimitsPanel.svelte';
     import MiscPanel from './MiscPanel.svelte';
     import MacroPanel from './MacroPanel.svelte';
-    const modules = { status: PrintStatusPanel, toolhead: ToolheadControl, extruder: ExtruderControl, console: ConsolePanel, camera: CameraPanel, temperature: TemperaturePanel, limits: MachineLimitsPanel, misc: MiscPanel };
-    const names = { status:'Print status', toolhead:'Toolhead', extruder:'Extruder', console:'Console', camera:'Camera', temperature:'Temperatures', limits:'Motion limits', misc:'Fans & lights' };
-    const defaults = ['status', 'camera', 'toolhead', 'temperature', 'extruder', 'limits', 'console', 'misc'];
+    const modules = { afc:AfcPanel, status: PrintStatusPanel, toolhead: ToolheadControl, extruder: ExtruderControl, console: ConsolePanel, camera: CameraPanel, temperature: TemperaturePanel, limits: MachineLimitsPanel, misc: MiscPanel };
+    const names = { afc:'AFC', status:'Print status', toolhead:'Toolhead', extruder:'Extruder', console:'Console', camera:'Camera', temperature:'Temperatures', limits:'Motion limits', misc:'Fans & lights' };
+    const defaults = ['status', 'camera', 'toolhead', 'temperature', 'afc', 'extruder', 'limits', 'console', 'misc'];
     export let editing = false;
     let compact = false;
     let dragging = '';
@@ -26,7 +29,7 @@
         return () => media.removeEventListener('change', update);
     });
     $: size = compact ? 'compact' : 'wide';
-    $: available = [...defaults.filter(id => id !== 'camera' || $configStore.cameras?.some(c => c.enabled)), ...[...$configStore.panels].sort((a,b) => a.order-b.order).map(p => 'macro:' + p.id)];
+    $: available = [...defaults.filter(id => id === 'afc' ? afcPanelVisible($machineState.afcObjects, $configStore) : id !== 'camera' || $configStore.cameras?.some(c => c.enabled)), ...[...$configStore.panels].sort((a,b) => a.order-b.order).map(p => 'macro:' + p.id)];
     $: saved = $configStore.dashboard?.[size] || defaults;
     $: order = [...saved.filter((id,i) => available.includes(id) && saved.indexOf(id) === i), ...available.filter(id => !saved.includes(id))];
     function move(id, target) {

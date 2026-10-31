@@ -194,3 +194,80 @@ test('heading font preference stays isolated per host', () => {
     config.switchHost(second);assert.equal(get(config.configStore).appearance.headingFont,'mono');
     config.switchHost(first);config.removeHost(second);
 });
+
+test('AFC subscribes on the shared socket, merges deltas and clears on host switch', async () => {
+    ws.connect('afc-printer:7125');const socket=FakeSocket.sockets.at(-1);socket.open();
+    const settle=()=>new Promise(resolve=>setImmediate(resolve));
+    async function respond(method,result) {const r=socket.sent.findLast(r=>r.method===method);assert.ok(r);socket.respond(r.id,result);await settle();}
+    await respond('printer.info',{state:'ready'});
+    await respond('printer.objects.list',{objects:['AFC','AFC_lane lane1','AFC_BoxTurtle Turtle','gcode','configfile','webhooks','print_stats','idle_timeout','virtual_sdcard','pause_resume']});
+    await respond('printer.objects.query',{status:{configfile:{settings:{}}}});
+    const subscription=socket.sent.findLast(r=>r.method==='printer.objects.subscribe');
+    assert.equal(subscription.params.objects.AFC,null);assert.equal(subscription.params.objects['AFC_lane lane1'],null);
+    assert.deepEqual(subscription.params.objects.gcode,['commands']);
+    await respond('printer.objects.subscribe',{});
+    await respond('printer.objects.query',{status:{AFC:{lanes:['lane1'],current_state:'Idle'},'AFC_lane lane1':{prep:true,material:'PLA'},gcode:{commands:{CHANGE_TOOL:{}}},webhooks:{state:'ready'}}});
+    socket.onmessage({data:JSON.stringify({method:'notify_status_update',params:[{'AFC_lane lane1':{load:true}},1]})});
+    assert.equal(get(machine.machineState).afcObjects['AFC_lane lane1'].material,'PLA');assert.equal(get(machine.machineState).afcObjects['AFC_lane lane1'].load,true);
+    assert.ok(Object.hasOwn(get(machine.machineState).availableCommands,'CHANGE_TOOL'));
+    ws.connect('no-afc-printer:7125');assert.deepEqual(get(machine.machineState).afcObjects,{});assert.deepEqual(get(machine.machineState).availableCommands,{});
+    ws.disconnect();
+});
+
+test('AFC checks fresh state before commands, prevents duplicate sends and cancels stale dialogs', async () => {
+    const afc=await import('../src/stores/afcStore.js');
+    const objects={AFC:{lanes:['lane1'],current_state:'Idle'},'AFC_lane lane1':{name:'lane1',prep:true,load:true}};
+    const ready={...objects,webhooks:{state:'ready'},print_stats:{state:'standby'},virtual_sdcard:{is_active:false},pause_resume:{is_paused:false},idle_timeout:{state:'Idle'},gcode:{commands:{CHANGE_TOOL:{}}}};
+    config.configStore.update(c=>({...c,afc:{enabled:true}}));
+    ws.connect('afc-commands:7125');const socket=FakeSocket.sockets.at(-1);socket.open();
+    machine.machineState.update(s=>({...s,isReady:true,afcObjects:objects,availableCommands:ready.gcode.commands}));
+    const action=afc.runAfcAction('load',{lane:'lane1'});
+    await assert.rejects(afc.runAfcAction('load',{lane:'lane1'}),/Wait/);
+    socket.respond(socket.sent.findLast(r=>r.method==='printer.objects.query').id,{status:ready});await new Promise(resolve=>setImmediate(resolve));
+    const command=socket.sent.findLast(r=>r.method==='printer.gcode.script');assert.equal(command.params.script,'CHANGE_TOOL LANE=lane1');
+    socket.respond(command.id,{});await new Promise(resolve=>setImmediate(resolve));
+    socket.respond(socket.sent.findLast(r=>r.method==='printer.objects.query').id,{status:{AFC:{current_lane:'lane1'}}});await action;
+    assert.equal(get(machine.machineState).afcObjects.AFC.current_lane,'lane1');assert.equal(get(afc.afcPending),null);
+    const busy=afc.runAfcAction('load',{lane:'lane1'});
+    socket.respond(socket.sent.findLast(r=>r.method==='printer.objects.query').id,{status:{...ready,print_stats:{state:'printing'}}});
+    await assert.rejects(busy,/current print/);assert.equal(socket.sent.filter(r=>r.method==='printer.gcode.script').length,1);
+    const oldGeneration=ws.getConnectionGeneration();
+    const stale=afc.runAfcAction('load',{lane:'lane1'});ws.connect('afc-another:7125');await assert.rejects(stale);
+    await assert.rejects(afc.runAfcAction('load',{lane:'lane1'},oldGeneration),/connection changed/);
+    assert.equal(socket.sent.filter(r=>r.method==='printer.gcode.script').length,1);assert.deepEqual(get(machine.machineState).afcObjects,{});
+    ws.disconnect();
+});
+
+test('AFC disable preference stays per host and round-trips workspace export', () => {
+    const first=get(config.workspaceStore).activeHostId;
+    config.configStore.update(c=>({...c,afc:{enabled:false}}));
+    const other=config.addHost('AFC isolation',{ip:'afc-settings-host',port:'7125',autoConnect:false});
+    assert.notEqual(get(config.configStore).afc?.enabled,false);
+    config.switchHost(first);assert.equal(get(config.configStore).afc.enabled,false);
+    assert.equal(config.importConfig(config.exportWorkspace()).success,true);assert.equal(get(config.configStore).afc.enabled,false);
+    config.removeHost(other);
+});
+
+test('AFC action rejects disabled preferences and firmware errors without replaying commands', async () => {
+    const afc=await import('../src/stores/afcStore.js');
+    ws.connect('afc-errors:7125');const socket=FakeSocket.sockets.at(-1);socket.open();
+    const objects={AFC:{lanes:['lane1'],current_state:'Idle'},'AFC_lane lane1':{name:'lane1',prep:true,load:true}};
+    const ready={...objects,webhooks:{state:'ready'},print_stats:{state:'standby'},virtual_sdcard:{is_active:false},pause_resume:{is_paused:false},idle_timeout:{state:'Idle'},gcode:{commands:{CHANGE_TOOL:{}}}};
+    machine.machineState.update(s=>({...s,isReady:true,afcObjects:objects}));
+    config.configStore.update(c=>({...c,afc:{enabled:false}}));
+    await assert.rejects(afc.runAfcAction('load',{lane:'lane1'}),/disabled/);
+    config.configStore.update(c=>({...c,afc:{enabled:true}}));
+    const disabledDuringQuery=afc.runAfcAction('load',{lane:'lane1'});
+    config.configStore.update(c=>({...c,afc:{enabled:false}}));
+    socket.respond(socket.sent.findLast(r=>r.method==='printer.objects.query').id,{status:ready});
+    await assert.rejects(disabledDuringQuery,/disabled/);
+    assert.equal(socket.sent.filter(r=>r.method==='printer.gcode.script').length,0);
+    config.configStore.update(c=>({...c,afc:{enabled:true}}));
+    const action=afc.runAfcAction('load',{lane:'lane1'});
+    socket.respond(socket.sent.findLast(r=>r.method==='printer.objects.query').id,{status:ready});await new Promise(resolve=>setImmediate(resolve));
+    const command=socket.sent.findLast(r=>r.method==='printer.gcode.script');
+    socket.onmessage({data:JSON.stringify({id:command.id,error:{code:400,message:'AFC load failed'}})});
+    await assert.rejects(action,e=>e.message==='AFC load failed');
+    assert.equal(get(afc.afcPending),null);assert.equal(socket.sent.filter(r=>r.method==='printer.gcode.script').length,1);
+    ws.disconnect();
+});

@@ -47,6 +47,15 @@ A Klipper/Moonraker frontend with a restrained, science-fiction control-interfac
 - **Pressure Advance Tuning**: Real-time adjustment in 0.005 increments
 - **Smooth Time Tuning**: Fine-tune extruder smooth time
 
+### 🧵 AFC Filament Changer
+- **Automatic Detection**: Appears only when the connected printer exposes AFC; supports real AFC and AFC-Lite compatibility status
+- **Lane Overview**: Grouped units, filament colours/materials, active lane, tool mappings, sensors, hubs and buffers
+- **Capability-Aware Controls**: Load/select, unload, eject, filament data, tool mappings and runout backups where the printer advertises support
+- **Per-Printer Toggle**: Disable the panel under Settings → Panels; collapse and rearrange it like other dashboard panels
+- **Fresh-State Checks**: Confirm movement actions and recheck printer/AFC state before sending commands; never replay a failed operation
+
+See [AFC panel details and validation limits](docs/afc.md).
+
 ### ⚡ Machine Limits
 - **Velocity Control**: Configure max velocity (mm/s)
 - **Acceleration Settings**: Adjust max acceleration (mm/s²)
