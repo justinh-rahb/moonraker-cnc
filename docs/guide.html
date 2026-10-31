@@ -43,6 +43,9 @@ python3 -m http.server 8080</code></pre>
       <h3>Dashboard and controls</h3>
       <p>Click a panel heading to collapse it. Enable <strong>Arrange panels</strong> to move panels using drag handles or arrows, then turn it off when finished. Wide and compact layouts are saved separately.</p>
       <p>Home axes before manual movement. Click an axis position to enter an absolute target. Temperature and fan controls accept numeric values alongside sliders; reset controls restore their defined baseline values.</p>
+      <h3>Klipper recovery</h3>
+      <p>When Moonraker is connected but Klipper reports an error, shutdown or disconnection, the dashboard offers <strong>Restart</strong> and <strong>Firmware Restart</strong>. Restart reloads Klipper and its configuration; firmware restart also resets the connected MCUs. Both require confirmation from the recovery prompt. Standalone restart macros and console commands use the same Moonraker recovery APIs, even when ordinary printer controls are unavailable.</p>
+      <p>Recovery waits for Klipper to report ready. A ready printer's active or paused print blocks a restart. G-code scripts allow up to ten minutes for acknowledgement; read requests normally time out after fifteen seconds and restart requests after sixty seconds. A timeout does not cancel a script. Check actual printer state before retrying; Retrograde does not replay failed commands.</p>
       <h3>Files and print history</h3>
       <p>Use <strong>Files</strong> to browse directories, upload G-code and inspect thumbnails and slicer metadata before starting a print. <strong>History</strong> shows previous jobs. Browser Back/Forward tracks top-level views; changing settings tabs or file directories updates the current URL.</p>
       <h3>Cameras</h3>

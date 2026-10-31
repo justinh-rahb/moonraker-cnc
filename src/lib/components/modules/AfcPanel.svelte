@@ -42,7 +42,7 @@
     {#if model.message}<div class="notice" role={model.afc.error_state ? 'alert' : 'status'}>{model.message}
         {#if has('clear')}<button class="small" disabled={!!$afcClearDisabledReason} on:click={() => request('clear',{},'Clear the AFC message?')}>CLEAR</button>{/if}
     </div>{/if}
-    {#if error}<p class="notice" role="alert">{error} Check current state before retrying.</p>{/if}
+    {#if error}<p class="notice" role="alert">{error}</p>{/if}
     {#each model.extruders as extruder (extruder.name)}
         <div class="device-row" class:selected={extruder.on_shuttle}>
             <strong>{extruder.name}</strong>

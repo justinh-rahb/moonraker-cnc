@@ -99,6 +99,7 @@ See [AFC panel details and validation limits](docs/afc.md).
 - **Version Information**: Build version and commit hash displayed in Settings with GitHub links
 
 ### 🔔 Notifications & Safety
+- **Klipper Recovery**: Restart and firmware-restart controls remain available when Klipper is stopped; ordinary macros stay disabled until it is ready
 - **Error Handling**: Display and track API errors
 - **System Status Monitoring**: Detects Klipper shutdown/error states
 - **Status LED Integration**: Visual indicators for RUN/ERR states

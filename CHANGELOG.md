@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Keep Klipper restart recovery available during shutdown/error/disconnection, route restart macros and console commands through dedicated Moonraker endpoints, and wait for confirmed readiness before recovery completes.
+- Use separate request deadlines for reads, long G-code scripts and restarts; serialize power polling and suppress repeated background timeout notifications.
+- Allow long-running AFC loading and toolchanger scripts up to ten minutes to acknowledge, keep duplicate actions blocked while waiting, and refresh reported state after command failures without replaying them.
 - Preserve the literal AFC tool-mapping validation pattern so valid entries such as `T1` can be submitted.
 - Display only filament lanes advertised in `AFC.lanes`, excluding internal drive/selector objects and empty units from the AFC panel and lane controls.
 

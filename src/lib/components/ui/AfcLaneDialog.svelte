@@ -65,7 +65,7 @@
         </form>
         {/if}
         {#if $afcDisabledReason}<p class="hint" role="status">{$afcDisabledReason}</p>{/if}
-        {#if error}<p class="error" role="alert">{error} Check current state before retrying.</p>{/if}
+        {#if error}<p class="error" role="alert">{error}</p>{/if}
         <button on:click={close}>CANCEL</button>
     </div>
 </div>

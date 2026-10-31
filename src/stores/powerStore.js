@@ -15,12 +15,13 @@ const powerState = writable({
 // Initialize power device monitoring when connected
 let cleanupNotification = null;
 let pollInterval = null;
+let pollingGeneration = null;
 
 // Fetch available power devices from Moonraker
 const fetchDevices = async () => {
     const generation = getConnectionGeneration();
     try {
-        const result = await send('machine.device_power.devices');
+        const result = await send('machine.device_power.devices',{}, {silent:true});
         return result.devices || [];
     } catch (error) {
         // Silently handle if device_power plugin is not available (Method not found)
@@ -37,14 +38,16 @@ const fetchDevices = async () => {
 
 // Fetch status for a specific device
 const fetchDeviceStatus = async (deviceName) => {
+    const generation = getConnectionGeneration();
     try {
-        const result = await send('machine.device_power.status', { [deviceName]: null });
+        const result = await send('machine.device_power.status', { [deviceName]: null }, {silent:true});
         return result[deviceName];
     } catch (error) {
         // Silently handle if device_power plugin is not available
         if (error.code === -32601) {
             return 'unavailable';
         }
+        if (generation !== getConnectionGeneration()) return 'unavailable';
         console.warn(`Failed to fetch status for ${deviceName}:`, error);
         return 'error';
     }
@@ -69,7 +72,7 @@ const initializePowerDevices = async () => {
     // Fetch initial status for all devices
     const statuses = {};
     for (const device of devices) {
-        const status = await fetchDeviceStatus(device.device);
+        const status = device.status || await fetchDeviceStatus(device.device);
         if (generation !== getConnectionGeneration()) return;
         statuses[device.device] = {
             status: device.status || status,
@@ -121,10 +124,12 @@ const handlePowerNotification = (params) => {
 const pollDeviceStatuses = async () => {
     const generation = getConnectionGeneration();
     const state = get(powerState);
-    if (!state.isInitialized || state.devices.length === 0) {
+    if (pollingGeneration === generation || get(configStore).power?.selectedDevice === 'OFF' || !state.isInitialized || state.devices.length === 0) {
         return;
     }
 
+    pollingGeneration = generation;
+    try {
     for (const device of state.devices) {
         const status = await fetchDeviceStatus(device.device);
         if (generation !== getConnectionGeneration()) return;
@@ -139,6 +144,7 @@ const pollDeviceStatuses = async () => {
             }
         }));
     }
+    } finally { if (pollingGeneration === generation) pollingGeneration = null; }
 };
 
 // Start polling for status updates
@@ -275,6 +281,7 @@ connectionState.subscribe(async (state) => {
         await initializePowerDevices();
         if (generation === getConnectionGeneration()) startPolling();
     } else {
+        pollingGeneration = null;
         // Cleanup notification listener
         if (cleanupNotification) {
             cleanupNotification();
